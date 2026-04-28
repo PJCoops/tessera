@@ -145,7 +145,7 @@ function HowToContent() {
         <div>
           <p className="font-medium">Tap two tiles to swap them.</p>
           <p className="text-[color:var(--color-muted)] mt-1">
-            Each swap is one move. There&rsquo;s no undo.
+            Each swap is one move.
           </p>
         </div>
       </li>
@@ -163,7 +163,7 @@ function HowToContent() {
         <div>
           <p className="font-medium">The columns spell words too.</p>
           <p className="text-[color:var(--color-muted)] mt-1">
-            Use them as a check. When all four rows match, the columns will too — and the whole grid turns gold.
+            Use them as a check. When all four rows match, the columns will too, and the whole grid turns gold.
           </p>
         </div>
       </li>
@@ -295,7 +295,7 @@ function WordsContent({ goldRows }: { goldRows: string[] }) {
               )}
               {e.resolvedFrom && (
                 <span className="text-xs text-[color:var(--color-muted)]">
-                  — from <span className="italic">{e.resolvedFrom}</span>
+                  from <span className="italic">{e.resolvedFrom}</span>
                 </span>
               )}
             </div>
