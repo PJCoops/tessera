@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const description =
@@ -41,7 +42,17 @@ export default function RootLayout({
           >
             Paul Cooper
           </a>
+          {" · "}
+          <a
+            href="https://www.reddit.com/r/TesseraPuzzle/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline-offset-4 hover:underline hover:text-[color:var(--color-ink)] transition-colors"
+          >
+            r/TesseraPuzzle
+          </a>
         </footer>
+        <Analytics />
       </body>
     </html>
   );
