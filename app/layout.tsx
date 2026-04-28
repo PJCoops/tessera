@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
@@ -6,12 +6,21 @@ const description =
   "A daily word puzzle. Swap tiles on a 4×4 grid until every row spells a word, and every column too. Same puzzle for everyone, every day.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://tesserapuzzle.com"),
+  metadataBase: new URL("https://www.tesserapuzzle.com"),
   title: { default: "Tessera", template: "%s · Tessera" },
   description,
   applicationName: "Tessera",
   authors: [{ name: "Paul Cooper", url: "https://pjcooper.design" }],
   creator: "Paul Cooper",
+  publisher: "Paul Cooper",
+  keywords: ["daily word puzzle", "word game", "tessera", "puzzle", "4x4", "anagram"],
+  category: "game",
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
   openGraph: {
     title: "Tessera",
     description,
@@ -20,7 +29,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_GB",
   },
-  twitter: { card: "summary_large_image", title: "Tessera", description },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tessera",
+    description,
+    creator: "@0xCoops",
+  },
+  manifest: "/manifest.webmanifest",
+  other: {
+    "copyright": "© 2026 Paul Cooper",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafaf7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
+  colorScheme: "light",
 };
 
 export default function RootLayout({

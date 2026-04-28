@@ -8,7 +8,7 @@ const gameSchema = {
   "@context": "https://schema.org",
   "@type": "VideoGame",
   name: "Tessera",
-  url: "https://tesserapuzzle.com",
+  url: "https://www.tesserapuzzle.com",
   description,
   author: { "@type": "Person", name: "Paul Cooper", url: "https://pjcooper.design" },
   creator: { "@type": "Person", name: "Paul Cooper", url: "https://pjcooper.design" },
