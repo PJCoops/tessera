@@ -7,7 +7,7 @@ const description =
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.tesserapuzzle.com"),
-  title: { default: "Tessera", template: "%s · Tessera" },
+  title: { default: "Tessera: Daily Word Puzzle", template: "%s · Tessera" },
   description,
   applicationName: "Tessera",
   authors: [{ name: "Paul Cooper", url: "https://pjcooper.design" }],
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
   openGraph: {
-    title: "Tessera",
+    title: "Tessera: Daily Word Puzzle",
     description,
     url: "/",
     siteName: "Tessera",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tessera",
+    title: "Tessera: Daily Word Puzzle",
     description,
     creator: "@0xCoops",
   },
