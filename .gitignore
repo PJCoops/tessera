@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tessera build-solution-words frequency cache (~33MB, regenerable)
+/app/lib/.freq-cache.txt
