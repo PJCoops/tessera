@@ -472,8 +472,8 @@ function Legend({ children, variant }: { children: React.ReactNode; variant: "ro
     return (
       <span className="inline-flex items-center gap-1.5">
         <span
-          className="inline-block w-3 h-3 rounded-sm border"
-          style={{ background: "var(--color-cream)", borderColor: "#7a9070" }}
+          className="inline-block w-3 h-3 rounded-sm"
+          style={{ background: "var(--color-cream)", outline: "2px dashed #3d5a32", outlineOffset: "-3px" }}
         />
         {children}
       </span>
@@ -491,7 +491,7 @@ function Legend({ children, variant }: { children: React.ReactNode; variant: "ro
 function tileClasses(rowValid: boolean, puzzleSolved: boolean, homeHint: boolean): string {
   if (puzzleSolved) return "bg-[#d9b25a] text-[color:var(--color-ink)]";
   if (rowValid) return "bg-[#7a9070] text-[color:var(--color-paper)]";
-  if (homeHint) return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[#7a9070]";
+  if (homeHint) return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)] outline-2 outline-dashed outline-[#3d5a32] -outline-offset-[3px]";
   return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]";
 }
 
