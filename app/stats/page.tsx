@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 // Always fetch fresh-ish data; underlying hogql() caches each query 5 min.
+// Refreshes pull from PostHog when the cache window expires.
 export const dynamic = "force-dynamic";
 
 const COOKIE_NAME = "stats_auth";
