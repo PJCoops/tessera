@@ -31,6 +31,7 @@ function swapAt(p: Tile[], a: number, b: number): Tile[] {
 
 const RESULT_PREFIX = "tessera:result:";
 const PROGRESS_PREFIX = "tessera:progress:";
+const HIDE_HINTS_KEY = "tessera:hide-hints";
 
 type Progress = { positions: Tile[]; moves: number };
 
@@ -119,6 +120,9 @@ export function TesseraGame() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [helpTab, setHelpTab] = useState<"how" | "words">("how");
   const [confirmReveal, setConfirmReveal] = useState(false);
+  const [demoPlaying, setDemoPlaying] = useState(false);
+  const [idleTick, setIdleTick] = useState(0);
+  const [hideHints, setHideHints] = useState(false);
 
   // Initialise on client mount (avoids SSR/UTC drift hydration mismatch).
   useEffect(() => {
@@ -159,7 +163,17 @@ export function TesseraGame() {
     }
     if (!demo) pruneOldProgress(num);
     if (!hasSeenHowTo()) setHowToOpen(true);
+    try {
+      setHideHints(window.localStorage.getItem(HIDE_HINTS_KEY) === "1");
+    } catch {}
     setMounted(true);
+  }, []);
+
+  const updateHideHints = useCallback((v: boolean) => {
+    setHideHints(v);
+    try {
+      window.localStorage.setItem(HIDE_HINTS_KEY, v ? "1" : "0");
+    } catch {}
   }, []);
 
   // Countdown to next puzzle.
@@ -214,6 +228,17 @@ export function TesseraGame() {
     if (validity.isBonus && bonusAt === null) setBonusAt(moves);
   }, [validity.isSolved, validity.isBonus, moves, solvedAt, bonusAt, puzzle, storedResult]);
 
+  // Show a one-shot demo swap if the player has stalled before their first move.
+  // Replays every 7s of continued inactivity so it's always there when they look up.
+  useEffect(() => {
+    if (!mounted || !puzzle) return;
+    if (demoPlaying) return;
+    if (moves > 0 || selectedIdx !== null) return;
+    if (validity.isSolved || storedResult) return;
+    const id = setTimeout(() => setDemoPlaying(true), 7000);
+    return () => clearTimeout(id);
+  }, [mounted, puzzle, demoPlaying, moves, selectedIdx, validity.isSolved, storedResult, idleTick]);
+
   const handleReveal = useCallback(() => {
     if (!puzzle) return;
     const goldPositions = puzzle.goldRows
@@ -236,6 +261,7 @@ export function TesseraGame() {
 
   const handleTap = useCallback(
     (idx: number) => {
+      setDemoPlaying(false);
       if (selectedIdx === null) return setSelectedIdx(idx);
       if (selectedIdx === idx) return setSelectedIdx(null);
       setPositions((p) => {
@@ -347,6 +373,8 @@ export function TesseraGame() {
         goldRows={puzzle.goldRows}
         showWordsTab={finished}
         initialTab={helpTab}
+        hideHints={hideHints}
+        onHideHintsChange={updateHideHints}
       />
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} streak={streak} epoch={EPOCH} />
       <RevealConfirm open={confirmReveal} onClose={() => setConfirmReveal(false)} onConfirm={handleReveal} />
@@ -402,13 +430,28 @@ export function TesseraGame() {
                 className={`flex items-center justify-center rounded-md text-3xl font-medium touch-manipulation transition-[background-color,color,border-color] duration-200 ${tileClasses(
                   rv,
                   validity.isSolved,
-                  homeHintByIdx[idx]
+                  !hideHints && homeHintByIdx[idx]
                 )} ${isSelected ? "ring-2 ring-[color:var(--color-ink)]" : ""}`}
               >
                 {tile.letter}
               </motion.button>
             );
           })}
+        {demoPlaying && positions.length >= 2 && (
+          <DemoHint
+            key={idleTick}
+            tileSize={TILE}
+            gap={GAP}
+            fromIdx={0}
+            toIdx={1}
+            fromLetter={positions[0].letter}
+            toLetter={positions[1].letter}
+            onDone={() => {
+              setDemoPlaying(false);
+              setIdleTick((n) => n + 1);
+            }}
+          />
+        )}
       </div>
 
       <div className="mt-8 flex flex-col items-center gap-4">
@@ -433,7 +476,7 @@ export function TesseraGame() {
         )}
 
         <div className="mt-2 flex items-center gap-4 text-xs text-[color:var(--color-muted)]">
-          <Legend variant="hint">correct row</Legend>
+          {!hideHints && <Legend variant="hint">correct row</Legend>}
           <Legend variant="row">correct word</Legend>
           <Legend variant="bonus">puzzle complete</Legend>
         </div>
@@ -464,6 +507,94 @@ export function TesseraGame() {
         </div>
       </div>
     </div>
+  );
+}
+
+function DemoHint({
+  tileSize,
+  gap,
+  fromIdx,
+  toIdx,
+  fromLetter,
+  toLetter,
+  onDone,
+}: {
+  tileSize: number;
+  gap: number;
+  fromIdx: number;
+  toIdx: number;
+  fromLetter: string;
+  toLetter: string;
+  onDone: () => void;
+}) {
+  const pos = (idx: number) => {
+    const r = Math.floor(idx / N);
+    const c = idx % N;
+    return { x: c * (tileSize + gap), y: r * (tileSize + gap) };
+  };
+  const a = pos(fromIdx);
+  const b = pos(toIdx);
+  // Cursor sits slightly inside the tile centre so the pointer tip lands on
+  // the tile rather than its corner.
+  const cox = tileSize / 2 - 4;
+  const coy = tileSize / 2 - 2;
+  const D = 2.6;
+  // 7 keyframes to cover: idle | tap-A (ring on) | hold | swap | held-swapped | swap-back | fade
+  const ghostTimes = [0, 0.08, 0.3, 0.45, 0.65, 0.85, 1];
+  const ringOff = "0 0 0 0px rgba(10,10,10,0)";
+  const ringOn = "0 0 0 2px rgba(10,10,10,1)";
+
+  return (
+    <>
+      {/* Ghost A: covers tile A. Selection ring lights up while the faux
+         cursor is tapping it; clears the moment the swap fires. */}
+      <motion.div
+        initial={{ x: a.x, y: a.y, opacity: 1, scale: 1, boxShadow: ringOff }}
+        animate={{
+          x: [a.x, a.x, a.x, b.x, b.x, a.x, a.x],
+          y: [a.y, a.y, a.y, b.y, b.y, a.y, a.y],
+          opacity: [1, 1, 1, 1, 1, 1, 0],
+          scale: [1, 1.04, 1.04, 1, 1, 1, 1],
+          boxShadow: [ringOff, ringOn, ringOn, ringOff, ringOff, ringOff, ringOff],
+        }}
+        transition={{ duration: D, times: ghostTimes, ease: "easeInOut" }}
+        style={{ position: "absolute", top: 0, left: 0, width: tileSize, height: tileSize, pointerEvents: "none", zIndex: 5 }}
+        className="flex items-center justify-center rounded-md text-3xl font-medium bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]"
+      >
+        {fromLetter}
+      </motion.div>
+      {/* Ghost B: mirror swap path. No persistent ring — in the real
+         interaction the second tap fires the swap immediately. */}
+      <motion.div
+        initial={{ x: b.x, y: b.y, opacity: 1 }}
+        animate={{
+          x: [b.x, b.x, b.x, a.x, a.x, b.x, b.x],
+          y: [b.y, b.y, b.y, a.y, a.y, b.y, b.y],
+          opacity: [1, 1, 1, 1, 1, 1, 0],
+        }}
+        transition={{ duration: D, times: ghostTimes, ease: "easeInOut" }}
+        style={{ position: "absolute", top: 0, left: 0, width: tileSize, height: tileSize, pointerEvents: "none", zIndex: 5 }}
+        className="flex items-center justify-center rounded-md text-3xl font-medium bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]"
+      >
+        {toLetter}
+      </motion.div>
+      {/* Faux cursor: taps A, moves to B, taps, fades. */}
+      <motion.div
+        initial={{ x: a.x + cox, y: a.y + coy, opacity: 0 }}
+        animate={{
+          x: [a.x + cox, a.x + cox, a.x + cox, b.x + cox, b.x + cox, b.x + cox],
+          y: [a.y + coy, a.y + coy, a.y + coy, b.y + coy, b.y + coy, b.y + coy],
+          opacity: [0, 1, 1, 1, 1, 0],
+        }}
+        transition={{ duration: D, times: [0, 0.06, 0.3, 0.42, 0.7, 0.85], ease: "easeInOut" }}
+        onAnimationComplete={onDone}
+        style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", zIndex: 10 }}
+      >
+        <svg viewBox="0 0 18 18" width="20" height="20" fill="var(--color-ink)" stroke="var(--color-paper)" strokeWidth="1.2" strokeLinejoin="round">
+          <path d="M3 2 L3 14 L6.5 10.8 L9 16 L11.5 14.8 L9 9.5 L13.5 9.5 Z" />
+        </svg>
+      </motion.div>
+    </>
   );
 }
 

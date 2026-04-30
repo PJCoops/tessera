@@ -22,7 +22,8 @@ export function markHowToSeen() {
   } catch {}
 }
 
-type Tab = "how" | "words";
+type Tab = "how" | "words" | "settings";
+type InitialTab = "how" | "words";
 
 export function HowToPlay({
   open,
@@ -30,12 +31,16 @@ export function HowToPlay({
   goldRows,
   showWordsTab,
   initialTab = "how",
+  hideHints,
+  onHideHintsChange,
 }: {
   open: boolean;
   onClose: () => void;
   goldRows: string[];
   showWordsTab: boolean;
-  initialTab?: Tab;
+  initialTab?: InitialTab;
+  hideHints: boolean;
+  onHideHintsChange: (v: boolean) => void;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
 
@@ -92,11 +97,17 @@ export function HowToPlay({
                   Today&rsquo;s words
                 </TabButton>
               )}
+              <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>
+                Settings
+              </TabButton>
             </div>
 
             <div className="mt-6">
               {tab === "how" && <HowToContent />}
               {tab === "words" && <WordsContent goldRows={goldRows} />}
+              {tab === "settings" && (
+                <SettingsContent hideHints={hideHints} onChange={onHideHintsChange} />
+              )}
             </div>
 
             {tab === "how" && (
@@ -309,6 +320,37 @@ function WordsContent({ goldRows }: { goldRows: string[] }) {
         Definitions from dictionaryapi.dev (en_GB).
       </p>
     </>
+  );
+}
+
+function SettingsContent({
+  hideHints,
+  onChange,
+}: {
+  hideHints: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="space-y-5 text-sm">
+      <label className="flex items-start gap-4 cursor-pointer">
+        <span className="relative inline-flex flex-shrink-0 items-center w-10 h-6 mt-0.5">
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            checked={hideHints}
+            onChange={(e) => onChange(e.target.checked)}
+          />
+          <span className="absolute inset-0 rounded-full bg-[color:var(--color-cream)] border border-[color:var(--color-rule)] peer-checked:bg-[color:var(--color-ink)] peer-checked:border-[color:var(--color-ink)] transition-colors" />
+          <span className="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-[color:var(--color-paper)] shadow transition-transform peer-checked:translate-x-4" />
+        </span>
+        <span>
+          <span className="font-medium">Hide row hints</span>
+          <span className="block text-[color:var(--color-muted)] mt-1">
+            Removes the dotted outline that marks tiles already on the right row. Harder mode.
+          </span>
+        </span>
+      </label>
+    </div>
   );
 }
 
