@@ -9,6 +9,7 @@ import { buildShareString } from "./lib/share";
 import { getTier } from "./lib/tier";
 import { HowToPlay, hasSeenHowTo, markHowToSeen } from "./HowToPlay";
 import { HistoryModal } from "./HistoryModal";
+import { track } from "./lib/analytics";
 
 const N = 4;
 const EPOCH = "2026-04-27"; // Tessera #1
@@ -161,6 +162,9 @@ export function TesseraGame() {
     } else {
       setPositions(startTiles);
     }
+    if (!isolated && !stored && !progress) {
+      track("puzzle_started", { num, day: date });
+    }
     if (!demo) pruneOldProgress(num);
     if (!hasSeenHowTo()) setHowToOpen(true);
     try {
@@ -174,6 +178,7 @@ export function TesseraGame() {
     try {
       window.localStorage.setItem(HIDE_HINTS_KEY, v ? "1" : "0");
     } catch {}
+    track("hide_hints_toggled", { enabled: v });
   }, []);
 
   // Countdown to next puzzle.
@@ -222,7 +227,14 @@ export function TesseraGame() {
         writeResult(puzzle.num, r);
         clearProgress(puzzle.num);
         setStoredResult(r);
-        setStreak(recordWin(puzzle.num));
+        const s = recordWin(puzzle.num);
+        setStreak(s);
+        track("puzzle_solved", {
+          num: puzzle.num,
+          moves,
+          bonus: validity.isBonus,
+          streak: s.current,
+        });
       }
     }
     if (validity.isBonus && bonusAt === null) setBonusAt(moves);
@@ -251,6 +263,7 @@ export function TesseraGame() {
       writeResult(puzzle.num, r);
       clearProgress(puzzle.num);
       setStoredResult(r);
+      track("puzzle_revealed", { num: puzzle.num, moves });
     }
     setSolvedAt(moves);
     setBonusAt(moves);
