@@ -81,6 +81,38 @@ export default function RootLayout({
             </a>
           </footer>
           <Analytics />
+          {/* External directory badges. Fixed to viewport corners so they
+             stay visible without intruding on the puzzle. Hidden on small
+             screens where they'd overlap the grid. */}
+          <a
+            href="https://www.producthunt.com/products/tessera-5?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-tessera-5"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Featured on Product Hunt"
+            className="hidden md:block fixed bottom-4 left-4 z-40 opacity-70 hover:opacity-100 transition-opacity"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt="Tessera - A 4x4 word puzzle where rows and columns have to spell words | Product Hunt"
+              width={180}
+              height={39}
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1134416&theme=neutral&t=1777651610297"
+            />
+          </a>
+          <a
+            href="https://playlin.io/game/tessera-daily-word-puzzle/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Featured on Playlin"
+            className="hidden md:block fixed bottom-4 right-4 z-40 opacity-70 hover:opacity-100 transition-opacity"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://cdn.playlin.io/creators/featured-dark.svg"
+              alt="Tessera: Daily Word Puzzle featured on Playlin"
+              width={140}
+            />
+          </a>
         </PHProvider>
       </body>
     </html>
