@@ -11,8 +11,9 @@ import { NextRequest, NextResponse } from "next/server";
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 const CAPI_TOKEN = process.env.META_CAPI_TOKEN;
 // When META_TEST_EVENT_CODE is set, every CAPI event is routed to Meta's
-// Test events tab and excluded from optimization. Unset (or set to empty) in
-// production once setup is verified.
+// Test events tab and excluded from optimization. Leave unset in production;
+// set it temporarily (Events Manager → Test events → copy code) when
+// re-verifying changes.
 const TEST_EVENT_CODE = process.env.META_TEST_EVENT_CODE || undefined;
 const GRAPH_VERSION = "v21.0";
 
