@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { PHProvider } from "./lib/posthog-provider";
+import { MetaPixelHead, MetaPixelNoScript } from "./lib/meta-pixel";
 import "./globals.css";
 
 const description =
@@ -55,7 +56,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="h-full antialiased">
+      <head>
+        <MetaPixelHead />
+      </head>
       <body className="min-h-full flex flex-col">
+        <MetaPixelNoScript />
         <PHProvider>
           <main className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
             {children}
