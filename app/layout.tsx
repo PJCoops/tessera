@@ -38,6 +38,11 @@ export const metadata: Metadata = {
     creator: "@0xCoops",
   },
   manifest: "/manifest.webmanifest",
+  verification: {
+    other: {
+      "facebook-domain-verification": "b7ev056dvv1igdi829y8b4kj7t2ob3",
+    },
+  },
   other: {
     "copyright": "© 2026 Paul Cooper",
   },
