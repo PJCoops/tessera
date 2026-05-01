@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { DEMO_GRID, generateDailyPuzzle, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
 import { puzzleNumber, seedFromDate, todayUtc } from "./lib/rng";
 import { readStreak, recordWin, visibleCurrent, type Streak } from "./lib/streak";
@@ -123,6 +123,8 @@ export function TesseraGame() {
   const [confirmReveal, setConfirmReveal] = useState(false);
   const [demoPlaying, setDemoPlaying] = useState(false);
   const [idleTick, setIdleTick] = useState(0);
+  const [demoSelected, setDemoSelected] = useState<number | null>(null);
+  const [demoTap, setDemoTap] = useState<{ idx: number; key: number } | null>(null);
   const [hideHints, setHideHints] = useState(false);
 
   // Initialise on client mount (avoids SSR/UTC drift hydration mismatch).
@@ -251,6 +253,56 @@ export function TesseraGame() {
     return () => clearTimeout(id);
   }, [mounted, puzzle, demoPlaying, moves, selectedIdx, validity.isSolved, storedResult, idleTick]);
 
+  // When demoPlaying flips true, run the sequence: tap A (ripple + ring),
+  // tap B (ripple), real swap, hold, real revert. Positions are snapshotted
+  // so cancellation always restores. This uses the actual setPositions path
+  // so the swap animation matches a real player swap exactly — same spring
+  // physics, same ring, same scale.
+  useEffect(() => {
+    if (!demoPlaying || !puzzle) return;
+    const snapshot = positions;
+    const [a, b] = pickDemoSwap(snapshot, puzzle.goldRows);
+    let cancelled = false;
+    let key = 0;
+    const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+    const run = async () => {
+      // Tap A — ripple + selection ring
+      setDemoTap({ idx: a, key: ++key });
+      setDemoSelected(a);
+      await wait(550);
+      if (cancelled) return;
+
+      // Tap B — ripple, then swap fires (mirrors real interaction lag)
+      setDemoTap({ idx: b, key: ++key });
+      await wait(180);
+      if (cancelled) return;
+      setDemoSelected(null);
+      setPositions(swapAt(snapshot, a, b));
+
+      // Hold the swapped state long enough to register
+      await wait(900);
+      if (cancelled) return;
+      setPositions(snapshot);
+
+      await wait(450);
+      if (cancelled) return;
+      setDemoTap(null);
+      setDemoPlaying(false);
+      setIdleTick((n) => n + 1);
+    };
+    run();
+
+    return () => {
+      cancelled = true;
+      setDemoSelected(null);
+      setDemoTap(null);
+      setPositions(snapshot);
+    };
+    // positions intentionally excluded — we snapshot once at demo start.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoPlaying, puzzle]);
+
   const handleReveal = useCallback(() => {
     if (!puzzle) return;
     const goldPositions = puzzle.goldRows
@@ -275,6 +327,8 @@ export function TesseraGame() {
   const handleTap = useCallback(
     (idx: number) => {
       setDemoPlaying(false);
+      setDemoSelected(null);
+      setDemoTap(null);
       if (selectedIdx === null) return setSelectedIdx(idx);
       if (selectedIdx === idx) return setSelectedIdx(null);
       setPositions((p) => {
@@ -304,6 +358,8 @@ export function TesseraGame() {
   const positionByTileId = new Map<number, number>();
   positions.forEach((t, idx) => positionByTileId.set(t.id, idx));
   const selectedTileId = selectedIdx !== null ? positions[selectedIdx].id : null;
+  const demoSelectedTileId =
+    demoSelected !== null ? positions[demoSelected]?.id ?? null : null;
 
   // Per-tile "letter belongs to this row's gold solution" hint, multiset-aware.
   // Prefer actual home tiles so duplicate letters don't get spuriously hinted.
@@ -395,21 +451,62 @@ export function TesseraGame() {
         <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
           {puzzle.demo ? "Tessera · puzzle" : `Tessera · #${puzzle.num} · ${puzzle.date}`}
         </p>
-        <p className="text-base mt-2">
-          {isRevealed ? (
-            <span className="font-medium text-[color:var(--color-muted)]">Revealed</span>
-          ) : storedResult ? (
-            <SolvedStatus moves={storedResult.moves} />
-          ) : validity.isSolved && puzzle.forceSolved ? (
-            <span className="font-medium">Solved</span>
-          ) : validity.isSolved && solvedAt !== null ? (
-            <SolvedStatus moves={solvedAt} />
-          ) : (
-            <span className="text-[color:var(--color-muted)]">
-              Moves {moves} · {validity.validRowCount}/{N} rows
-            </span>
-          )}
-        </p>
+        <div className="text-base mt-2 h-10 overflow-hidden flex items-center justify-center px-4 max-w-md mx-auto">
+          <AnimatePresence mode="wait" initial={false}>
+            {(() => {
+              // Roll transition between status messages. Demo tip preempts
+              // the moves counter while a demo is playing, then rolls back.
+              const rollProps = {
+                initial: { y: 14, opacity: 0 },
+                animate: { y: 0, opacity: 1 },
+                exit: { y: -14, opacity: 0 },
+                transition: { duration: 0.25, ease: "easeOut" as const },
+              };
+              if (isRevealed) {
+                return (
+                  <motion.span key="revealed" {...rollProps} className="block font-medium text-[color:var(--color-muted)]">
+                    Revealed
+                  </motion.span>
+                );
+              }
+              if (storedResult) {
+                return (
+                  <motion.span key="stored" {...rollProps} className="block">
+                    <SolvedStatus moves={storedResult.moves} />
+                  </motion.span>
+                );
+              }
+              if (validity.isSolved && puzzle.forceSolved) {
+                return (
+                  <motion.span key="forcesolved" {...rollProps} className="block font-medium">
+                    Solved
+                  </motion.span>
+                );
+              }
+              if (validity.isSolved && solvedAt !== null) {
+                return (
+                  <motion.span key="solvedat" {...rollProps} className="block">
+                    <SolvedStatus moves={solvedAt} />
+                  </motion.span>
+                );
+              }
+              if (demoPlaying) {
+                return (
+                  <motion.span key="demo" {...rollProps} className="block text-sm leading-snug text-[color:var(--color-muted)] text-center">
+                    Tap two tiles to swap them
+                    <br />
+                    to make a grid of 4 letter words
+                  </motion.span>
+                );
+              }
+              return (
+                <motion.span key="moves" {...rollProps} className="block text-[color:var(--color-muted)]">
+                  Moves {moves} · {validity.validRowCount}/{N} rows
+                </motion.span>
+              );
+            })()}
+          </AnimatePresence>
+        </div>
       </div>
 
       <div className="relative" style={{ width: gridPx, height: gridPx }}>
@@ -421,7 +518,7 @@ export function TesseraGame() {
             const c = idx % N;
             const rv = validity.rowValid[r];
             const cv = validity.colValid[c];
-            const isSelected = selectedTileId === tile.id;
+            const isSelected = selectedTileId === tile.id || demoSelectedTileId === tile.id;
             return (
               <motion.button
                 key={tile.id}
@@ -450,20 +547,8 @@ export function TesseraGame() {
               </motion.button>
             );
           })}
-        {demoPlaying && positions.length >= 2 && (
-          <DemoHint
-            key={idleTick}
-            tileSize={TILE}
-            gap={GAP}
-            fromIdx={0}
-            toIdx={1}
-            fromLetter={positions[0].letter}
-            toLetter={positions[1].letter}
-            onDone={() => {
-              setDemoPlaying(false);
-              setIdleTick((n) => n + 1);
-            }}
-          />
+        {demoTap && (
+          <TapRipple key={demoTap.key} idx={demoTap.idx} tileSize={TILE} gap={GAP} />
         )}
       </div>
 
@@ -523,92 +608,56 @@ export function TesseraGame() {
   );
 }
 
-function DemoHint({
-  tileSize,
-  gap,
-  fromIdx,
-  toIdx,
-  fromLetter,
-  toLetter,
-  onDone,
-}: {
-  tileSize: number;
-  gap: number;
-  fromIdx: number;
-  toIdx: number;
-  fromLetter: string;
-  toLetter: string;
-  onDone: () => void;
-}) {
-  const pos = (idx: number) => {
-    const r = Math.floor(idx / N);
-    const c = idx % N;
-    return { x: c * (tileSize + gap), y: r * (tileSize + gap) };
-  };
-  const a = pos(fromIdx);
-  const b = pos(toIdx);
-  // Cursor sits slightly inside the tile centre so the pointer tip lands on
-  // the tile rather than its corner.
-  const cox = tileSize / 2 - 4;
-  const coy = tileSize / 2 - 2;
-  const D = 2.6;
-  // 7 keyframes to cover: idle | tap-A (ring on) | hold | swap | held-swapped | swap-back | fade
-  const ghostTimes = [0, 0.08, 0.3, 0.45, 0.65, 0.85, 1];
-  const ringOff = "0 0 0 0px rgba(10,10,10,0)";
-  const ringOn = "0 0 0 2px rgba(10,10,10,1)";
-
+// Touch-style ripple at a tile's centre. Expands from a dot to fill the
+// tile area while fading out — the same metaphor as Material's tap ripple,
+// readable on both touch and mouse.
+function TapRipple({ idx, tileSize, gap }: { idx: number; tileSize: number; gap: number }) {
+  const r = Math.floor(idx / N);
+  const c = idx % N;
+  const x = c * (tileSize + gap);
+  const y = r * (tileSize + gap);
   return (
-    <>
-      {/* Ghost A: covers tile A. Selection ring lights up while the faux
-         cursor is tapping it; clears the moment the swap fires. */}
-      <motion.div
-        initial={{ x: a.x, y: a.y, opacity: 1, scale: 1, boxShadow: ringOff }}
-        animate={{
-          x: [a.x, a.x, a.x, b.x, b.x, a.x, a.x],
-          y: [a.y, a.y, a.y, b.y, b.y, a.y, a.y],
-          opacity: [1, 1, 1, 1, 1, 1, 0],
-          scale: [1, 1.04, 1.04, 1, 1, 1, 1],
-          boxShadow: [ringOff, ringOn, ringOn, ringOff, ringOff, ringOff, ringOff],
-        }}
-        transition={{ duration: D, times: ghostTimes, ease: "easeInOut" }}
-        style={{ position: "absolute", top: 0, left: 0, width: tileSize, height: tileSize, pointerEvents: "none", zIndex: 5 }}
-        className="flex items-center justify-center rounded-md text-3xl font-medium bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]"
-      >
-        {fromLetter}
-      </motion.div>
-      {/* Ghost B: mirror swap path. No persistent ring — in the real
-         interaction the second tap fires the swap immediately. */}
-      <motion.div
-        initial={{ x: b.x, y: b.y, opacity: 1 }}
-        animate={{
-          x: [b.x, b.x, b.x, a.x, a.x, b.x, b.x],
-          y: [b.y, b.y, b.y, a.y, a.y, b.y, b.y],
-          opacity: [1, 1, 1, 1, 1, 1, 0],
-        }}
-        transition={{ duration: D, times: ghostTimes, ease: "easeInOut" }}
-        style={{ position: "absolute", top: 0, left: 0, width: tileSize, height: tileSize, pointerEvents: "none", zIndex: 5 }}
-        className="flex items-center justify-center rounded-md text-3xl font-medium bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]"
-      >
-        {toLetter}
-      </motion.div>
-      {/* Faux cursor: taps A, moves to B, taps, fades. */}
-      <motion.div
-        initial={{ x: a.x + cox, y: a.y + coy, opacity: 0 }}
-        animate={{
-          x: [a.x + cox, a.x + cox, a.x + cox, b.x + cox, b.x + cox, b.x + cox],
-          y: [a.y + coy, a.y + coy, a.y + coy, b.y + coy, b.y + coy, b.y + coy],
-          opacity: [0, 1, 1, 1, 1, 0],
-        }}
-        transition={{ duration: D, times: [0, 0.06, 0.3, 0.42, 0.7, 0.85], ease: "easeInOut" }}
-        onAnimationComplete={onDone}
-        style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", zIndex: 10 }}
-      >
-        <svg viewBox="0 0 18 18" width="20" height="20" fill="var(--color-ink)" stroke="var(--color-paper)" strokeWidth="1.2" strokeLinejoin="round">
-          <path d="M3 2 L3 14 L6.5 10.8 L9 16 L11.5 14.8 L9 9.5 L13.5 9.5 Z" />
-        </svg>
-      </motion.div>
-    </>
+    <motion.div
+      initial={{ scale: 0, opacity: 0.55 }}
+      animate={{ scale: 1, opacity: 0 }}
+      transition={{ duration: 0.55, ease: "easeOut" }}
+      style={{
+        position: "absolute",
+        left: x,
+        top: y,
+        width: tileSize,
+        height: tileSize,
+        borderRadius: "50%",
+        background: "var(--color-ink)",
+        pointerEvents: "none",
+        zIndex: 20,
+        transformOrigin: "center",
+      }}
+    />
   );
+}
+
+// Pick a swap pair for the demo that won't accidentally validate a row
+// (which would flash a fake "you got one!" on screen). Falls back to [0,1]
+// if every candidate is risky.
+function pickDemoSwap(positions: Tile[], goldRows: string[]): [number, number] {
+  const candidates: [number, number][] = [
+    [0, 1], [1, 2], [2, 3],
+    [4, 5], [5, 6], [6, 7],
+    [0, 4], [1, 5], [2, 6], [3, 7],
+  ];
+  const upper = goldRows.map((r) => r.toUpperCase());
+  const validRows = (p: Tile[]) =>
+    [0, 1, 2, 3].filter(
+      (r) => Array.from({ length: N }, (_, c) => p[r * N + c].letter).join("") === upper[r]
+    ).length;
+  const before = validRows(positions);
+  for (const [a, b] of candidates) {
+    if (a >= positions.length || b >= positions.length) continue;
+    const after = validRows(swapAt(positions, a, b));
+    if (after <= before) return [a, b];
+  }
+  return [0, 1];
 }
 
 function Legend({ children, variant }: { children: React.ReactNode; variant: "row" | "bonus" | "hint" }) {
