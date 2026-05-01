@@ -10,7 +10,11 @@ if (typeof window !== "undefined") {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (key) {
     posthog.init(key, {
-      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com",
+      // Send ingestion through our own origin (proxied via next.config.ts
+      // rewrites) so adblockers don't kill the requests. ui_host keeps
+      // PostHog's UI links pointing at the real dashboard.
+      api_host: "/ingest",
+      ui_host: "https://eu.posthog.com",
       capture_pageview: true,
       capture_pageleave: true,
       // Autocapture would log every tile tap and burn through the event
