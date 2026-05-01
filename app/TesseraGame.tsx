@@ -612,21 +612,25 @@ function DemoHint({
 }
 
 function Legend({ children, variant }: { children: React.ReactNode; variant: "row" | "bonus" | "hint" }) {
-  if (variant === "hint") {
-    return (
-      <span className="inline-flex items-center gap-1.5">
-        <span
-          className="inline-block w-3 h-3 rounded-sm"
-          style={{ background: "var(--color-cream)", outline: "2px dashed #3d5a32", outlineOffset: "-3px" }}
-        />
-        {children}
-      </span>
-    );
-  }
-  const bg = variant === "bonus" ? "#d9b25a" : "#7a9070";
+  // Mini tiles, styled to match the real grid 1:1 so the legend swatch is
+  // visually identical to what you're looking for on the board.
+  const isHint = variant === "hint";
+  const bg = isHint ? "var(--color-cream)" : variant === "bonus" ? "#d9b25a" : "#7a9070";
+  const color = variant === "row" ? "var(--color-paper)" : "var(--color-ink)";
+  const letter = isHint ? "A" : variant === "row" ? "B" : "C";
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className="inline-block w-3 h-3 rounded-sm" style={{ background: bg }} />
+      <span
+        className="inline-flex items-center justify-center w-5 h-5 rounded-[3px] text-[11px] font-medium leading-none"
+        style={{
+          background: bg,
+          color,
+          outline: isHint ? "2px dashed #3d5a32" : undefined,
+          outlineOffset: isHint ? "-3px" : undefined,
+        }}
+      >
+        {letter}
+      </span>
       {children}
     </span>
   );
@@ -635,7 +639,7 @@ function Legend({ children, variant }: { children: React.ReactNode; variant: "ro
 function tileClasses(rowValid: boolean, puzzleSolved: boolean, homeHint: boolean): string {
   if (puzzleSolved) return "bg-[#d9b25a] text-[color:var(--color-ink)]";
   if (rowValid) return "bg-[#7a9070] text-[color:var(--color-paper)]";
-  if (homeHint) return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)] outline-2 outline-dashed outline-[#3d5a32] -outline-offset-[3px]";
+  if (homeHint) return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] outline-2 outline-dashed outline-[#3d5a32] -outline-offset-[3px]";
   return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]";
 }
 
