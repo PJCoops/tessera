@@ -525,9 +525,34 @@ export function TesseraGame() {
                 animate={{
                   x: c * (TILE + GAP),
                   y: r * (TILE + GAP),
-                  scale: isSelected ? 1.04 : 1,
+                  // Solved cascade: each tile bounces + wobbles in reading
+                  // order (top-left to bottom-right) with a 70 ms stagger.
+                  scale: validity.isSolved ? [1, 1.1, 1] : isSelected ? 1.04 : 1,
+                  rotate: validity.isSolved ? [0, -3, 3, 0] : 0,
+                  // Drive bg/text via framer when solved so we can stagger;
+                  // otherwise leave undefined so the Tailwind class wins.
+                  backgroundColor: validity.isSolved ? "#d9b25a" : undefined,
+                  color: validity.isSolved ? "#0a0a0a" : undefined,
                 }}
-                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 35,
+                  scale: validity.isSolved
+                    ? { duration: 0.5, delay: idx * 0.07, ease: "easeOut" }
+                    : isSelected
+                    ? { type: "spring", stiffness: 500, damping: 35 }
+                    : { duration: 0.15 },
+                  rotate: validity.isSolved
+                    ? { duration: 0.5, delay: idx * 0.07, ease: "easeOut" }
+                    : { duration: 0.15 },
+                  backgroundColor: validity.isSolved
+                    ? { duration: 0.25, delay: idx * 0.07 + 0.1 }
+                    : { duration: 0.2 },
+                  color: validity.isSolved
+                    ? { duration: 0.25, delay: idx * 0.07 + 0.1 }
+                    : { duration: 0.2 },
+                }}
                 onClick={() => handleTap(idx)}
                 style={{
                   position: "absolute",
@@ -537,9 +562,8 @@ export function TesseraGame() {
                   height: TILE,
                   zIndex: isSelected ? 10 : 1,
                 }}
-                className={`flex items-center justify-center rounded-md text-3xl font-medium touch-manipulation transition-[background-color,color,border-color] duration-200 ${tileClasses(
+                className={`flex items-center justify-center rounded-md text-3xl font-medium touch-manipulation ${tileClasses(
                   rv,
-                  validity.isSolved,
                   !hideHints && homeHintByIdx[idx]
                 )} ${isSelected ? "ring-2 ring-[color:var(--color-ink)]" : ""}`}
               >
@@ -685,8 +709,9 @@ function Legend({ children, variant }: { children: React.ReactNode; variant: "ro
   );
 }
 
-function tileClasses(rowValid: boolean, puzzleSolved: boolean, homeHint: boolean): string {
-  if (puzzleSolved) return "bg-[#d9b25a] text-[color:var(--color-ink)]";
+function tileClasses(rowValid: boolean, homeHint: boolean): string {
+  // The solved (gold) state is driven by framer's animate prop so the cascade
+  // can stagger per tile — see the motion.button in the grid render.
   if (rowValid) return "bg-[#7a9070] text-[color:var(--color-paper)]";
   if (homeHint) return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] outline-2 outline-dashed outline-[#3d5a32] -outline-offset-[3px]";
   return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]";
