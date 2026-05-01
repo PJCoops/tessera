@@ -18,6 +18,24 @@ export const dynamic = "force-dynamic";
 const COOKIE_NAME = "stats_auth";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
+// Comma-separated PostHog distinct_ids to exclude from every query, so your
+// own test sessions don't pollute the dashboard. Append new IDs as you test
+// from new devices (find them in PostHog → Activity → click any event).
+function buildExcludeClause(): string {
+  const raw = process.env.STATS_EXCLUDE_IDS;
+  if (!raw) return "";
+  const ids = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    // Defensive: HogQL strings are single-quoted, so escape any embedded
+    // single quotes.
+    .map((id) => `'${id.replace(/'/g, "''")}'`);
+  if (ids.length === 0) return "";
+  return ` AND distinct_id NOT IN (${ids.join(",")})`;
+}
+const EXCLUDE = buildExcludeClause();
+
 async function signIn(formData: FormData) {
   "use server";
   const token = String(formData.get("t") ?? "");
@@ -151,7 +169,7 @@ export default async function StatsPage({
             toInt(countIf(event = 'puzzle_revealed')) AS revealed
           FROM events
           WHERE timestamp >= now() - INTERVAL 14 DAY
-            AND event IN ('puzzle_started', 'puzzle_solved', 'puzzle_revealed')
+            AND event IN ('puzzle_started', 'puzzle_solved', 'puzzle_revealed')${EXCLUDE}
           GROUP BY day
           ORDER BY day DESC
         `),
@@ -159,7 +177,7 @@ export default async function StatsPage({
           SELECT toInt(toString(properties.moves)) AS moves,
             toInt(count()) AS solves
           FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY
+          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
           GROUP BY moves
           HAVING moves IS NOT NULL
           ORDER BY moves
@@ -169,7 +187,7 @@ export default async function StatsPage({
             toInt(count()) AS toggles,
             toInt(uniq(distinct_id)) AS users
           FROM events
-          WHERE event = 'hide_hints_toggled' AND timestamp >= now() - INTERVAL 30 DAY
+          WHERE event = 'hide_hints_toggled' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
           GROUP BY enabled
         `),
         hogql<PuzzleRow>(`
@@ -178,7 +196,7 @@ export default async function StatsPage({
             round(avg(toInt(toString(properties.moves))), 1) AS avg_moves,
             quantile(0.5)(toInt(toString(properties.moves))) AS median_moves
           FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY
+          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
           GROUP BY num
           HAVING num IS NOT NULL
           ORDER BY num DESC
@@ -187,13 +205,13 @@ export default async function StatsPage({
         hogql<TierRow>(`
           SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
           FROM events
-          WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()
+          WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
           GROUP BY tier
         `),
         hogql<TierRow>(`
           SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
           FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY
+          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
           GROUP BY tier
         `),
         hogql<TodayRow>(`
@@ -204,7 +222,7 @@ export default async function StatsPage({
             toInt(countIf(toString(properties.bonus) = 'true')) AS bonus,
             toInt(max(toInt(toString(properties.streak)))) AS top_streak
           FROM events
-          WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()
+          WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
           GROUP BY num
         `),
         hogql<ExtremeRow>(`
@@ -212,7 +230,7 @@ export default async function StatsPage({
             toInt(count()) AS solves,
             round(avg(toInt(toString(properties.moves))), 1) AS avg_moves
           FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY
+          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
           GROUP BY num
           HAVING solves >= 5
           ORDER BY avg_moves DESC
@@ -223,7 +241,7 @@ export default async function StatsPage({
             toInt(count()) AS solves,
             round(avg(toInt(toString(properties.moves))), 1) AS avg_moves
           FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY
+          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
           GROUP BY num
           HAVING solves >= 5
           ORDER BY avg_moves ASC
@@ -237,7 +255,7 @@ export default async function StatsPage({
             toInt(max(toInt(toString(properties.streak)))) AS top_streak,
             toInt(uniq(distinct_id)) AS unique_solvers
           FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 90 DAY
+          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 90 DAY${EXCLUDE}
         `),
         hogql<AllTimeRow>(`
           SELECT
@@ -250,12 +268,13 @@ export default async function StatsPage({
             toInt(countIf(event = 'puzzle_solved' AND toString(properties.bonus) = 'true')) AS bonus_solves,
             toInt(maxIf(toInt(toString(properties.streak)), event = 'puzzle_solved')) AS top_streak
           FROM events
+          WHERE 1=1${EXCLUDE}
         `),
         hogql<BiggestDayRow>(`
           SELECT toString(toDate(timestamp)) AS day,
             toInt(count()) AS solves
           FROM events
-          WHERE event = 'puzzle_solved'
+          WHERE event = 'puzzle_solved'${EXCLUDE}
           GROUP BY day
           ORDER BY solves DESC
           LIMIT 1
@@ -268,7 +287,7 @@ export default async function StatsPage({
           FROM (
             SELECT distinct_id, count() AS n
             FROM events
-            WHERE event = 'puzzle_solved'
+            WHERE event = 'puzzle_solved'${EXCLUDE}
             GROUP BY distinct_id
           )
         `),
@@ -346,7 +365,9 @@ export default async function StatsPage({
           <h1 className="text-2xl font-light tracking-tight mt-1">Player activity</h1>
         </div>
         <div className="flex items-center gap-3">
-          <p className="text-xs text-[color:var(--color-muted)]">Cached up to 5 min</p>
+          <p className="text-xs text-[color:var(--color-muted)] tabular-nums">
+            Fetched {new Date().toISOString().slice(11, 19)} UTC
+          </p>
           <form action={signOut}>
             <button
               type="submit"

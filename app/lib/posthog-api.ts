@@ -1,6 +1,9 @@
 // Server-side PostHog Query API helper. Personal API keys must never reach
 // the client — this module only runs in server components / route handlers.
-import { unstable_cache } from "next/cache";
+//
+// No caching layer: the /stats page is force-dynamic and only hit a handful
+// of times a day. Adding a cache (Next's unstable_cache or otherwise) just
+// hides freshness bugs. Every page render = a fresh PostHog query.
 
 // Ingestion runs through eu.i.posthog.com but the Query API lives on the
 // non-`i.` host. Derive the API host from the public ingestion host so we
@@ -16,7 +19,7 @@ type QueryResponse = {
   results?: unknown[][];
 };
 
-async function rawQuery<T>(query: string): Promise<T[]> {
+export async function hogql<T>(query: string): Promise<T[]> {
   const key = process.env.POSTHOG_PERSONAL_API_KEY;
   const projectId = process.env.POSTHOG_PROJECT_ID;
   if (!key || !projectId) {
@@ -29,6 +32,7 @@ async function rawQuery<T>(query: string): Promise<T[]> {
       Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({ query: { kind: "HogQLQuery", query } }),
+    cache: "no-store",
   });
   if (!res.ok) {
     throw new Error(`PostHog query failed (${res.status}): ${await res.text()}`);
@@ -38,7 +42,3 @@ async function rawQuery<T>(query: string): Promise<T[]> {
   const rows = data.results ?? [];
   return rows.map((r) => Object.fromEntries(cols.map((c, i) => [c, r[i]])) as T);
 }
-
-// Cache each distinct query for 5 minutes so refreshing the dashboard doesn't
-// hammer PostHog's quota.
-export const hogql = unstable_cache(rawQuery, ["hogql"], { revalidate: 300 });
