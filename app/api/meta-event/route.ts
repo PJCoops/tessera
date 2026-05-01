@@ -10,6 +10,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 const CAPI_TOKEN = process.env.META_CAPI_TOKEN;
+// When META_TEST_EVENT_CODE is set, every CAPI event is routed to Meta's
+// Test events tab and excluded from optimization. Unset (or set to empty) in
+// production once setup is verified.
+const TEST_EVENT_CODE = process.env.META_TEST_EVENT_CODE || undefined;
 const GRAPH_VERSION = "v21.0";
 
 type EventBody = {
@@ -44,7 +48,7 @@ export async function POST(req: NextRequest) {
   const fbp = req.cookies.get("_fbp")?.value;
   const fbc = req.cookies.get("_fbc")?.value;
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     data: [
       {
         event_name,
@@ -62,6 +66,7 @@ export async function POST(req: NextRequest) {
       },
     ],
   };
+  if (TEST_EVENT_CODE) payload.test_event_code = TEST_EVENT_CODE;
 
   try {
     const url = `https://graph.facebook.com/${GRAPH_VERSION}/${PIXEL_ID}/events?access_token=${encodeURIComponent(CAPI_TOKEN)}`;
