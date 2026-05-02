@@ -665,12 +665,20 @@ export function TesseraGame() {
           </button>
         )}
         {!validity.isSolved && !storedResult && (
-          <button
-            onClick={() => setConfirmReveal(true)}
-            className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition-colors"
-          >
-            Reveal solution
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => updateHideHints(!hideHints)}
+              className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] bg-[color:var(--color-cream)] rounded-md hover:text-[color:var(--color-ink)] transition-colors"
+            >
+              {hideHints ? "Show hints" : "Hide hints"}
+            </button>
+            <button
+              onClick={() => setConfirmReveal(true)}
+              className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] bg-[color:var(--color-cream)] rounded-md hover:text-[color:var(--color-ink)] transition-colors"
+            >
+              Reveal solution
+            </button>
+          </div>
         )}
         {finished && (
           <p className="text-xs text-[color:var(--color-muted)]">Next puzzle in {countdown}</p>
