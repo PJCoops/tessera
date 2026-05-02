@@ -11,7 +11,8 @@ export type AnalyticsEvent =
   | "puzzle_solved"
   | "puzzle_revealed"
   | "hide_hints_toggled"
-  | "muted_toggled";
+  | "muted_toggled"
+  | "email_subscribed";
 
 // Mirror to Meta only the events worth optimizing ad delivery against.
 // PageView is auto-fired by the Pixel snippet itself. ViewContent is a

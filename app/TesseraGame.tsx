@@ -9,6 +9,7 @@ import { buildShareString } from "./lib/share";
 import { getTier } from "./lib/tier";
 import { HowToPlay, hasSeenHowTo, markHowToSeen } from "./HowToPlay";
 import { HistoryModal } from "./HistoryModal";
+import { EmailSignup } from "./EmailSignup";
 import { track } from "./lib/analytics";
 
 const N = 4;
@@ -673,6 +674,11 @@ export function TesseraGame() {
         )}
         {finished && (
           <p className="text-xs text-[color:var(--color-muted)]">Next puzzle in {countdown}</p>
+        )}
+        {finished && (
+          <div className="mt-2 w-full max-w-xs">
+            <EmailSignup source={isRevealed ? "revealed" : "solved"} />
+          </div>
         )}
 
         <div className="mt-2 flex items-center gap-4 text-xs text-[color:var(--color-muted)]">
