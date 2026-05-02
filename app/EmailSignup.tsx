@@ -6,7 +6,7 @@ import { track } from "./lib/analytics";
 const DISMISSED_KEY = "tessera:email-dismissed";
 const SUBSCRIBED_KEY = "tessera:email-subscribed";
 
-type Status = "idle" | "submitting" | "ok" | "error";
+type Status = "idle" | "submitting" | "ok" | "error" | "not_configured";
 
 export function hasSubscribed(): boolean {
   if (typeof window === "undefined") return false;
@@ -59,7 +59,14 @@ export function EmailSignup({
         body: JSON.stringify({ email: email.trim(), source }),
       });
       if (!res.ok) {
-        setStatus("error");
+        // Distinguish "the operator hasn't configured this yet" from a
+        // real failure so the form doesn't yell at users before launch.
+        let reason: string | undefined;
+        try {
+          const j = (await res.json()) as { reason?: string };
+          reason = j.reason;
+        } catch {}
+        setStatus(reason === "not_configured" ? "not_configured" : "error");
         return;
       }
       try {
@@ -142,6 +149,11 @@ export function EmailSignup({
       {status === "error" && (
         <p className="mt-2 text-[11px] text-red-700">
           Something went wrong. Check the address and try again.
+        </p>
+      )}
+      {status === "not_configured" && (
+        <p className="mt-2 text-[11px] text-[color:var(--color-muted)]">
+          Reminders aren&rsquo;t live yet. Come back soon.
         </p>
       )}
     </div>
