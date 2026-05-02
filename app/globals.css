@@ -32,3 +32,10 @@ body {
   background: var(--color-accent);
   color: var(--color-paper);
 }
+
+/* ?demo mode hides the OS cursor in favour of a synthetic grey follower
+   rendered by TesseraGame for cleaner screen recordings. */
+html.demo-cursor-hide,
+html.demo-cursor-hide * {
+  cursor: none !important;
+}

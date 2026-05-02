@@ -125,6 +125,9 @@ export function TesseraGame() {
   const [idleTick, setIdleTick] = useState(0);
   const [demoSelected, setDemoSelected] = useState<number | null>(null);
   const [demoTap, setDemoTap] = useState<{ idx: number; key: number } | null>(null);
+  // Position of the synthetic cursor follower used in ?demo mode for cleaner
+  // screen recordings. Null until the mouse first moves.
+  const [demoCursor, setDemoCursor] = useState<{ x: number; y: number; down: boolean } | null>(null);
   const [hideHints, setHideHints] = useState(false);
 
   // Initialise on client mount (avoids SSR/UTC drift hydration mismatch).
@@ -241,6 +244,31 @@ export function TesseraGame() {
     }
     if (validity.isBonus && bonusAt === null) setBonusAt(moves);
   }, [validity.isSolved, validity.isBonus, moves, solvedAt, bonusAt, puzzle, storedResult]);
+
+  // ?demo mode: hide the OS cursor and render a small grey follower dot
+  // instead. Makes screen recordings look intentional rather than showing the
+  // operating-system pointer.
+  useEffect(() => {
+    if (!puzzle?.demo) return;
+    const onMove = (e: MouseEvent) => {
+      setDemoCursor((prev) => ({ x: e.clientX, y: e.clientY, down: prev?.down ?? false }));
+    };
+    const onDown = () => setDemoCursor((prev) => (prev ? { ...prev, down: true } : prev));
+    const onUp = () => setDemoCursor((prev) => (prev ? { ...prev, down: false } : prev));
+    const onLeave = () => setDemoCursor(null);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("mouseup", onUp);
+    document.addEventListener("mouseleave", onLeave);
+    document.documentElement.classList.add("demo-cursor-hide");
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("mouseup", onUp);
+      document.removeEventListener("mouseleave", onLeave);
+      document.documentElement.classList.remove("demo-cursor-hide");
+    };
+  }, [puzzle?.demo]);
 
   // Show a one-shot demo swap if the player has stalled before their first move.
   // Replays every 7s of continued inactivity so it's always there when they look up.
@@ -436,6 +464,23 @@ export function TesseraGame() {
 
   return (
     <div className="flex flex-col items-center select-none">
+      {puzzle.demo && demoCursor && (
+        <div
+          className="pointer-events-none fixed rounded-full"
+          style={{
+            left: demoCursor.x - 11,
+            top: demoCursor.y - 11,
+            width: 22,
+            height: 22,
+            background: demoCursor.down ? "rgba(60,60,60,0.55)" : "rgba(120,120,120,0.45)",
+            border: "1px solid rgba(255,255,255,0.6)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
+            zIndex: 9999,
+            transform: demoCursor.down ? "scale(0.85)" : "scale(1)",
+            transition: "transform 80ms ease-out, background 80ms ease-out",
+          }}
+        />
+      )}
       <HowToPlay
         open={howToOpen}
         onClose={closeHowTo}
