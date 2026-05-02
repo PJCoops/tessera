@@ -9,6 +9,7 @@
 //   LOOPS_DAILY_AUDIENCE_ID  — if set, the contact is added to that audience
 //
 import { NextRequest, NextResponse } from "next/server";
+import { addSubscriber } from "../../lib/subscribers";
 
 const LOOPS_ENDPOINT = "https://app.loops.so/api/v1/contacts/create";
 // Loops also exposes /update which upserts. Use it so a returning visitor
@@ -96,6 +97,16 @@ export async function POST(req: NextRequest) {
       { ok: false, reason: "upstream" },
       { status: 502 }
     );
+  }
+
+  // Mirror to our own subscriber list. The daily-reminder cron iterates
+  // this set because Loops has no list-contacts endpoint. KV failures
+  // are swallowed so a transient KV blip doesn't kill the signup —
+  // Loops still got the address and the welcome email will fire.
+  try {
+    await addSubscriber(email);
+  } catch (e) {
+    console.error("KV addSubscriber failed:", e);
   }
 
   return NextResponse.json({ ok: true });
