@@ -447,11 +447,11 @@ export function TesseraGame() {
   const liveStreak = visibleCurrent(streak, puzzle.num);
   const isRevealed = storedResult?.revealed === true;
   const shareSrc = isRevealed
-    ? { moves: storedResult!.moves, revealed: true }
+    ? { moves: storedResult!.moves, bonus: false, revealed: true }
     : validity.isSolved
-    ? { moves, revealed: false }
+    ? { moves, bonus: validity.isBonus, revealed: false }
     : storedResult
-    ? { moves: storedResult.moves, revealed: false }
+    ? { moves: storedResult.moves, bonus: storedResult.bonus, revealed: false }
     : null;
   const canShare = shareSrc !== null;
   const shareString = shareSrc
@@ -459,6 +459,7 @@ export function TesseraGame() {
         puzzleNumber: puzzle.num,
         moves: shareSrc.moves,
         streak: liveStreak,
+        bonus: shareSrc.bonus,
         revealed: shareSrc.revealed,
       })
     : "";
