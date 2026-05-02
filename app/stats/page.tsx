@@ -111,6 +111,7 @@ type AllTimeRow = {
   total_started: number;
   total_solved: number;
   total_revealed: number;
+  unique_visitors: number;
   unique_players: number;
   unique_solvers: number;
   total_moves: number;
@@ -119,6 +120,7 @@ type AllTimeRow = {
 };
 type BiggestDayRow = { day: string; solves: number };
 type ReturningRow = { returning: number; total: number; top_player_solves: number };
+type RecentIdRow = { distinct_id: string; events: number; first_seen: string; last_seen: string };
 
 export default async function StatsPage({
   searchParams,
@@ -145,6 +147,7 @@ export default async function StatsPage({
   let allTime: AllTimeRow[] = [];
   let biggestDay: BiggestDayRow[] = [];
   let returning: ReturningRow[] = [];
+  let recentIds: RecentIdRow[] = [];
   let error: string | null = null;
   try {
     [
@@ -161,6 +164,7 @@ export default async function StatsPage({
       allTime,
       biggestDay,
       returning,
+      recentIds,
     ] = await Promise.all([
         hogql<DailyRow>(`
           SELECT toString(toDate(timestamp)) AS day,
@@ -262,6 +266,7 @@ export default async function StatsPage({
             toInt(countIf(event = 'puzzle_started')) AS total_started,
             toInt(countIf(event = 'puzzle_solved')) AS total_solved,
             toInt(countIf(event = 'puzzle_revealed')) AS total_revealed,
+            toInt(uniqIf(distinct_id, event = '$pageview')) AS unique_visitors,
             toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS unique_players,
             toInt(uniqIf(distinct_id, event = 'puzzle_solved')) AS unique_solvers,
             toInt(sumIf(toInt(toString(properties.moves)), event = 'puzzle_solved')) AS total_moves,
@@ -291,6 +296,19 @@ export default async function StatsPage({
             GROUP BY distinct_id
           )
         `),
+        // Diagnostic: NOT filtered by EXCLUDE so we can see *all* recently
+        // active distinct_ids and identify which ones are us.
+        hogql<RecentIdRow>(`
+          SELECT distinct_id,
+            toInt(count()) AS events,
+            toString(min(timestamp)) AS first_seen,
+            toString(max(timestamp)) AS last_seen
+          FROM events
+          WHERE timestamp >= now() - INTERVAL 7 DAY
+          GROUP BY distinct_id
+          ORDER BY events DESC
+          LIMIT 20
+        `),
       ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -304,6 +322,12 @@ export default async function StatsPage({
   const ret = returning[0];
   const returningPct = ret?.total ? (ret.returning / ret.total) * 100 : 0;
   const allTimeSolveRate = at?.total_started ? (at.total_solved / at.total_started) * 100 : 0;
+  const visitorEngageRate = at?.unique_visitors
+    ? ((at.unique_players ?? 0) / at.unique_visitors) * 100
+    : 0;
+  const playerSolveRate = at?.unique_players
+    ? ((at.unique_solvers ?? 0) / at.unique_players) * 100
+    : 0;
   const totalTilesFlippedAllTime = (at?.total_moves ?? 0) * 2;
   const totals = daily.reduce(
     (acc, d) => ({
@@ -387,10 +411,30 @@ export default async function StatsPage({
       ) : (
         <>
           {/* HERO — all-time big numbers */}
-          <section className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-            <Hero label="Total players" value={fmt(at?.unique_players ?? 0)} />
-            <Hero label="Total solves" value={fmt(at?.total_solved ?? 0)} />
-            <Hero label="Games started" value={fmt(at?.total_started ?? 0)} />
+          <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+            <Hero
+              label="Visitors"
+              value={fmt(at?.unique_visitors ?? 0)}
+              suffix="loaded the page"
+            />
+            <Hero
+              label="Engaged players"
+              value={fmt(at?.unique_players ?? 0)}
+              suffix={
+                at?.unique_visitors
+                  ? `${visitorEngageRate.toFixed(0)}% of visitors started a puzzle`
+                  : "started a puzzle"
+              }
+            />
+            <Hero
+              label="Solvers"
+              value={fmt(at?.unique_solvers ?? 0)}
+              suffix={
+                at?.unique_players
+                  ? `${playerSolveRate.toFixed(0)}% of players solved one`
+                  : "solved at least one"
+              }
+            />
           </section>
 
           {/* SOCIAL — pre-formatted blurb at the top so it's the first thing
@@ -688,13 +732,24 @@ function Login({ error }: { error: boolean }) {
   );
 }
 
-function Hero({ label, value }: { label: string; value: string }) {
+function Hero({
+  label,
+  value,
+  suffix,
+}: {
+  label: string;
+  value: string;
+  suffix?: string;
+}) {
   return (
     <div className="border border-[color:var(--color-rule)] rounded-lg p-6 bg-[color:var(--color-cream)]">
       <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">{label}</p>
       <p className="text-5xl sm:text-6xl font-light tabular-nums mt-2 leading-none tracking-tight">
         {value}
       </p>
+      {suffix && (
+        <p className="text-[11px] text-[color:var(--color-muted)] mt-2">{suffix}</p>
+      )}
     </div>
   );
 }
