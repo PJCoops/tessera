@@ -71,16 +71,6 @@ export default function RootLayout({
             {children}
           </main>
           <footer className="py-6 text-center text-xs text-[color:var(--color-muted)]">
-            Made by{" "}
-            <a
-              href="https://pjcooper.design"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline-offset-4 hover:underline hover:text-[color:var(--color-ink)] transition-colors"
-            >
-              Paul Cooper
-            </a>
-            {" · "}
             <a
               href="https://www.reddit.com/r/TesseraPuzzle/"
               target="_blank"

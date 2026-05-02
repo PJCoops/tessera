@@ -22,7 +22,7 @@ export function markHowToSeen() {
   } catch {}
 }
 
-type Tab = "how" | "words" | "settings";
+type Tab = "how" | "words" | "settings" | "credits";
 type InitialTab = "how" | "words";
 
 export function HowToPlay({
@@ -33,6 +33,8 @@ export function HowToPlay({
   initialTab = "how",
   hideHints,
   onHideHintsChange,
+  muted,
+  onMutedChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -41,6 +43,8 @@ export function HowToPlay({
   initialTab?: InitialTab;
   hideHints: boolean;
   onHideHintsChange: (v: boolean) => void;
+  muted: boolean;
+  onMutedChange: (v: boolean) => void;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
 
@@ -100,14 +104,23 @@ export function HowToPlay({
               <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>
                 Settings
               </TabButton>
+              <TabButton active={tab === "credits"} onClick={() => setTab("credits")}>
+                Credits
+              </TabButton>
             </div>
 
             <div className="mt-6">
               {tab === "how" && <HowToContent />}
               {tab === "words" && <WordsContent goldRows={goldRows} />}
               {tab === "settings" && (
-                <SettingsContent hideHints={hideHints} onChange={onHideHintsChange} />
+                <SettingsContent
+                  hideHints={hideHints}
+                  onHideHintsChange={onHideHintsChange}
+                  muted={muted}
+                  onMutedChange={onMutedChange}
+                />
               )}
+              {tab === "credits" && <CreditsContent />}
             </div>
 
             {tab === "how" && (
@@ -165,7 +178,7 @@ function HowToContent() {
         <div>
           <p className="font-medium">Find today&rsquo;s four words.</p>
           <p className="text-[color:var(--color-muted)] mt-1">
-            Each row is one specific word. Tiles with a green outline are already on the right row. Tiles fill green when the whole row matches today&rsquo;s word.
+            Each row is one specific word. Tiles fill green when the whole row matches today&rsquo;s word. Turn on hints in Settings to also mark tiles already on the right row with a green outline.
           </p>
         </div>
       </li>
@@ -325,31 +338,136 @@ function WordsContent({ goldRows }: { goldRows: string[] }) {
 
 function SettingsContent({
   hideHints,
-  onChange,
+  onHideHintsChange,
+  muted,
+  onMutedChange,
 }: {
   hideHints: boolean;
-  onChange: (v: boolean) => void;
+  onHideHintsChange: (v: boolean) => void;
+  muted: boolean;
+  onMutedChange: (v: boolean) => void;
 }) {
   return (
     <div className="space-y-5 text-sm">
-      <label className="flex items-start gap-4 cursor-pointer">
-        <span className="relative inline-flex flex-shrink-0 items-center w-10 h-6 mt-0.5">
-          <input
-            type="checkbox"
-            className="sr-only peer"
-            checked={hideHints}
-            onChange={(e) => onChange(e.target.checked)}
-          />
-          <span className="absolute inset-0 rounded-full bg-[color:var(--color-cream)] border border-[color:var(--color-rule)] peer-checked:bg-[color:var(--color-ink)] peer-checked:border-[color:var(--color-ink)] transition-colors" />
-          <span className="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-[color:var(--color-paper)] shadow transition-transform peer-checked:translate-x-4" />
-        </span>
-        <span>
-          <span className="font-medium">Hide row hints</span>
-          <span className="block text-[color:var(--color-muted)] mt-1">
-            Removes the dotted outline that marks tiles already on the right row. Harder mode.
-          </span>
-        </span>
-      </label>
+      <SettingsToggle
+        checked={hideHints}
+        onChange={onHideHintsChange}
+        title="Hide row hints"
+        description="Removes the dotted outline that marks tiles already on the right row. Harder mode."
+      />
+      <SettingsToggle
+        checked={muted}
+        onChange={onMutedChange}
+        title="Mute"
+        description="Silences the win jingle when you solve the puzzle."
+      />
+    </div>
+  );
+}
+
+function SettingsToggle({
+  checked,
+  onChange,
+  title,
+  description,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <label className="flex items-start gap-4 cursor-pointer">
+      <span className="relative inline-flex flex-shrink-0 items-center w-10 h-6 mt-0.5">
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <span className="absolute inset-0 rounded-full bg-[color:var(--color-cream)] border border-[color:var(--color-rule)] peer-checked:bg-[color:var(--color-ink)] peer-checked:border-[color:var(--color-ink)] transition-colors" />
+        <span className="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-[color:var(--color-paper)] shadow transition-transform peer-checked:translate-x-4" />
+      </span>
+      <span>
+        <span className="font-medium">{title}</span>
+        <span className="block text-[color:var(--color-muted)] mt-1">{description}</span>
+      </span>
+    </label>
+  );
+}
+
+function CreditsContent() {
+  return (
+    <div className="space-y-5 text-sm max-h-[60vh] overflow-y-auto pr-1">
+      <section>
+        <h3 className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
+          Created by
+        </h3>
+        <p className="mt-2">
+          <a
+            href="https://pjcooper.design"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline-offset-4 hover:underline"
+          >
+            Paul Cooper
+          </a>
+        </p>
+      </section>
+
+      <section>
+        <h3 className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
+          Sound effects
+        </h3>
+        <ul className="mt-2 space-y-2 text-[color:var(--color-ink-soft)]">
+          <li>
+            <a
+              href="https://freesound.org/s/808180/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline-offset-4 hover:underline"
+            >
+              Ice Cream Truck at Park Playground
+            </a>
+            {" "}by fudgealtoid. License: Attribution 4.0.
+          </li>
+          <li>
+            <a
+              href="https://freesound.org/s/615100/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline-offset-4 hover:underline"
+            >
+              Magic Game Win Success 2
+            </a>
+            {" "}by MLaudio. License: Creative Commons 0.
+          </li>
+          <li>
+            <a
+              href="https://freesound.org/s/274183/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline-offset-4 hover:underline"
+            >
+              Jingle Win Synth 04
+            </a>
+            {" "}by LittleRobotSoundFactory. License: Attribution 4.0.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
+          Contributors
+        </h3>
+        <ul className="mt-2 space-y-1 text-[color:var(--color-ink-soft)]">
+          <li>Christine Banfield</li>
+          <li>Don Brown</li>
+          <li>Alison Burd</li>
+          <li>Brett Pandora</li>
+          <li>Richard Pattie</li>
+        </ul>
+      </section>
     </div>
   );
 }

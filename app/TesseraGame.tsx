@@ -33,6 +33,7 @@ function swapAt(p: Tile[], a: number, b: number): Tile[] {
 const RESULT_PREFIX = "tessera:result:";
 const PROGRESS_PREFIX = "tessera:progress:";
 const HIDE_HINTS_KEY = "tessera:hide-hints";
+const MUTED_KEY = "tessera:muted";
 
 type Progress = { positions: Tile[]; moves: number };
 
@@ -128,7 +129,8 @@ export function TesseraGame() {
   // Position of the synthetic cursor follower used in ?demo mode for cleaner
   // screen recordings. Null until the mouse first moves.
   const [demoCursor, setDemoCursor] = useState<{ x: number; y: number; down: boolean } | null>(null);
-  const [hideHints, setHideHints] = useState(false);
+  const [hideHints, setHideHints] = useState(true);
+  const [muted, setMuted] = useState(true);
 
   // Initialise on client mount (avoids SSR/UTC drift hydration mismatch).
   useEffect(() => {
@@ -173,7 +175,10 @@ export function TesseraGame() {
     if (!demo) pruneOldProgress(num);
     if (!hasSeenHowTo()) setHowToOpen(true);
     try {
-      setHideHints(window.localStorage.getItem(HIDE_HINTS_KEY) === "1");
+      const hh = window.localStorage.getItem(HIDE_HINTS_KEY);
+      if (hh !== null) setHideHints(hh === "1");
+      const m = window.localStorage.getItem(MUTED_KEY);
+      if (m !== null) setMuted(m === "1");
     } catch {}
     setMounted(true);
   }, []);
@@ -184,6 +189,14 @@ export function TesseraGame() {
       window.localStorage.setItem(HIDE_HINTS_KEY, v ? "1" : "0");
     } catch {}
     track("hide_hints_toggled", { enabled: v });
+  }, []);
+
+  const updateMuted = useCallback((v: boolean) => {
+    setMuted(v);
+    try {
+      window.localStorage.setItem(MUTED_KEY, v ? "1" : "0");
+    } catch {}
+    track("muted_toggled", { enabled: v });
   }, []);
 
   // Countdown to next puzzle.
@@ -244,6 +257,23 @@ export function TesseraGame() {
     }
     if (validity.isBonus && bonusAt === null) setBonusAt(moves);
   }, [validity.isSolved, validity.isBonus, moves, solvedAt, bonusAt, puzzle, storedResult]);
+
+  // Play the win jingle once when the puzzle solves this session. Only fires
+  // on a fresh solve (solvedAt was just set this render) — never on a stored
+  // result from yesterday or on a forced reveal-as-solve, since those don't
+  // earn the celebration.
+  useEffect(() => {
+    if (!validity.isSolved) return;
+    if (solvedAt === null) return;
+    if (storedResult?.revealed) return;
+    if (muted) return;
+    const audio = new Audio("/win.mp3");
+    audio.volume = 0.25;
+    audio.play().catch(() => {
+      // Browsers may reject playback without a recent user gesture; the
+      // solve itself is one, but be defensive — never throw.
+    });
+  }, [validity.isSolved, solvedAt, storedResult, muted]);
 
   // ?demo mode: hide the OS cursor and render a small grey follower dot
   // instead. Makes screen recordings look intentional rather than showing the
@@ -489,6 +519,8 @@ export function TesseraGame() {
         initialTab={helpTab}
         hideHints={hideHints}
         onHideHintsChange={updateHideHints}
+        muted={muted}
+        onMutedChange={updateMuted}
       />
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} streak={streak} epoch={EPOCH} />
       <RevealConfirm open={confirmReveal} onClose={() => setConfirmReveal(false)} onConfirm={handleReveal} />
