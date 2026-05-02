@@ -330,7 +330,7 @@ export default async function StatsPage({
         // until we can identify by email.
         hogql<CohortRow>(`
           WITH player_first AS (
-            SELECT distinct_id, toDate(min(timestamp)) AS first_day
+            SELECT distinct_id, min(toDate(timestamp)) AS first_day
             FROM events
             WHERE event = 'puzzle_started'${EXCLUDE}
             GROUP BY distinct_id
