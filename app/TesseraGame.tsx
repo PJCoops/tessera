@@ -130,7 +130,7 @@ export function TesseraGame() {
   // Position of the synthetic cursor follower used in ?demo mode for cleaner
   // screen recordings. Null until the mouse first moves.
   const [demoCursor, setDemoCursor] = useState<{ x: number; y: number; down: boolean } | null>(null);
-  const [hideHints, setHideHints] = useState(true);
+  const [hideHints, setHideHints] = useState(false);
   const [muted, setMuted] = useState(true);
 
   // Initialise on client mount (avoids SSR/UTC drift hydration mismatch).

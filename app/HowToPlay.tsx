@@ -178,7 +178,7 @@ function HowToContent() {
         <div>
           <p className="font-medium">Find today&rsquo;s four words.</p>
           <p className="text-[color:var(--color-muted)] mt-1">
-            Each row is one specific word. Tiles fill green when the whole row matches today&rsquo;s word. Turn on hints in Settings to also mark tiles already on the right row with a green outline.
+            Each row is one specific word. Tiles with a green outline are already on the right row. Tiles fill green when the whole row matches today&rsquo;s word.
           </p>
         </div>
       </li>
