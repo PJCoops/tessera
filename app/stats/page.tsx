@@ -121,6 +121,15 @@ type AllTimeRow = {
 type BiggestDayRow = { day: string; solves: number };
 type ReturningRow = { returning: number; total: number; top_player_solves: number };
 type RecentIdRow = { distinct_id: string; events: number; first_seen: string; last_seen: string };
+type CohortRow = {
+  cohort_week: string;
+  cohort_size: number;
+  d1: number;
+  d3: number;
+  d7: number;
+  d14: number;
+  d30: number;
+};
 
 export default async function StatsPage({
   searchParams,
@@ -148,6 +157,7 @@ export default async function StatsPage({
   let biggestDay: BiggestDayRow[] = [];
   let returning: ReturningRow[] = [];
   let recentIds: RecentIdRow[] = [];
+  let cohorts: CohortRow[] = [];
   let error: string | null = null;
   try {
     [
@@ -165,6 +175,7 @@ export default async function StatsPage({
       biggestDay,
       returning,
       recentIds,
+      cohorts,
     ] = await Promise.all([
         hogql<DailyRow>(`
           SELECT toString(toDate(timestamp)) AS day,
@@ -308,6 +319,40 @@ export default async function StatsPage({
           GROUP BY distinct_id
           ORDER BY events DESC
           LIMIT 20
+        `),
+        // Cohort retention. For each player, find the day of their first
+        // puzzle_started, bucket into ISO weeks, then count how many of
+        // that cohort fired any puzzle_started event N days later.
+        // Limited to the most recent 8 cohort-weeks; older ones are too
+        // sparse and clutter the table.
+        // distinct_id is device-scoped so cross-device players inflate
+        // cohort size and understate retention — accepted as directional
+        // until we can identify by email.
+        hogql<CohortRow>(`
+          WITH player_first AS (
+            SELECT distinct_id, toDate(min(timestamp)) AS first_day
+            FROM events
+            WHERE event = 'puzzle_started'${EXCLUDE}
+            GROUP BY distinct_id
+          ),
+          activity AS (
+            SELECT distinct distinct_id, toDate(timestamp) AS day
+            FROM events
+            WHERE event = 'puzzle_started'${EXCLUDE}
+          )
+          SELECT toString(toStartOfWeek(pf.first_day)) AS cohort_week,
+            toInt(uniq(pf.distinct_id)) AS cohort_size,
+            toInt(uniqIf(pf.distinct_id, dateDiff('day', pf.first_day, a.day) = 1)) AS d1,
+            toInt(uniqIf(pf.distinct_id, dateDiff('day', pf.first_day, a.day) = 3)) AS d3,
+            toInt(uniqIf(pf.distinct_id, dateDiff('day', pf.first_day, a.day) = 7)) AS d7,
+            toInt(uniqIf(pf.distinct_id, dateDiff('day', pf.first_day, a.day) = 14)) AS d14,
+            toInt(uniqIf(pf.distinct_id, dateDiff('day', pf.first_day, a.day) = 30)) AS d30
+          FROM player_first AS pf
+          LEFT JOIN activity AS a ON pf.distinct_id = a.distinct_id
+          WHERE pf.first_day >= today() - INTERVAL 56 DAY
+          GROUP BY cohort_week
+          ORDER BY cohort_week DESC
+          LIMIT 8
         `),
       ]);
   } catch (e) {
@@ -574,6 +619,16 @@ export default async function StatsPage({
               <LegendDot color="#7a9070" label="Solved" />
               <LegendDot color="#b88a3a" label="Revealed" />
             </div>
+          </Section>
+
+          <Section title="Cohort retention · weekly cohorts">
+            <p className="text-[11px] text-[color:var(--color-muted)] mb-3 max-w-prose">
+              Each row is players whose first puzzle landed in that ISO week.
+              Columns show the share of that cohort that came back N days later.
+              Device-scoped (PostHog distinct_id), so cross-device players
+              understate the numbers — directional, not exact.
+            </p>
+            <CohortTable rows={cohorts} />
           </Section>
 
           <Section title={`Tier distribution · last 30d · ${allTotal} solves`}>
@@ -857,4 +912,75 @@ function LegendDot({ color, label }: { color: string; label: string }) {
 
 function Empty() {
   return <p className="text-xs text-[color:var(--color-muted)] italic">No data yet</p>;
+}
+
+function CohortTable({ rows }: { rows: CohortRow[] }) {
+  if (rows.length === 0) return <Empty />;
+  const cols: { key: keyof Omit<CohortRow, "cohort_week" | "cohort_size">; label: string }[] = [
+    { key: "d1", label: "D1" },
+    { key: "d3", label: "D3" },
+    { key: "d7", label: "D7" },
+    { key: "d14", label: "D14" },
+    { key: "d30", label: "D30" },
+  ];
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs tabular-nums">
+        <thead>
+          <tr className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
+            <th className="text-left font-normal py-1 pr-3">Cohort week</th>
+            <th className="text-right font-normal py-1 px-2">Size</th>
+            {cols.map((c) => (
+              <th key={c.key} className="text-right font-normal py-1 px-2">
+                {c.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.cohort_week} className="border-t border-[color:var(--color-rule)]">
+              <td className="py-1.5 pr-3 text-[color:var(--color-muted)]">
+                {r.cohort_week.slice(0, 10)}
+              </td>
+              <td className="py-1.5 px-2 text-right">{r.cohort_size}</td>
+              {cols.map((c) => {
+                const value = r[c.key];
+                const pct = r.cohort_size > 0 ? (value / r.cohort_size) * 100 : 0;
+                return (
+                  <td key={c.key} className="py-1 px-2 text-right">
+                    <CohortCell value={value} pct={pct} />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CohortCell({ value, pct }: { value: number; pct: number }) {
+  // Heatmap: deeper sage as retention rises. Empty cells render flat so
+  // sparse cohorts don't pretend to have data.
+  const intensity = Math.min(1, pct / 50); // 50% retention = full sage
+  const bg = value === 0 ? "transparent" : `rgba(122, 144, 112, ${0.1 + intensity * 0.6})`;
+  return (
+    <span
+      className="inline-block min-w-[3.5rem] px-2 py-1 rounded-sm"
+      style={{ background: bg }}
+    >
+      {value === 0 ? (
+        <span className="text-[color:var(--color-muted)]">—</span>
+      ) : (
+        <>
+          <span>{pct.toFixed(0)}%</span>
+          <span className="text-[10px] text-[color:var(--color-muted)] ml-1">
+            ({value})
+          </span>
+        </>
+      )}
+    </span>
+  );
 }
