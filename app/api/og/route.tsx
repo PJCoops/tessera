@@ -15,6 +15,12 @@ import { ImageResponse } from "next/og";
 import { readFile } from "fs/promises";
 import path from "path";
 import { getTier } from "../../lib/tier";
+import { getDictionary, t } from "../../lib/i18n";
+
+// OG cards are shared cross-locale and have no locale signal in the
+// share URL, so they always render in English. If we add locale to the
+// share slug later, this can become per-locale.
+const ogDict = getDictionary("en");
 
 const OG_SIZE = { width: 1200, height: 630 };
 
@@ -56,7 +62,7 @@ export async function GET(req: Request) {
   const subhead = revealed
     ? "revealed"
     : m !== null
-    ? `${m} ${m === 1 ? "swap" : "swaps"} · ${getTier(m).name}${bonus ? " · ✨ bonus" : ""}`
+    ? `${m} ${m === 1 ? "swap" : "swaps"} · ${t(ogDict, `tiers.${getTier(m).key}`)}${bonus ? " · ✨ bonus" : ""}`
     : "today's puzzle";
 
   return new ImageResponse(

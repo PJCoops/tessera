@@ -21,9 +21,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { listSubscribers, isConfigured as kvConfigured } from "../../../lib/subscribers";
+import { LOCALES, type Locale } from "../../../lib/i18n";
 
 const LOOPS_EVENT_ENDPOINT = "https://app.loops.so/api/v1/events/send";
-const EVENT_NAME = "daily_reminder";
+
+// One Loops event per locale so each language gets its own template in
+// the Loops dashboard — no conditional template logic, just two Loops.
+function eventNameFor(locale: Locale): string {
+  return `daily_reminder_${locale}`;
+}
 
 // Per-request timeout when calling Loops. Long enough for a slow leg,
 // short enough not to wedge the cron when Loops degrades.
@@ -66,32 +72,49 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const emails = await listSubscribers();
-  if (emails.length === 0) {
-    return NextResponse.json({ ok: true, attempted: 0, succeeded: 0, failed: 0 });
+  // Fan out per locale. Each locale's subscriber set is fetched and
+  // dispatched against its own event name. Per-locale stats are returned
+  // so the cron logs show coverage at a glance.
+  const perLocale: Record<string, { attempted: number; succeeded: number; failed: number }> = {};
+  const failures: { email: string; locale: Locale; status: number; reason: string }[] = [];
+  let totalAttempted = 0;
+  let totalSucceeded = 0;
+
+  for (const locale of LOCALES) {
+    const emails = await listSubscribers(locale);
+    perLocale[locale] = { attempted: emails.length, succeeded: 0, failed: 0 };
+    if (emails.length === 0) continue;
+    totalAttempted += emails.length;
+
+    const queue = [...emails];
+    const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+      while (queue.length) {
+        const email = queue.shift();
+        if (!email) break;
+        const result = await sendEvent(email, apiKey, eventNameFor(locale));
+        if (result.ok) {
+          perLocale[locale].succeeded++;
+          totalSucceeded++;
+        } else {
+          perLocale[locale].failed++;
+          failures.push({
+            email: maskEmail(email),
+            locale,
+            status: result.status,
+            reason: result.reason,
+          });
+        }
+      }
+    });
+    await Promise.all(workers);
   }
-
-  let succeeded = 0;
-  const failures: { email: string; status: number; reason: string }[] = [];
-
-  // Simple bounded-concurrency pool. Avoid pulling in a dep for this.
-  const queue = [...emails];
-  const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
-    while (queue.length) {
-      const email = queue.shift();
-      if (!email) break;
-      const result = await sendEvent(email, apiKey);
-      if (result.ok) succeeded++;
-      else failures.push({ email: maskEmail(email), status: result.status, reason: result.reason });
-    }
-  });
-  await Promise.all(workers);
 
   return NextResponse.json({
     ok: true,
-    attempted: emails.length,
-    succeeded,
+    attempted: totalAttempted,
+    succeeded: totalSucceeded,
     failed: failures.length,
+    perLocale,
     // Cap the failure detail in the response so a bad day doesn't
     // produce a 50KB JSON blob in the cron logs.
     failures: failures.slice(0, 20),
@@ -100,7 +123,8 @@ export async function GET(req: NextRequest) {
 
 async function sendEvent(
   email: string,
-  apiKey: string
+  apiKey: string,
+  eventName: string
 ): Promise<{ ok: true } | { ok: false; status: number; reason: string }> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), LOOPS_TIMEOUT_MS);
@@ -111,7 +135,7 @@ async function sendEvent(
         "content-type": "application/json",
         authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ email, eventName: EVENT_NAME }),
+      body: JSON.stringify({ email, eventName }),
       signal: ctrl.signal,
     });
     if (!res.ok) {

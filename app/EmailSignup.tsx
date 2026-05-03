@@ -38,7 +38,7 @@ export function EmailSignup({
   onDismiss?: () => void;
   compact?: boolean;
 }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [hidden, setHidden] = useState(false);
@@ -58,7 +58,7 @@ export function EmailSignup({
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), source }),
+        body: JSON.stringify({ email: email.trim(), source, locale }),
       });
       if (!res.ok) {
         // Distinguish "the operator hasn't configured this yet" from a

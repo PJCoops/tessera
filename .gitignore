@@ -44,4 +44,5 @@ next-env.d.ts
 /app/lib/.freq-cache.txt
 /app/lib/.freq-cache-es.txt
 /app/lib/.dict-cache-es.json
+/app/lib/.defs-cache-es.json
 .env*.local

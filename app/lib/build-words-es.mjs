@@ -84,16 +84,23 @@ async function loadCachedOrFetch(cachePath, url) {
   return text;
 }
 
-// 1. Load Spanish dictionary, filter to normalised 4-letter words.
+// 1. Load Spanish dictionary, filter to normalised 4-letter words. Track
+//    the original accented form alongside each normalised key so
+//    downstream tools (definitions cache, future Spanish dictionary
+//    lookups) can hit Wiktionary at the right URL — "acné" not "acne".
 const dictRaw = await loadCachedOrFetch(
   join(here, ".dict-cache-es.json"),
   DICT_SOURCE
 );
 const dictArr = JSON.parse(dictRaw);
 const SPANISH = new Set();
+const ACCENTED = new Map(); // normalised key → first-seen accented original
 for (const w of dictArr) {
   const n = normalise(w);
-  if (n && n.length === 4) SPANISH.add(n);
+  if (n && n.length === 4) {
+    SPANISH.add(n);
+    if (!ACCENTED.has(n)) ACCENTED.set(n, w.toLowerCase());
+  }
 }
 console.log(
   `Spanish dictionary: ${dictArr.length} entries, ${SPANISH.size} normalised 4-letter words`
@@ -132,3 +139,18 @@ writeFileSync(join(here, "solution-words-es.json"), JSON.stringify(solution));
 writeFileSync(join(here, "words-es.json"), JSON.stringify(words));
 console.log(`Wrote ${solution.length} solution words → solution-words-es.json`);
 console.log(`Wrote ${words.length} validation words → words-es.json`);
+
+// Sidecar map: normalised → accented form. Used only by the definitions
+// builder (and any future Spanish dictionary integration); not loaded at
+// runtime.
+const accentedMap = {};
+for (const w of words) {
+  if (ACCENTED.has(w)) accentedMap[w] = ACCENTED.get(w);
+}
+writeFileSync(
+  join(here, "accented-map-es.json"),
+  JSON.stringify(accentedMap)
+);
+console.log(
+  `Wrote ${Object.keys(accentedMap).length} accented-form entries → accented-map-es.json`
+);

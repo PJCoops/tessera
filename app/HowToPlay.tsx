@@ -55,7 +55,7 @@ export function HowToPlay({
   theme: ThemePref;
   onThemeChange: (v: ThemePref) => void;
 }) {
-  const { locale, t } = useLocale();
+  const { t } = useLocale();
   const [tab, setTab] = useState<Tab>(initialTab);
 
   useEffect(() => {
@@ -130,7 +130,6 @@ export function HowToPlay({
                   onMutedChange={onMutedChange}
                   theme={theme}
                   onThemeChange={onThemeChange}
-                  locale={locale}
                 />
               )}
               {tab === "credits" && <CreditsContent />}

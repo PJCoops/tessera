@@ -12,6 +12,7 @@ export type AnalyticsEvent =
   | "puzzle_revealed"
   | "hide_hints_toggled"
   | "muted_toggled"
+  | "theme_changed"
   | "email_subscribed";
 
 // Mirror to Meta only the events worth optimizing ad delivery against.

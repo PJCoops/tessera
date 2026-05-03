@@ -10,6 +10,7 @@
 //
 import { NextRequest, NextResponse } from "next/server";
 import { addSubscriber } from "../../lib/subscribers";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "../../lib/i18n";
 
 const LOOPS_ENDPOINT = "https://app.loops.so/api/v1/contacts/create";
 // Loops also exposes /update which upserts. Use it so a returning visitor
@@ -28,7 +29,7 @@ function isPlausibleEmail(value: string): boolean {
   return true;
 }
 
-type Body = { email?: string; source?: string };
+type Body = { email?: string; source?: string; locale?: string };
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.LOOPS_API_KEY;
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
 
   const email = (body.email ?? "").trim().toLowerCase();
   const source = (body.source ?? "unknown").slice(0, 64);
+  const locale: Locale = isLocale(body.locale) ? body.locale : DEFAULT_LOCALE;
   if (!isPlausibleEmail(email)) {
     return NextResponse.json(
       { ok: false, reason: "bad_email" },
@@ -56,11 +58,14 @@ export async function POST(req: NextRequest) {
   }
 
   // Loops payload. `source` and `signupSource` give us a way to filter
-  // in their dashboard ("solved" vs "history" etc.).
+  // in their dashboard ("solved" vs "history" etc.). `language` is a
+  // custom contact property that the Spanish welcome / daily templates
+  // filter on so each locale gets the right copy.
   const payload: Record<string, unknown> = {
     email,
     source,
     signupSource: source,
+    language: locale,
     subscribed: true,
   };
   const audienceId = process.env.LOOPS_DAILY_AUDIENCE_ID;
@@ -104,7 +109,7 @@ export async function POST(req: NextRequest) {
   // are swallowed so a transient KV blip doesn't kill the signup —
   // Loops still got the address and the welcome email will fire.
   try {
-    await addSubscriber(email);
+    await addSubscriber(email, locale);
   } catch (e) {
     console.error("KV addSubscriber failed:", e);
   }
