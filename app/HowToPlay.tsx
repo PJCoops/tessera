@@ -272,22 +272,27 @@ async function fetchDefinition(word: string): Promise<DefCached> {
 }
 
 function WordsContent({ goldRows }: { goldRows: string[] }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [entries, setEntries] = useState<DefEntry[]>([]);
 
   useEffect(() => {
     let cancelled = false;
+    // dictionaryapi.dev only serves English. For other locales, render the
+    // word list without definitions and skip the network call entirely. A
+    // future Spanish dictionary source would slot in here.
+    const skipLookup = locale !== "en";
     const initial: DefEntry[] = goldRows.map((w) => {
-      const cached = readDefCache(w);
+      const cached = skipLookup ? null : readDefCache(w);
       return {
         word: w,
-        loading: cached === null,
+        loading: !skipLookup && cached === null,
         definition: cached?.definition ?? null,
         partOfSpeech: cached?.partOfSpeech ?? null,
         resolvedFrom: cached?.resolvedFrom ?? null,
       };
     });
     setEntries(initial);
+    if (skipLookup) return;
     const toFetch = initial.filter((e) => e.loading).map((e) => e.word);
     Promise.all(
       toFetch.map(async (w) => {
@@ -338,9 +343,11 @@ function WordsContent({ goldRows }: { goldRows: string[] }) {
           </li>
         ))}
       </ul>
-      <p className="mt-6 text-[10px] text-[color:var(--color-muted)]">
-        {t("howto.words.attribution")}
-      </p>
+      {locale === "en" && (
+        <p className="mt-6 text-[10px] text-[color:var(--color-muted)]">
+          {t("howto.words.attribution")}
+        </p>
+      )}
     </>
   );
 }

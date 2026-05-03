@@ -40,5 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# tessera build-solution-words frequency cache (~33MB, regenerable)
+# tessera build-words frequency / dictionary caches (regenerable)
 /app/lib/.freq-cache.txt
+/app/lib/.freq-cache-es.txt
+/app/lib/.dict-cache-es.json
+.env*.local

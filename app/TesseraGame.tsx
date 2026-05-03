@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { DEMO_GRID, generateDailyPuzzle, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
+import { DEMO_GRID, generateDailyPuzzleFor, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
 import { puzzleNumber, seedFromDate, todayUtc } from "./lib/rng";
 import { readStreak, recordWin, visibleCurrent, type Streak } from "./lib/streak";
 import { buildShareString } from "./lib/share";
@@ -164,7 +164,7 @@ export function TesseraGame() {
       goldRows = [...DEMO_GRID];
       startTiles = forceSolved ? tilesFromRows(goldRows) : scrambleGoldRows(goldRows, 42);
     } else {
-      const generated = generateDailyPuzzle(seed);
+      const generated = generateDailyPuzzleFor(locale, seed);
       goldRows = generated.goldRows;
       startTiles = forceSolved ? tilesFromRows(goldRows) : generated.startTiles;
     }
