@@ -4,6 +4,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { LOCALES, LOCALE_COOKIE, type Locale, pathnameWithLocale } from "./lib/i18n";
 import { useLocale } from "./lib/locale-context";
+import definitionsEs from "./locales/definitions-es.json";
+
+// Static Spanish definitions, baked at build time from es.wiktionary.org.
+// Coverage isn't 100% — words without an entry render the same
+// "Definition unavailable" placeholder used for English misses.
+const STATIC_DEFS: Record<string, Record<string, string>> = {
+  es: definitionsEs as Record<string, string>,
+};
 
 const SEEN_KEY = "tessera:seen-howto";
 const DEF_CACHE_PREFIX = "tessera:def:";
@@ -276,22 +284,26 @@ function WordsContent({ goldRows }: { goldRows: string[] }) {
 
   useEffect(() => {
     let cancelled = false;
-    // dictionaryapi.dev only serves English. For other locales, render the
-    // word list without definitions and skip the network call entirely. A
-    // future Spanish dictionary source would slot in here.
-    const skipLookup = locale !== "en";
+    // dictionaryapi.dev is English-only. For other locales we ship a
+    // build-time map of definitions instead — no runtime fetch needed.
+    const staticMap = STATIC_DEFS[locale];
+    const isStatic = staticMap !== undefined;
     const initial: DefEntry[] = goldRows.map((w) => {
-      const cached = skipLookup ? null : readDefCache(w);
+      if (isStatic) {
+        const def = staticMap[w.toLowerCase()] ?? null;
+        return { word: w, loading: false, definition: def, partOfSpeech: null, resolvedFrom: null };
+      }
+      const cached = readDefCache(w);
       return {
         word: w,
-        loading: !skipLookup && cached === null,
+        loading: cached === null,
         definition: cached?.definition ?? null,
         partOfSpeech: cached?.partOfSpeech ?? null,
         resolvedFrom: cached?.resolvedFrom ?? null,
       };
     });
     setEntries(initial);
-    if (skipLookup) return;
+    if (isStatic) return;
     const toFetch = initial.filter((e) => e.loading).map((e) => e.word);
     Promise.all(
       toFetch.map(async (w) => {
@@ -342,11 +354,9 @@ function WordsContent({ goldRows }: { goldRows: string[] }) {
           </li>
         ))}
       </ul>
-      {locale === "en" && (
-        <p className="mt-6 text-[10px] text-[color:var(--color-muted)]">
-          {t("howto.words.attribution")}
-        </p>
-      )}
+      <p className="mt-6 text-[10px] text-[color:var(--color-muted)]">
+        {t("howto.words.attribution")}
+      </p>
     </>
   );
 }

@@ -1,8 +1,19 @@
 // Daily reminder fan-out. Triggered by Vercel Cron at 09:00 UTC. Reads
-// every subscriber from our KV set and fires a `daily_reminder` event
-// into Loops for each. A Loop in the Loops dashboard is configured to
-// react to that event by sending today's email — keeps copy editable
-// without redeploying.
+// every subscriber from the KV set for each locale and fires a
+// `daily_reminder_<locale>` event into Loops for each address. A Loop
+// in the Loops dashboard reacts to that event with the localised email
+// body — keeps copy editable without redeploying.
+//
+// Loops setup the dashboard side needs when adding a new locale:
+//   1. Create a Loop triggered by event `daily_reminder_<locale>`
+//      (e.g. `daily_reminder_en`, `daily_reminder_es`).
+//   2. Optionally filter on contact.language === <locale> as belt-and-
+//      braces in case the same address subscribes from both routes.
+//
+// Migration note: the original implementation fired `daily_reminder`
+// (no suffix). After the i18n rollout, English subscribers receive
+// `daily_reminder_en` instead — the old Loops trigger will stop firing
+// until you point it at the new event name.
 //
 // Auth: Vercel Cron sends an `Authorization: Bearer ${CRON_SECRET}`
 // header automatically when CRON_SECRET is set in env. We verify it
