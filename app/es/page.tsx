@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { TesseraGame } from "../TesseraGame";
-import { parseShareSlug, buildShareSlug } from "../lib/share";
-import { getTier } from "../lib/tier";
+import { parseShareSlug } from "../lib/share";
+import { buildShareMetadata } from "../lib/share-metadata";
 import { LocaleProvider } from "../lib/locale-context";
-import { getDictionary, t } from "../lib/i18n";
+import { getDictionary } from "../lib/i18n";
 
 const dict = getDictionary("es");
 
@@ -49,45 +49,7 @@ export async function generateMetadata({
       },
     };
   }
-
-  const { num, moves, bonus, revealed } = parsed;
-  const ogParams = new URLSearchParams({ n: String(num) });
-  if (moves !== null) ogParams.set("m", String(moves));
-  if (bonus) ogParams.set("b", "1");
-  if (revealed) ogParams.set("r", "1");
-  const ogUrl = `/api/og?${ogParams.toString()}`;
-
-  const moveWord = (n: number) => (n === 1 ? "movimiento" : "movimientos");
-  const tierName = moves !== null ? t(dict, `tiers.${getTier(moves).key}`) : "";
-  const title = revealed
-    ? `Tessera #${num} · solución revelada`
-    : moves !== null
-    ? `Tessera #${num} · resuelto en ${moves} ${moveWord(moves)}${bonus ? " · bonus" : ""}`
-    : `Tessera #${num}`;
-  const cardDescription =
-    revealed
-      ? "Revelé la solución de hoy. Prueba la partida tú mismo."
-      : moves !== null
-      ? `${tierName} · resuelto en ${moves} ${moveWord(moves)}${bonus ? ", con las columnas bonus" : ""}. Juega la cuadrícula de hoy.`
-      : dict.meta.description;
-
-  return {
-    title,
-    description: cardDescription,
-    openGraph: {
-      title,
-      description: cardDescription,
-      url: `/es?s=${buildShareSlug(parsed)}`,
-      images: [{ url: ogUrl, width: 1200, height: 630 }],
-      locale: "es_ES",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description: cardDescription,
-      images: [ogUrl],
-    },
-  };
+  return buildShareMetadata(parsed, "es");
 }
 
 export default function HomeEs() {

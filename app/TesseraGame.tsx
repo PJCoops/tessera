@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { DEMO_GRID, generateDailyPuzzleFor, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
 import { puzzleNumber, seedFromDate, todayUtc } from "./lib/rng";
 import { readStreak, recordWin, visibleCurrent, type Streak } from "./lib/streak";
-import { buildShareString } from "./lib/share";
+import { buildSharePayload } from "./lib/share";
 import { getTier } from "./lib/tier";
 import { HowToPlay, hasSeenHowTo, markHowToSeen } from "./HowToPlay";
 import { HistoryModal } from "./HistoryModal";
@@ -480,29 +480,33 @@ export function TesseraGame() {
     ? { moves: storedResult.moves, bonus: storedResult.bonus, revealed: false }
     : null;
   const canShare = shareSrc !== null;
-  const shareString = shareSrc
-    ? buildShareString({
+  const sharePayload = shareSrc
+    ? buildSharePayload({
         puzzleNumber: puzzle.num,
         moves: shareSrc.moves,
         streak: liveStreak,
         bonus: shareSrc.bonus,
         revealed: shareSrc.revealed,
+        locale,
         dict,
       })
-    : "";
+    : null;
 
   const onShare = async () => {
-    if (!shareString) return;
+    if (!sharePayload) return;
+    // Pass text+url separately so Facebook (which ignores `text`) can still
+    // unfurl via the per-solve OG card, while WhatsApp/X/iMessage continue
+    // to render the headline + grid plus the link.
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
-        await navigator.share({ text: shareString });
+        await navigator.share({ text: sharePayload.text, url: sharePayload.url });
         return;
       } catch {
         // user cancelled or share failed; fall through to clipboard
       }
     }
     try {
-      await navigator.clipboard.writeText(shareString);
+      await navigator.clipboard.writeText(sharePayload.full);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}

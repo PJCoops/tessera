@@ -1,5 +1,5 @@
 import { getTier, type TierKey } from "./tier";
-import { type Dictionary, t } from "./i18n";
+import { type Dictionary, type Locale, t } from "./i18n";
 
 export type ShareInput = {
   puzzleNumber: number;
@@ -7,6 +7,7 @@ export type ShareInput = {
   streak: number;
   bonus?: boolean;
   revealed?: boolean;
+  locale: Locale;
   // Locale-aware copy: pass the player's current dictionary so the headline,
   // streak line, and bonus tag are in the language they're playing in.
   dict: Dictionary;
@@ -91,8 +92,18 @@ export function parseShareSlug(slug: string): ShareSlug | null {
   return { num, moves, bonus, revealed: false };
 }
 
-export function buildShareString(input: ShareInput): string {
-  const { puzzleNumber, moves, streak, bonus = false, revealed = false, dict } = input;
+// Returns the share split into a `text` half (headline, meta, grid) and a
+// separate `url`. Web Share API targets disagree on which field they read:
+// WhatsApp / X / iMessage concatenate text+url; Facebook drops `text` and
+// only reads `url`, relying on OG tags to unfurl. Passing both fields
+// makes every target work. `full` is the joined version used for the
+// clipboard fallback.
+export function buildSharePayload(input: ShareInput): {
+  text: string;
+  url: string;
+  full: string;
+} {
+  const { puzzleNumber, moves, streak, bonus = false, revealed = false, locale, dict } = input;
   const tier = getTier(moves);
   const tierName = t(dict, `tiers.${tier.key}`);
   const tierEmoji = TIER_EMOJI[tier.key] ?? "";
@@ -113,13 +124,13 @@ export function buildShareString(input: ShareInput): string {
   if (!revealed && bonus) meta.push(t(dict, "share.bonusMeta"));
 
   const slug = buildShareSlug({ num: puzzleNumber, moves, bonus, revealed });
-  const url = `tesserapuzzle.com/?s=${slug}`;
+  const localePrefix = locale === "en" ? "" : `/${locale}`;
+  const url = `https://tesserapuzzle.com${localePrefix}/s/${slug}`;
 
   const lines = [headline];
   if (meta.length) lines.push(meta.join(" · "));
   lines.push("");
   lines.push(buildGrid({ revealed, bonus }));
-  lines.push("");
-  lines.push(url);
-  return lines.join("\n");
+  const text = lines.join("\n");
+  return { text, url, full: `${text}\n\n${url}` };
 }

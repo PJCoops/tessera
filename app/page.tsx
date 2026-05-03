@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { TesseraGame } from "./TesseraGame";
-import { parseShareSlug, buildShareSlug } from "./lib/share";
-import { getTier } from "./lib/tier";
+import { parseShareSlug } from "./lib/share";
+import { buildShareMetadata } from "./lib/share-metadata";
 import { LocaleProvider } from "./lib/locale-context";
-import { getDictionary, t } from "./lib/i18n";
+import { getDictionary } from "./lib/i18n";
 
 const dict = getDictionary("en");
 const description = dict.meta.description;
@@ -26,10 +26,8 @@ const gameSchema = {
   offers: { "@type": "Offer", price: "0", priceCurrency: "GBP" },
 };
 
-// When the URL carries a `?s=N-M[-b|-r]` slug (set by buildShareString),
-// override the page metadata to point at a per-solve OG image. This is
-// what makes pasted Tessera links unfurl as a graphic in iMessage /
-// WhatsApp / Twitter / Discord.
+// Legacy `?s=N-M[-b|-r]` shares (pre-/s/[slug] route) still need to unfurl
+// with a per-solve OG card. New shares use /s/[slug] directly.
 export async function generateMetadata({
   searchParams,
 }: {
@@ -39,44 +37,7 @@ export async function generateMetadata({
   const raw = typeof params.s === "string" ? params.s : null;
   const parsed = raw ? parseShareSlug(raw) : null;
   if (!parsed) return {};
-
-  const { num, moves, bonus, revealed } = parsed;
-  const ogParams = new URLSearchParams({ n: String(num) });
-  if (moves !== null) ogParams.set("m", String(moves));
-  if (bonus) ogParams.set("b", "1");
-  if (revealed) ogParams.set("r", "1");
-  const ogUrl = `/api/og?${ogParams.toString()}`;
-
-  const swapWord = (n: number) => (n === 1 ? "swap" : "swaps");
-  const tierName = moves !== null ? t(dict, `tiers.${getTier(moves).key}`) : "";
-  const title = revealed
-    ? `Tessera #${num} · revealed`
-    : moves !== null
-    ? `Tessera #${num} · solved in ${moves} ${swapWord(moves)}${bonus ? " · bonus" : ""}`
-    : `Tessera #${num}`;
-  const cardDescription =
-    revealed
-      ? "I revealed today's solution. Try the puzzle yourself."
-      : moves !== null
-      ? `${tierName} · solved in ${moves} ${swapWord(moves)}${bonus ? ", with the bonus columns" : ""}. Play today's grid.`
-      : description;
-
-  return {
-    title,
-    description: cardDescription,
-    openGraph: {
-      title,
-      description: cardDescription,
-      url: `/?s=${buildShareSlug(parsed)}`,
-      images: [{ url: ogUrl, width: 1200, height: 630 }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description: cardDescription,
-      images: [ogUrl],
-    },
-  };
+  return buildShareMetadata(parsed, "en");
 }
 
 export default function Home() {
