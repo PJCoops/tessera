@@ -35,6 +35,17 @@ const RESULT_PREFIX = "tessera:result:";
 const PROGRESS_PREFIX = "tessera:progress:";
 const HIDE_HINTS_KEY = "tessera:hide-hints";
 const MUTED_KEY = "tessera:muted";
+const THEME_KEY = "tessera:theme";
+
+export type ThemePref = "system" | "light" | "dark";
+function isThemePref(v: unknown): v is ThemePref {
+  return v === "system" || v === "light" || v === "dark";
+}
+function applyTheme(t: ThemePref) {
+  const root = document.documentElement;
+  root.classList.remove("light", "dark");
+  if (t !== "system") root.classList.add(t);
+}
 
 type Progress = { positions: Tile[]; moves: number };
 
@@ -132,6 +143,7 @@ export function TesseraGame() {
   const [demoCursor, setDemoCursor] = useState<{ x: number; y: number; down: boolean } | null>(null);
   const [hideHints, setHideHints] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [theme, setTheme] = useState<ThemePref>("system");
 
   // Initialise on client mount (avoids SSR/UTC drift hydration mismatch).
   useEffect(() => {
@@ -180,6 +192,8 @@ export function TesseraGame() {
       if (hh !== null) setHideHints(hh === "1");
       const m = window.localStorage.getItem(MUTED_KEY);
       if (m !== null) setMuted(m === "1");
+      const t = window.localStorage.getItem(THEME_KEY);
+      if (isThemePref(t)) setTheme(t);
     } catch {}
     setMounted(true);
   }, []);
@@ -198,6 +212,15 @@ export function TesseraGame() {
       window.localStorage.setItem(MUTED_KEY, v ? "1" : "0");
     } catch {}
     track("muted_toggled", { enabled: v });
+  }, []);
+
+  const updateTheme = useCallback((v: ThemePref) => {
+    setTheme(v);
+    try {
+      window.localStorage.setItem(THEME_KEY, v);
+    } catch {}
+    applyTheme(v);
+    track("theme_changed", { theme: v });
   }, []);
 
   // Countdown to next puzzle.
@@ -523,6 +546,8 @@ export function TesseraGame() {
         onHideHintsChange={updateHideHints}
         muted={muted}
         onMutedChange={updateMuted}
+        theme={theme}
+        onThemeChange={updateTheme}
       />
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} streak={streak} epoch={EPOCH} />
       <RevealConfirm open={confirmReveal} onClose={() => setConfirmReveal(false)} onConfirm={handleReveal} />
@@ -781,7 +806,9 @@ function Legend({ children, variant }: { children: React.ReactNode; variant: "ro
   // visually identical to what you're looking for on the board.
   const isHint = variant === "hint";
   const bg = isHint ? "var(--color-cream)" : variant === "bonus" ? "#d9b25a" : "#7a9070";
-  const color = variant === "row" ? "var(--color-paper)" : "var(--color-ink)";
+  // Green/gold swatches have fixed backgrounds — pin their text contrast too so
+  // they read the same in light and dark themes. Hint tile follows the theme.
+  const color = isHint ? "var(--color-ink)" : variant === "row" ? "#fafaf7" : "#0a0a0a";
   const letter = isHint ? "A" : variant === "row" ? "B" : "C";
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -804,7 +831,7 @@ function Legend({ children, variant }: { children: React.ReactNode; variant: "ro
 function tileClasses(rowValid: boolean, homeHint: boolean): string {
   // The solved (gold) state is driven by framer's animate prop so the cascade
   // can stagger per tile — see the motion.button in the grid render.
-  if (rowValid) return "bg-[#7a9070] text-[color:var(--color-paper)]";
+  if (rowValid) return "bg-[#7a9070] text-[#fafaf7]";
   if (homeHint) return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] outline-2 outline-dashed outline-[#3d5a32] -outline-offset-[3px]";
   return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]";
 }

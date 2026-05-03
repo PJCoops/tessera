@@ -24,6 +24,7 @@ export function markHowToSeen() {
 
 type Tab = "how" | "words" | "settings" | "credits";
 type InitialTab = "how" | "words";
+type ThemePref = "system" | "light" | "dark";
 
 export function HowToPlay({
   open,
@@ -35,6 +36,8 @@ export function HowToPlay({
   onHideHintsChange,
   muted,
   onMutedChange,
+  theme,
+  onThemeChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -45,6 +48,8 @@ export function HowToPlay({
   onHideHintsChange: (v: boolean) => void;
   muted: boolean;
   onMutedChange: (v: boolean) => void;
+  theme: ThemePref;
+  onThemeChange: (v: ThemePref) => void;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
 
@@ -118,6 +123,8 @@ export function HowToPlay({
                   onHideHintsChange={onHideHintsChange}
                   muted={muted}
                   onMutedChange={onMutedChange}
+                  theme={theme}
+                  onThemeChange={onThemeChange}
                 />
               )}
               {tab === "credits" && <CreditsContent />}
@@ -341,58 +348,129 @@ function SettingsContent({
   onHideHintsChange,
   muted,
   onMutedChange,
+  theme,
+  onThemeChange,
 }: {
   hideHints: boolean;
   onHideHintsChange: (v: boolean) => void;
   muted: boolean;
   onMutedChange: (v: boolean) => void;
+  theme: ThemePref;
+  onThemeChange: (v: ThemePref) => void;
 }) {
   return (
-    <div className="space-y-5 text-sm">
-      <SettingsToggle
-        checked={hideHints}
-        onChange={onHideHintsChange}
+    <div className="divide-y divide-[color:var(--color-rule)] text-sm">
+      <SettingRow
+        title="Theme"
+        description="System follows your device. Light or dark stays on this browser."
+        control={
+          <Segmented
+            value={theme}
+            onChange={onThemeChange}
+            options={[
+              { value: "system", label: "System" },
+              { value: "light", label: "Light" },
+              { value: "dark", label: "Dark" },
+            ]}
+            ariaLabel="Theme"
+          />
+        }
+      />
+      <SettingRow
         title="Hide row hints"
         description="Removes the dotted outline that marks tiles already on the right row. Harder mode."
+        control={<Toggle checked={hideHints} onChange={onHideHintsChange} ariaLabel="Hide row hints" />}
       />
-      <SettingsToggle
-        checked={muted}
-        onChange={onMutedChange}
+      <SettingRow
         title="Mute"
         description="Silences the win jingle when you solve the puzzle."
+        control={<Toggle checked={muted} onChange={onMutedChange} ariaLabel="Mute" />}
       />
     </div>
   );
 }
 
-function SettingsToggle({
-  checked,
-  onChange,
+function SettingRow({
   title,
   description,
+  control,
+}: {
+  title: string;
+  description: string;
+  control: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">{title}</p>
+        <p className="text-[color:var(--color-muted)] mt-0.5 text-xs leading-snug">{description}</p>
+      </div>
+      <div className="flex-shrink-0 mt-0.5">{control}</div>
+    </div>
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+  ariaLabel,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
-  title: string;
-  description: string;
+  ariaLabel: string;
 }) {
   return (
-    <label className="flex items-start gap-4 cursor-pointer">
-      <span className="relative inline-flex flex-shrink-0 items-center w-10 h-6 mt-0.5">
-        <input
-          type="checkbox"
-          className="sr-only peer"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-        <span className="absolute inset-0 rounded-full bg-[color:var(--color-cream)] border border-[color:var(--color-rule)] peer-checked:bg-[color:var(--color-ink)] peer-checked:border-[color:var(--color-ink)] transition-colors" />
-        <span className="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-[color:var(--color-paper)] shadow transition-transform peer-checked:translate-x-4" />
-      </span>
-      <span>
-        <span className="font-medium">{title}</span>
-        <span className="block text-[color:var(--color-muted)] mt-1">{description}</span>
-      </span>
+    <label className="relative inline-flex items-center w-10 h-6 cursor-pointer">
+      <input
+        type="checkbox"
+        className="sr-only peer"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        aria-label={ariaLabel}
+      />
+      <span className="absolute inset-0 rounded-full bg-[color:var(--color-cream)] border border-[color:var(--color-rule)] peer-checked:bg-[color:var(--color-ink)] peer-checked:border-[color:var(--color-ink)] transition-colors" />
+      <span className="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-[color:var(--color-paper)] shadow transition-transform peer-checked:translate-x-4" />
     </label>
+  );
+}
+
+function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+  ariaLabel: string;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      className="inline-flex rounded-md bg-[color:var(--color-cream)] border border-[color:var(--color-rule)] p-0.5"
+    >
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(o.value)}
+            className={`px-2.5 py-1 text-xs rounded transition-colors ${
+              active
+                ? "bg-[color:var(--color-paper)] text-[color:var(--color-ink)] shadow-sm"
+                : "text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

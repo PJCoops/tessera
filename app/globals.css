@@ -15,6 +15,31 @@
   --tracking-kicker: 0.14em;
 }
 
+/* Dark theme overrides. Applied when user picks Dark explicitly, or when
+   they're on System and the OS prefers dark. Explicit Light wins over system. */
+:root.dark {
+  --color-ink: #ededea;
+  --color-ink-soft: #c8c8c2;
+  --color-paper: #0e0e0e;
+  --color-cream: #2a2a27;
+  --color-accent: #ff3d99;
+  --color-muted: #8a8a82;
+  --color-rule: #ffffff26;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not(.dark) {
+    --color-ink: #ededea;
+    --color-ink-soft: #c8c8c2;
+    --color-paper: #0e0e0e;
+    --color-cream: #2a2a27;
+    --color-accent: #ff3d99;
+    --color-muted: #8a8a82;
+    --color-rule: #ffffff26;
+    color-scheme: dark;
+  }
+}
+
 html, body {
   background: var(--color-paper);
   color: var(--color-ink);
@@ -26,6 +51,19 @@ body {
     Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Theme-aware Product Hunt badge. Both <a> tags ship with `hidden md:block`,
+   so they're hidden on mobile already. We only need to choose which variant is
+   visible on >=md, by theme. !important to beat Tailwind's md:block. */
+@media (min-width: 768px) {
+  .ph-badge-dark { display: none !important; }
+  :root.dark .ph-badge-light { display: none !important; }
+  :root.dark .ph-badge-dark { display: block !important; }
+}
+@media (min-width: 768px) and (prefers-color-scheme: dark) {
+  :root:not(.light):not(.dark) .ph-badge-light { display: none !important; }
+  :root:not(.light):not(.dark) .ph-badge-dark { display: block !important; }
 }
 
 ::selection {

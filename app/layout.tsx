@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import { PHProvider } from "./lib/posthog-provider";
 import { MetaPixelHead, MetaPixelNoScript } from "./lib/meta-pixel";
@@ -51,17 +52,26 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#fafaf7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e0e0e" },
   ],
-  colorScheme: "light",
+  colorScheme: "light dark",
 };
+
+// Runs before React hydration to set the theme class synchronously and avoid a
+// flash of the wrong palette. Must stay tiny and side-effect-free.
+const themeInitScript = `(function(){try{var t=localStorage.getItem('tessera:theme');if(t==='dark'||t==='light'){document.documentElement.classList.add(t);}}catch(e){}})();`;
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <head>
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
         <MetaPixelHead />
       </head>
       <body className="min-h-full flex flex-col">
@@ -89,7 +99,7 @@ export default function RootLayout({
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Featured on Product Hunt"
-            className="hidden md:block fixed bottom-4 left-4 z-40 opacity-70 hover:opacity-100 transition-opacity"
+            className="ph-badge ph-badge-light hidden md:block fixed bottom-4 left-4 z-40 opacity-70 hover:opacity-100 transition-opacity"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -97,6 +107,21 @@ export default function RootLayout({
               width={180}
               height={39}
               src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1134416&theme=neutral&t=1777651610297"
+            />
+          </a>
+          <a
+            href="https://www.producthunt.com/products/tessera-5?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-tessera-5"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Featured on Product Hunt"
+            className="ph-badge ph-badge-dark hidden md:block fixed bottom-4 left-4 z-40 opacity-70 hover:opacity-100 transition-opacity"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt="Tessera - A 4x4 word puzzle where rows and columns have to spell words | Product Hunt"
+              width={180}
+              height={39}
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1134416&theme=dark&t=1777805167587"
             />
           </a>
           <a
