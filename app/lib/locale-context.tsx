@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
+import posthog from "posthog-js";
 import {
   type Dictionary,
   type Locale,
@@ -26,14 +27,21 @@ export function LocaleProvider({
 }) {
   const dict = useMemo(() => getDictionary(locale), [locale]);
 
-  // Keep <html lang> and the cookie aligned with the route the user is on, so
-  // assistive tech, browser language tooling, and proxy redirects all stay in
-  // sync without a server round-trip.
+  // Keep <html lang>, the cookie, and PostHog's session-wide event
+  // properties aligned with the route the user is on. Registering
+  // `language` here means every analytics event captured for the rest of
+  // the session carries it as a property — no individual track() call
+  // needs updating, and the /stats dashboard can group by it.
   useEffect(() => {
     if (document.documentElement.lang !== locale) {
       document.documentElement.lang = locale;
     }
     document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; samesite=lax`;
+    try {
+      posthog.register({ language: locale });
+    } catch {
+      // analytics must never break gameplay
+    }
   }, [locale]);
 
   const t = useCallback(

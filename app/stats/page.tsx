@@ -130,6 +130,14 @@ type CohortRow = {
   d14: number;
   d30: number;
 };
+type LangRow = {
+  language: string;
+  unique_players: number;
+  started: number;
+  solved: number;
+  revealed: number;
+  avg_moves: number | null;
+};
 
 export default async function StatsPage({
   searchParams,
@@ -158,6 +166,7 @@ export default async function StatsPage({
   let returning: ReturningRow[] = [];
   let recentIds: RecentIdRow[] = [];
   let cohorts: CohortRow[] = [];
+  let langs: LangRow[] = [];
   let error: string | null = null;
   try {
     [
@@ -176,6 +185,7 @@ export default async function StatsPage({
       returning,
       recentIds,
       cohorts,
+      langs,
     ] = await Promise.all([
         hogql<DailyRow>(`
           SELECT toString(toDate(timestamp)) AS day,
@@ -353,6 +363,24 @@ export default async function StatsPage({
           GROUP BY cohort_week
           ORDER BY cohort_week DESC
           LIMIT 8
+        `),
+        // Locale split. PostHog records `language` on every event from
+        // LocaleProvider.register(). Events captured before that landed
+        // have language=null — coalesce them as 'en' since the only
+        // route that existed pre-i18n was /. ORDER BY started DESC so
+        // English (the bulk) leads the table.
+        hogql<LangRow>(`
+          SELECT coalesce(toString(properties.language), 'en') AS language,
+            toInt(uniq(distinct_id)) AS unique_players,
+            toInt(countIf(event = 'puzzle_started')) AS started,
+            toInt(countIf(event = 'puzzle_solved')) AS solved,
+            toInt(countIf(event = 'puzzle_revealed')) AS revealed,
+            round(avgIf(toInt(toString(properties.moves)), event = 'puzzle_solved'), 1) AS avg_moves
+          FROM events
+          WHERE timestamp >= now() - INTERVAL 30 DAY
+            AND event IN ('puzzle_started', 'puzzle_solved', 'puzzle_revealed')${EXCLUDE}
+          GROUP BY language
+          ORDER BY started DESC
         `),
       ]);
   } catch (e) {
@@ -594,6 +622,37 @@ export default async function StatsPage({
                 sub={`${totals.solved}/${totals.started}`}
               />
             </div>
+          </Section>
+
+          <Section title="By language · last 30d">
+            <div className="space-y-1">
+              <div className="grid grid-cols-[60px_repeat(5,1fr)] gap-3 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
+                <span>Lang</span>
+                <span>Players</span>
+                <span>Started</span>
+                <span>Solved</span>
+                <span>Revealed</span>
+                <span>Avg moves</span>
+              </div>
+              {langs.length === 0 && <Empty />}
+              {langs.map((l) => (
+                <div
+                  key={l.language}
+                  className="grid grid-cols-[60px_repeat(5,1fr)] gap-3 text-xs tabular-nums"
+                >
+                  <span className="text-[color:var(--color-muted)] uppercase">{l.language}</span>
+                  <span>{l.unique_players}</span>
+                  <span>{l.started}</span>
+                  <span>{l.solved}</span>
+                  <span>{l.revealed}</span>
+                  <span>{l.avg_moves ?? "—"}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[10px] text-[color:var(--color-muted)] max-w-prose">
+              Events from before the locale rollout have no <code>language</code> property
+              and are bucketed as <code>en</code> (the only route that existed then).
+            </p>
           </Section>
 
           <Section title="Last 14 days">
