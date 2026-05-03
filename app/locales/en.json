@@ -1,0 +1,60 @@
+{
+  "meta": {
+    "title": "Tessera: Daily Word Puzzle",
+    "description": "A daily word puzzle. Swap tiles on a 4×4 grid until every row spells a word, and every column too. Same puzzle for everyone, every day."
+  },
+  "game": {
+    "kicker": "TESSERA · #{num} · {date}",
+    "moves": "Moves {count}",
+    "rows": "{valid}/4 rows",
+    "showHints": "Show hints",
+    "hideHints": "Hide hints",
+    "reveal": "Reveal solution",
+    "share": "Share",
+    "copied": "Copied",
+    "nextPuzzle": "Next puzzle in {countdown}",
+    "legend": {
+      "correctRow": "correct row",
+      "correctWord": "correct word",
+      "puzzleComplete": "puzzle complete"
+    },
+    "history": "History"
+  },
+  "howto": {
+    "title": "Tessera.",
+    "tabs": {
+      "how": "How to play",
+      "words": "Today’s words",
+      "settings": "Settings",
+      "credits": "Credits"
+    },
+    "play": "Play",
+    "close": "Close"
+  },
+  "settings": {
+    "theme": {
+      "title": "Theme",
+      "description": "System follows your device. Light or dark stays on this browser.",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "hideHints": {
+      "title": "Hide row hints",
+      "description": "Removes the dotted outline that marks tiles already on the right row. Harder mode."
+    },
+    "mute": {
+      "title": "Mute",
+      "description": "Silences the win jingle when you solve the puzzle."
+    },
+    "language": {
+      "title": "Language",
+      "description": "Changes UI language. Puzzle words stay the same.",
+      "en": "English",
+      "es": "Español"
+    }
+  },
+  "footer": {
+    "subreddit": "r/TesseraPuzzle"
+  }
+}

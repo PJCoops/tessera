@@ -11,6 +11,7 @@ import { HowToPlay, hasSeenHowTo, markHowToSeen } from "./HowToPlay";
 import { HistoryModal } from "./HistoryModal";
 import { EmailSignup } from "./EmailSignup";
 import { track } from "./lib/analytics";
+import { useLocale } from "./lib/locale-context";
 
 const N = 4;
 const EPOCH = "2026-04-27"; // Tessera #1
@@ -112,6 +113,7 @@ function formatHms(ms: number): string {
 }
 
 export function TesseraGame() {
+  const { locale } = useLocale();
   const [mounted, setMounted] = useState(false);
   const [puzzle, setPuzzle] = useState<{
     num: number;
@@ -548,6 +550,7 @@ export function TesseraGame() {
         onMutedChange={updateMuted}
         theme={theme}
         onThemeChange={updateTheme}
+        locale={locale}
       />
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} streak={streak} epoch={EPOCH} />
       <RevealConfirm open={confirmReveal} onClose={() => setConfirmReveal(false)} onConfirm={handleReveal} />

@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
+import { LOCALES, LOCALE_COOKIE, type Locale, pathnameWithLocale } from "./lib/i18n";
 
 const SEEN_KEY = "tessera:seen-howto";
 const DEF_CACHE_PREFIX = "tessera:def:";
@@ -26,6 +27,8 @@ type Tab = "how" | "words" | "settings" | "credits";
 type InitialTab = "how" | "words";
 type ThemePref = "system" | "light" | "dark";
 
+const LANG_LABELS: Record<Locale, string> = { en: "English", es: "Español" };
+
 export function HowToPlay({
   open,
   onClose,
@@ -38,6 +41,7 @@ export function HowToPlay({
   onMutedChange,
   theme,
   onThemeChange,
+  locale,
 }: {
   open: boolean;
   onClose: () => void;
@@ -50,6 +54,7 @@ export function HowToPlay({
   onMutedChange: (v: boolean) => void;
   theme: ThemePref;
   onThemeChange: (v: ThemePref) => void;
+  locale: Locale;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
 
@@ -125,6 +130,7 @@ export function HowToPlay({
                   onMutedChange={onMutedChange}
                   theme={theme}
                   onThemeChange={onThemeChange}
+                  locale={locale}
                 />
               )}
               {tab === "credits" && <CreditsContent />}
@@ -350,6 +356,7 @@ function SettingsContent({
   onMutedChange,
   theme,
   onThemeChange,
+  locale,
 }: {
   hideHints: boolean;
   onHideHintsChange: (v: boolean) => void;
@@ -357,7 +364,18 @@ function SettingsContent({
   onMutedChange: (v: boolean) => void;
   theme: ThemePref;
   onThemeChange: (v: ThemePref) => void;
+  locale: Locale;
 }) {
+  // Locale change is a navigation, not local state. Write the cookie before
+  // navigating — otherwise the proxy sees the stale value and redirects back.
+  const onLanguageChange = (next: Locale) => {
+    if (next === locale) return;
+    if (typeof window === "undefined") return;
+    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
+    const target = pathnameWithLocale(window.location.pathname, next) + window.location.search;
+    window.location.href = target;
+  };
+
   return (
     <div className="divide-y divide-[color:var(--color-rule)] text-sm">
       <SettingRow
@@ -373,6 +391,18 @@ function SettingsContent({
               { value: "dark", label: "Dark" },
             ]}
             ariaLabel="Theme"
+          />
+        }
+      />
+      <SettingRow
+        title="Language"
+        description="Changes UI language. Puzzle words stay the same."
+        control={
+          <Segmented
+            value={locale}
+            onChange={onLanguageChange}
+            options={LOCALES.map((l) => ({ value: l, label: LANG_LABELS[l] }))}
+            ariaLabel="Language"
           />
         }
       />

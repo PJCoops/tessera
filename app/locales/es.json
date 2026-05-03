@@ -1,0 +1,60 @@
+{
+  "meta": {
+    "title": "Tessera: Crucigrama diario",
+    "description": "Un crucigrama diario. Intercambia fichas en una cuadrícula de 4×4 hasta que cada fila forme una palabra, y también cada columna. La misma partida para todos, cada día."
+  },
+  "game": {
+    "kicker": "TESSERA · #{num} · {date}",
+    "moves": "Movimientos {count}",
+    "rows": "{valid}/4 filas",
+    "showHints": "Mostrar pistas",
+    "hideHints": "Ocultar pistas",
+    "reveal": "Ver solución",
+    "share": "Compartir",
+    "copied": "Copiado",
+    "nextPuzzle": "Próxima partida en {countdown}",
+    "legend": {
+      "correctRow": "fila correcta",
+      "correctWord": "palabra correcta",
+      "puzzleComplete": "partida completa"
+    },
+    "history": "Historial"
+  },
+  "howto": {
+    "title": "Tessera.",
+    "tabs": {
+      "how": "Cómo jugar",
+      "words": "Palabras de hoy",
+      "settings": "Ajustes",
+      "credits": "Créditos"
+    },
+    "play": "Jugar",
+    "close": "Cerrar"
+  },
+  "settings": {
+    "theme": {
+      "title": "Tema",
+      "description": "Sistema sigue tu dispositivo. Claro u oscuro se queda en este navegador.",
+      "system": "Sistema",
+      "light": "Claro",
+      "dark": "Oscuro"
+    },
+    "hideHints": {
+      "title": "Ocultar pistas de fila",
+      "description": "Quita el borde punteado que marca las fichas que ya están en la fila correcta. Modo difícil."
+    },
+    "mute": {
+      "title": "Silenciar",
+      "description": "Silencia el sonido de victoria al completar la partida."
+    },
+    "language": {
+      "title": "Idioma",
+      "description": "Cambia el idioma de la interfaz. Las palabras de la partida no cambian.",
+      "en": "English",
+      "es": "Español"
+    }
+  },
+  "footer": {
+    "subreddit": "r/TesseraPuzzle"
+  }
+}

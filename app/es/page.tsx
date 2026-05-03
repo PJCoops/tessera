@@ -1,34 +1,30 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { TesseraGame } from "./TesseraGame";
-import { parseShareSlug, buildShareSlug } from "./lib/share";
-import { getTier } from "./lib/tier";
-import { LocaleProvider } from "./lib/locale-context";
+import { TesseraGame } from "../TesseraGame";
+import { parseShareSlug, buildShareSlug } from "../lib/share";
+import { getTier } from "../lib/tier";
+import { LocaleProvider } from "../lib/locale-context";
+import { getDictionary } from "../lib/i18n";
 
-const description =
-  "A daily word puzzle. Swap tiles on a 4×4 grid until every row spells a word, and every column too. Same puzzle for everyone, every day.";
+const dict = getDictionary("es");
 
 const gameSchema = {
   "@context": "https://schema.org",
   "@type": "VideoGame",
   name: "Tessera",
-  url: "https://www.tesserapuzzle.com",
-  description,
+  url: "https://www.tesserapuzzle.com/es",
+  description: dict.meta.description,
   author: { "@type": "Person", name: "Paul Cooper", url: "https://pjcooper.design" },
   creator: { "@type": "Person", name: "Paul Cooper", url: "https://pjcooper.design" },
   genre: ["Casual", "Puzzle", "Word"],
   gamePlatform: ["Web browser"],
   applicationCategory: "Game",
   operatingSystem: "Any",
-  inLanguage: "en-GB",
+  inLanguage: "es-ES",
   datePublished: "2026-04-27",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "GBP" },
+  offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
 };
 
-// When the URL carries a `?s=N-M[-b|-r]` slug (set by buildShareString),
-// override the page metadata to point at a per-solve OG image. This is
-// what makes pasted Tessera links unfurl as a graphic in iMessage /
-// WhatsApp / Twitter / Discord.
 export async function generateMetadata({
   searchParams,
 }: {
@@ -37,7 +33,22 @@ export async function generateMetadata({
   const params = await searchParams;
   const raw = typeof params.s === "string" ? params.s : null;
   const parsed = raw ? parseShareSlug(raw) : null;
-  if (!parsed) return {};
+  if (!parsed) {
+    return {
+      title: dict.meta.title,
+      description: dict.meta.description,
+      alternates: {
+        canonical: "/es",
+        languages: { en: "/", es: "/es" },
+      },
+      openGraph: {
+        title: dict.meta.title,
+        description: dict.meta.description,
+        url: "/es",
+        locale: "es_ES",
+      },
+    };
+  }
 
   const { num, moves, bonus, revealed } = parsed;
   const ogParams = new URLSearchParams({ n: String(num) });
@@ -47,16 +58,16 @@ export async function generateMetadata({
   const ogUrl = `/api/og?${ogParams.toString()}`;
 
   const title = revealed
-    ? `Tessera #${num} · revealed`
+    ? `Tessera #${num} · solución revelada`
     : moves !== null
-    ? `Tessera #${num} · solved in ${moves} ${moves === 1 ? "swap" : "swaps"}${bonus ? " · bonus" : ""}`
+    ? `Tessera #${num} · resuelto en ${moves} ${moves === 1 ? "movimiento" : "movimientos"}${bonus ? " · bonus" : ""}`
     : `Tessera #${num}`;
   const cardDescription =
     revealed
-      ? "I revealed today's solution. Try the puzzle yourself."
+      ? "Revelé la solución de hoy. Prueba la partida tú mismo."
       : moves !== null
-      ? `${getTier(moves).name} · solved in ${moves} ${moves === 1 ? "swap" : "swaps"}${bonus ? ", with the bonus columns" : ""}. Play today's grid.`
-      : description;
+      ? `${getTier(moves).name} · resuelto en ${moves} ${moves === 1 ? "movimiento" : "movimientos"}${bonus ? ", con las columnas bonus" : ""}. Juega la cuadrícula de hoy.`
+      : dict.meta.description;
 
   return {
     title,
@@ -64,8 +75,9 @@ export async function generateMetadata({
     openGraph: {
       title,
       description: cardDescription,
-      url: `/?s=${buildShareSlug(parsed)}`,
+      url: `/es?s=${buildShareSlug(parsed)}`,
       images: [{ url: ogUrl, width: 1200, height: 630 }],
+      locale: "es_ES",
     },
     twitter: {
       card: "summary_large_image",
@@ -76,16 +88,16 @@ export async function generateMetadata({
   };
 }
 
-export default function Home() {
+export default function HomeEs() {
   return (
     <>
       <Script
-        id="ld-json-tessera"
+        id="ld-json-tessera-es"
         type="application/ld+json"
         strategy="beforeInteractive"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(gameSchema) }}
       />
-      <LocaleProvider locale="en">
+      <LocaleProvider locale="es">
         <TesseraGame />
       </LocaleProvider>
     </>

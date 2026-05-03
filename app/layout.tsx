@@ -18,7 +18,10 @@ export const metadata: Metadata = {
   publisher: "Paul Cooper",
   keywords: ["daily word puzzle", "word game", "tessera", "puzzle", "4x4", "anagram"],
   category: "game",
-  alternates: { canonical: "/" },
+  alternates: {
+    canonical: "/",
+    languages: { en: "/", es: "/es" },
+  },
   robots: {
     index: true,
     follow: true,
