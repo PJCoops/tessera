@@ -5,6 +5,7 @@ import { useEffect, useMemo } from "react";
 import { dateFromPuzzleNumber } from "./lib/rng";
 import type { Streak } from "./lib/streak";
 import { TIERS, getTier } from "./lib/tier";
+import { useLocale } from "./lib/locale-context";
 
 type Result = { moves: number; bonus: boolean; completedAt: number; revealed?: boolean };
 
@@ -42,6 +43,7 @@ export function HistoryModal({
   streak: Streak;
   epoch: string;
 }) {
+  const { t } = useLocale();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -60,8 +62,8 @@ export function HistoryModal({
   const tierCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const e of solved) {
-      const t = getTier(e.result.moves).name;
-      counts.set(t, (counts.get(t) ?? 0) + 1);
+      const k = getTier(e.result.moves).key;
+      counts.set(k, (counts.get(k) ?? 0) + 1);
     }
     return counts;
   }, [solved]);
@@ -89,35 +91,35 @@ export function HistoryModal({
           >
             <button
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("history.ariaClose")}
               className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] rounded"
             >
               ×
             </button>
 
             <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
-              History
+              {t("history.kicker")}
             </p>
-            <h2 className="text-2xl font-light tracking-tight mt-1">Your Tessera.</h2>
+            <h2 className="text-2xl font-light tracking-tight mt-1">{t("history.title")}</h2>
 
             <div className="mt-5 grid grid-cols-4 gap-3 text-center">
-              <Stat label="Solved" value={solvedCount} />
-              <Stat label="Avg moves" value={avgMoves} />
-              <Stat label="Streak" value={streak.current} />
-              <Stat label="Best" value={streak.max} />
+              <Stat label={t("history.stats.solved")} value={solvedCount} />
+              <Stat label={t("history.stats.avgMoves")} value={avgMoves} />
+              <Stat label={t("history.stats.streak")} value={streak.current} />
+              <Stat label={t("history.stats.best")} value={streak.max} />
             </div>
 
             {solvedCount > 0 && (
               <div className="mt-4">
-                <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] mb-2">By tier</p>
+                <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] mb-2">{t("history.byTier")}</p>
                 <ul className="space-y-1">
-                  {TIERS.map((t) => {
-                    const count = tierCounts.get(t.name) ?? 0;
-                    const range = t.max === Infinity ? `${(TIERS[TIERS.indexOf(t) - 1]?.max ?? 0) + 1}+` : `≤${t.max}`;
+                  {TIERS.map((tier) => {
+                    const count = tierCounts.get(tier.key) ?? 0;
+                    const range = tier.max === Infinity ? `${(TIERS[TIERS.indexOf(tier) - 1]?.max ?? 0) + 1}+` : `≤${tier.max}`;
                     return (
-                      <li key={t.name} className="flex items-baseline justify-between text-sm">
+                      <li key={tier.key} className="flex items-baseline justify-between text-sm">
                         <span>
-                          <span className="font-medium">{t.name}</span>
+                          <span className="font-medium">{t(`tiers.${tier.key}`)}</span>
                           <span className="text-[color:var(--color-muted)] ml-2 text-xs">{range}</span>
                         </span>
                         <span className="tabular-nums text-[color:var(--color-muted)]">{count}</span>
@@ -131,7 +133,7 @@ export function HistoryModal({
             <div className="mt-6 flex-1 overflow-y-auto -mx-2">
               {entries.length === 0 ? (
                 <p className="text-sm text-[color:var(--color-muted)] px-2">
-                  No puzzles solved yet. Today&rsquo;s your day.
+                  {t("history.empty")}
                 </p>
               ) : (
                 <ul className="divide-y divide-[color:var(--color-rule)]">
@@ -142,11 +144,11 @@ export function HistoryModal({
                       </span>
                       <span className="font-medium tabular-nums">
                         {e.result.revealed
-                          ? <span className="text-[color:var(--color-muted)]">revealed</span>
+                          ? <span className="text-[color:var(--color-muted)]">{t("history.revealed")}</span>
                           : (
                             <>
-                              {e.result.moves} {e.result.moves === 1 ? "move" : "moves"}
-                              <span className="text-[color:var(--color-muted)] ml-2 text-xs">{getTier(e.result.moves).name}</span>
+                              {e.result.moves} {t(e.result.moves === 1 ? "game.moveSingular" : "game.movePlural")}
+                              <span className="text-[color:var(--color-muted)] ml-2 text-xs">{t(`tiers.${getTier(e.result.moves).key}`)}</span>
                             </>
                           )
                         }

@@ -113,7 +113,7 @@ function formatHms(ms: number): string {
 }
 
 export function TesseraGame() {
-  const { locale } = useLocale();
+  const { locale, dict, t } = useLocale();
   const [mounted, setMounted] = useState(false);
   const [puzzle, setPuzzle] = useState<{
     num: number;
@@ -487,6 +487,7 @@ export function TesseraGame() {
         streak: liveStreak,
         bonus: shareSrc.bonus,
         revealed: shareSrc.revealed,
+        dict,
       })
     : "";
 
@@ -550,13 +551,12 @@ export function TesseraGame() {
         onMutedChange={updateMuted}
         theme={theme}
         onThemeChange={updateTheme}
-        locale={locale}
       />
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} streak={streak} epoch={EPOCH} />
       <RevealConfirm open={confirmReveal} onClose={() => setConfirmReveal(false)} onConfirm={handleReveal} />
       <div className="mb-6 text-center">
         <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
-          {puzzle.demo ? "Tessera · puzzle" : `Tessera · #${puzzle.num} · ${puzzle.date}`}
+          {puzzle.demo ? t("game.kickerDemo") : t("game.kicker", { num: puzzle.num, date: puzzle.date })}
         </p>
         <div className="text-base mt-2 h-10 overflow-hidden flex items-center justify-center px-4 max-w-md mx-auto">
           <AnimatePresence mode="wait" initial={false}>
@@ -572,7 +572,7 @@ export function TesseraGame() {
               if (isRevealed) {
                 return (
                   <motion.span key="revealed" {...rollProps} className="block font-medium text-[color:var(--color-muted)]">
-                    Revealed
+                    {t("game.revealedStatus")}
                   </motion.span>
                 );
               }
@@ -586,7 +586,7 @@ export function TesseraGame() {
               if (validity.isSolved && puzzle.forceSolved) {
                 return (
                   <motion.span key="forcesolved" {...rollProps} className="block font-medium">
-                    Solved
+                    {t("game.solvedShort")}
                   </motion.span>
                 );
               }
@@ -600,15 +600,15 @@ export function TesseraGame() {
               if (demoPlaying) {
                 return (
                   <motion.span key="demo" {...rollProps} className="block text-sm leading-snug text-[color:var(--color-muted)] text-center">
-                    Tap two tiles to swap them
+                    {t("game.demoTipL1")}
                     <br />
-                    to make a grid of 4 letter words
+                    {t("game.demoTipL2")}
                   </motion.span>
                 );
               }
               return (
                 <motion.span key="moves" {...rollProps} className="block text-[color:var(--color-muted)]">
-                  Moves {moves} · {validity.validRowCount}/{N} rows
+                  {t("game.movesStatus", { moves, valid: validity.validRowCount, total: N })}
                 </motion.span>
               );
             })()}
@@ -689,7 +689,7 @@ export function TesseraGame() {
             onClick={onShare}
             className="px-5 py-2 text-sm border border-[color:var(--color-rule)] rounded-md hover:bg-[color:var(--color-cream)] transition-colors"
           >
-            {copied ? "Copied" : "Share"}
+            {copied ? t("game.copied") : t("game.share")}
           </button>
         )}
         {!validity.isSolved && !storedResult && (
@@ -698,18 +698,18 @@ export function TesseraGame() {
               onClick={() => updateHideHints(!hideHints)}
               className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] bg-[color:var(--color-cream)] rounded-md hover:text-[color:var(--color-ink)] transition-colors"
             >
-              {hideHints ? "Show hints" : "Hide hints"}
+              {hideHints ? t("game.showHints") : t("game.hideHints")}
             </button>
             <button
               onClick={() => setConfirmReveal(true)}
               className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] bg-[color:var(--color-cream)] rounded-md hover:text-[color:var(--color-ink)] transition-colors"
             >
-              Reveal solution
+              {t("game.reveal")}
             </button>
           </div>
         )}
         {finished && (
-          <p className="text-xs text-[color:var(--color-muted)]">Next puzzle in {countdown}</p>
+          <p className="text-xs text-[color:var(--color-muted)]">{t("game.nextPuzzle", { countdown })}</p>
         )}
         {finished && (
           <div className="mt-2 w-full max-w-xs">
@@ -718,22 +718,22 @@ export function TesseraGame() {
         )}
 
         <div className="mt-2 flex items-center gap-4 text-xs text-[color:var(--color-muted)]">
-          {!hideHints && <Legend variant="hint">correct row</Legend>}
-          <Legend variant="row">correct word</Legend>
-          <Legend variant="bonus">puzzle complete</Legend>
+          {!hideHints && <Legend variant="hint">{t("game.legend.correctRow")}</Legend>}
+          <Legend variant="row">{t("game.legend.correctWord")}</Legend>
+          <Legend variant="bonus">{t("game.legend.puzzleComplete")}</Legend>
         </div>
 
         <div className="mt-2 flex items-center gap-3 text-[color:var(--color-muted)]">
           <button
             onClick={() => openHelp("how")}
-            aria-label="How to play"
+            aria-label={t("game.ariaHowToPlay")}
             className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[color:var(--color-rule)] text-xs hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
           >
             ?
           </button>
           <button
             onClick={() => setHistoryOpen(true)}
-            aria-label="History"
+            aria-label={t("game.ariaHistory")}
             className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[color:var(--color-rule)] hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
           >
             <svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -840,10 +840,12 @@ function tileClasses(rowValid: boolean, homeHint: boolean): string {
 }
 
 function SolvedStatus({ moves }: { moves: number }) {
+  const { t } = useLocale();
   const tier = getTier(moves);
+  const moveWord = t(moves === 1 ? "game.moveSingular" : "game.movePlural");
   return (
     <span className="font-medium">
-      Solved in {moves} {moves === 1 ? "move" : "moves"} · {tier.name}
+      {t("game.solvedIn", { moves, moveWord, tier: t(`tiers.${tier.key}`) })}
     </span>
   );
 }
@@ -857,6 +859,7 @@ function RevealConfirm({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useLocale();
   if (!open) return null;
   return (
     <div
@@ -868,24 +871,24 @@ function RevealConfirm({
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
-          Reveal solution
+          {t("game.revealConfirm.kicker")}
         </p>
-        <h2 className="text-xl font-light tracking-tight mt-1">Give up for today?</h2>
+        <h2 className="text-xl font-light tracking-tight mt-1">{t("game.revealConfirm.title")}</h2>
         <p className="text-sm mt-3 text-[color:var(--color-ink-soft)]">
-          The board will snap to the solved grid. Today won&rsquo;t count toward your streak (your current streak stays as it is).
+          {t("game.revealConfirm.body")}
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm border border-[color:var(--color-rule)] rounded-md hover:bg-[color:var(--color-cream)] transition-colors"
           >
-            Keep trying
+            {t("game.revealConfirm.cancel")}
           </button>
           <button
             onClick={onConfirm}
             className="px-4 py-2 text-sm bg-[color:var(--color-ink)] text-[color:var(--color-paper)] rounded-md hover:opacity-90 transition-opacity"
           >
-            Reveal
+            {t("game.revealConfirm.confirm")}
           </button>
         </div>
       </div>

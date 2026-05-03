@@ -4,24 +4,42 @@
     "description": "Un crucigrama diario. Intercambia fichas en una cuadrícula de 4×4 hasta que cada fila forme una palabra, y también cada columna. La misma partida para todos, cada día."
   },
   "game": {
-    "kicker": "TESSERA · #{num} · {date}",
-    "moves": "Movimientos {count}",
-    "rows": "{valid}/4 filas",
+    "kicker": "Tessera · #{num} · {date}",
+    "kickerDemo": "Tessera · partida",
+    "movesStatus": "Movimientos {moves} · {valid}/{total} filas",
+    "demoTipL1": "Toca dos fichas para intercambiarlas",
+    "demoTipL2": "y formar una cuadrícula de palabras de 4 letras",
+    "revealedStatus": "Revelado",
+    "solvedShort": "Resuelto",
+    "solvedIn": "Resuelto en {moves} {moveWord} · {tier}",
+    "moveSingular": "movimiento",
+    "movePlural": "movimientos",
+    "swapSingular": "intercambio",
+    "swapPlural": "intercambios",
+    "share": "Compartir",
+    "copied": "Copiado",
     "showHints": "Mostrar pistas",
     "hideHints": "Ocultar pistas",
     "reveal": "Ver solución",
-    "share": "Compartir",
-    "copied": "Copiado",
     "nextPuzzle": "Próxima partida en {countdown}",
     "legend": {
       "correctRow": "fila correcta",
       "correctWord": "palabra correcta",
       "puzzleComplete": "partida completa"
     },
-    "history": "Historial"
+    "ariaHowToPlay": "Cómo jugar",
+    "ariaHistory": "Historial",
+    "revealConfirm": {
+      "kicker": "Ver solución",
+      "title": "¿Te rindes por hoy?",
+      "body": "El tablero se completará con la solución. Hoy no contará para tu racha (tu racha actual se mantiene).",
+      "cancel": "Seguir intentando",
+      "confirm": "Revelar"
+    }
   },
   "howto": {
     "title": "Tessera.",
+    "ariaClose": "Cerrar",
     "tabs": {
       "how": "Cómo jugar",
       "words": "Palabras de hoy",
@@ -29,7 +47,29 @@
       "credits": "Créditos"
     },
     "play": "Jugar",
-    "close": "Cerrar"
+    "step1": {
+      "title": "Toca dos fichas para intercambiarlas.",
+      "body": "Cada intercambio es un movimiento."
+    },
+    "step2": {
+      "title": "Encuentra las cuatro palabras de hoy.",
+      "body": "Cada fila es una palabra concreta. Las fichas con borde verde ya están en la fila correcta. Las fichas se rellenan de verde cuando toda la fila coincide con la palabra de hoy."
+    },
+    "step3": {
+      "title": "Las columnas también forman palabras.",
+      "body": "Úsalas para comprobar. Cuando las cuatro filas coincidan, también lo harán las columnas, y toda la cuadrícula se vuelve dorada."
+    },
+    "words": {
+      "from": "de",
+      "missing": "Definición no disponible.",
+      "attribution": "Definiciones de dictionaryapi.dev (en_GB)."
+    },
+    "credits": {
+      "createdBy": "Creado por",
+      "soundEffects": "Efectos de sonido",
+      "contributors": "Colaboradores",
+      "soundLicensePrefix": "por"
+    }
   },
   "settings": {
     "theme": {
@@ -39,6 +79,12 @@
       "light": "Claro",
       "dark": "Oscuro"
     },
+    "language": {
+      "title": "Idioma",
+      "description": "Cambia el idioma de la interfaz. Las palabras de la partida no cambian.",
+      "en": "English",
+      "es": "Español"
+    },
     "hideHints": {
       "title": "Ocultar pistas de fila",
       "description": "Quita el borde punteado que marca las fichas que ya están en la fila correcta. Modo difícil."
@@ -46,15 +92,44 @@
     "mute": {
       "title": "Silenciar",
       "description": "Silencia el sonido de victoria al completar la partida."
-    },
-    "language": {
-      "title": "Idioma",
-      "description": "Cambia el idioma de la interfaz. Las palabras de la partida no cambian.",
-      "en": "English",
-      "es": "Español"
     }
   },
-  "footer": {
-    "subreddit": "r/TesseraPuzzle"
+  "history": {
+    "kicker": "Historial",
+    "title": "Tu Tessera.",
+    "ariaClose": "Cerrar",
+    "stats": {
+      "solved": "Resueltos",
+      "avgMoves": "Mov. medios",
+      "streak": "Racha",
+      "best": "Mejor"
+    },
+    "byTier": "Por nivel",
+    "empty": "Aún no has resuelto ninguna partida. Hoy es tu día.",
+    "revealed": "revelado"
+  },
+  "tiers": {
+    "legendary": "Legendario",
+    "genius": "Genio",
+    "wordsmith": "Lingüista",
+    "persistent": "Persistente",
+    "tenacious": "Tenaz"
+  },
+  "email": {
+    "title": "Recordatorio diario",
+    "dismiss": "No, gracias",
+    "body": "Un correo a las 09:00 UTC con la partida de hoy. Cancela cuando quieras.",
+    "placeholder": "tu@ejemplo.com",
+    "submit": "Recuérdamelo",
+    "submitting": "Enviando…",
+    "success": "Suscrito. Te enviaremos la cuadrícula de mañana a las 09:00 UTC.",
+    "error": "Algo salió mal. Revisa la dirección e inténtalo de nuevo.",
+    "notConfigured": "Los recordatorios todavía no están activos. Vuelve pronto."
+  },
+  "share": {
+    "headlineRevealed": "Tessera #{num} · revelado",
+    "headlineSolved": "Tessera #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
+    "streakMeta": "🔥 racha de {streak} días",
+    "bonusMeta": "✨ bonus"
   }
 }

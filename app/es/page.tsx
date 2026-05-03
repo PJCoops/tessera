@@ -4,7 +4,7 @@ import { TesseraGame } from "../TesseraGame";
 import { parseShareSlug, buildShareSlug } from "../lib/share";
 import { getTier } from "../lib/tier";
 import { LocaleProvider } from "../lib/locale-context";
-import { getDictionary } from "../lib/i18n";
+import { getDictionary, t } from "../lib/i18n";
 
 const dict = getDictionary("es");
 
@@ -57,16 +57,18 @@ export async function generateMetadata({
   if (revealed) ogParams.set("r", "1");
   const ogUrl = `/api/og?${ogParams.toString()}`;
 
+  const moveWord = (n: number) => (n === 1 ? "movimiento" : "movimientos");
+  const tierName = moves !== null ? t(dict, `tiers.${getTier(moves).key}`) : "";
   const title = revealed
     ? `Tessera #${num} · solución revelada`
     : moves !== null
-    ? `Tessera #${num} · resuelto en ${moves} ${moves === 1 ? "movimiento" : "movimientos"}${bonus ? " · bonus" : ""}`
+    ? `Tessera #${num} · resuelto en ${moves} ${moveWord(moves)}${bonus ? " · bonus" : ""}`
     : `Tessera #${num}`;
   const cardDescription =
     revealed
       ? "Revelé la solución de hoy. Prueba la partida tú mismo."
       : moves !== null
-      ? `${getTier(moves).name} · resuelto en ${moves} ${moves === 1 ? "movimiento" : "movimientos"}${bonus ? ", con las columnas bonus" : ""}. Juega la cuadrícula de hoy.`
+      ? `${tierName} · resuelto en ${moves} ${moveWord(moves)}${bonus ? ", con las columnas bonus" : ""}. Juega la cuadrícula de hoy.`
       : dict.meta.description;
 
   return {

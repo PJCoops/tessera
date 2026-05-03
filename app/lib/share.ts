@@ -1,4 +1,5 @@
-import { getTier } from "./tier";
+import { getTier, type TierKey } from "./tier";
+import { type Dictionary, t } from "./i18n";
 
 export type ShareInput = {
   puzzleNumber: number;
@@ -6,6 +7,9 @@ export type ShareInput = {
   streak: number;
   bonus?: boolean;
   revealed?: boolean;
+  // Locale-aware copy: pass the player's current dictionary so the headline,
+  // streak line, and bonus tag are in the language they're playing in.
+  dict: Dictionary;
 };
 
 // Compact representation of a share slug. Used both in the share URL
@@ -18,15 +22,14 @@ export type ShareSlug = {
   revealed: boolean;
 };
 
-// Tier-specific emoji used in the share headline. Keeps the share line
-// distinctive at a glance — Wordle has its yellow/green grid, Tessera
-// has the tier badge plus the gold rows below.
-const TIER_EMOJI: Record<string, string> = {
-  Legendary: "🏆",
-  Genius: "🧠",
-  Wordsmith: "📖",
-  Persistent: "🧩",
-  Tenacious: "💪",
+// Tier-specific emoji used in the share headline. Keyed by locale-independent
+// tier key so emoji stay constant across languages.
+const TIER_EMOJI: Record<TierKey, string> = {
+  legendary: "🏆",
+  genius: "🧠",
+  wordsmith: "📖",
+  persistent: "🧩",
+  tenacious: "💪",
 };
 
 const SOLVED_TILE = "🟩";
@@ -89,16 +92,25 @@ export function parseShareSlug(slug: string): ShareSlug | null {
 }
 
 export function buildShareString(input: ShareInput): string {
-  const { puzzleNumber, moves, streak, bonus = false, revealed = false } = input;
+  const { puzzleNumber, moves, streak, bonus = false, revealed = false, dict } = input;
   const tier = getTier(moves);
-  const tierEmoji = TIER_EMOJI[tier.name] ?? "";
+  const tierName = t(dict, `tiers.${tier.key}`);
+  const tierEmoji = TIER_EMOJI[tier.key] ?? "";
+  const swapWord = t(dict, moves === 1 ? "game.swapSingular" : "game.swapPlural");
+
   const headline = revealed
-    ? `Tessera #${puzzleNumber} · revealed`
-    : `Tessera #${puzzleNumber} · ${moves} ${moves === 1 ? "swap" : "swaps"} · ${tierEmoji} ${tier.name}`.trim();
+    ? t(dict, "share.headlineRevealed", { num: puzzleNumber })
+    : t(dict, "share.headlineSolved", {
+        num: puzzleNumber,
+        moves,
+        swapWord,
+        tierEmoji,
+        tier: tierName,
+      }).trim();
 
   const meta: string[] = [];
-  if (!revealed && streak > 1) meta.push(`🔥 ${streak}-day streak`);
-  if (!revealed && bonus) meta.push("✨ bonus");
+  if (!revealed && streak > 1) meta.push(t(dict, "share.streakMeta", { streak }));
+  if (!revealed && bonus) meta.push(t(dict, "share.bonusMeta"));
 
   const slug = buildShareSlug({ num: puzzleNumber, moves, bonus, revealed });
   const url = `tesserapuzzle.com/?s=${slug}`;

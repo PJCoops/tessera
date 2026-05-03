@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { track } from "./lib/analytics";
+import { useLocale } from "./lib/locale-context";
 
 const DISMISSED_KEY = "tessera:email-dismissed";
 const SUBSCRIBED_KEY = "tessera:email-subscribed";
@@ -37,6 +38,7 @@ export function EmailSignup({
   onDismiss?: () => void;
   compact?: boolean;
 }) {
+  const { t } = useLocale();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [hidden, setHidden] = useState(false);
@@ -94,7 +96,7 @@ export function EmailSignup({
           compact ? "text-[11px]" : "text-xs"
         }`}
       >
-        Subscribed. We&rsquo;ll send tomorrow&rsquo;s grid at 09:00 UTC.
+        {t("email.success")}
       </p>
     );
   }
@@ -107,14 +109,14 @@ export function EmailSignup({
     >
       <div className="flex items-baseline justify-between gap-3">
         <p className={`font-medium ${compact ? "text-xs" : "text-sm"}`}>
-          Daily reminder
+          {t("email.title")}
         </p>
         <button
           type="button"
           onClick={dismiss}
           className="text-[10px] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] underline-offset-4 hover:underline"
         >
-          No thanks
+          {t("email.dismiss")}
         </button>
       </div>
       <p
@@ -122,7 +124,7 @@ export function EmailSignup({
           compact ? "text-[11px]" : "text-xs"
         }`}
       >
-        One email at 09:00 UTC with today&rsquo;s puzzle. Unsubscribe whenever.
+        {t("email.body")}
       </p>
       <form onSubmit={submit} className="mt-3 flex gap-2">
         <input
@@ -132,7 +134,7 @@ export function EmailSignup({
           autoComplete="email"
           inputMode="email"
           spellCheck={false}
-          placeholder="you@example.com"
+          placeholder={t("email.placeholder")}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={status === "submitting"}
@@ -143,17 +145,17 @@ export function EmailSignup({
           disabled={status === "submitting"}
           className="px-3 py-2 text-xs bg-[color:var(--color-ink)] text-[color:var(--color-paper)] rounded-md hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          {status === "submitting" ? "Sending…" : "Remind me"}
+          {status === "submitting" ? t("email.submitting") : t("email.submit")}
         </button>
       </form>
       {status === "error" && (
         <p className="mt-2 text-[11px] text-red-700">
-          Something went wrong. Check the address and try again.
+          {t("email.error")}
         </p>
       )}
       {status === "not_configured" && (
         <p className="mt-2 text-[11px] text-[color:var(--color-muted)]">
-          Reminders aren&rsquo;t live yet. Come back soon.
+          {t("email.notConfigured")}
         </p>
       )}
     </div>

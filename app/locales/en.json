@@ -4,24 +4,42 @@
     "description": "A daily word puzzle. Swap tiles on a 4×4 grid until every row spells a word, and every column too. Same puzzle for everyone, every day."
   },
   "game": {
-    "kicker": "TESSERA · #{num} · {date}",
-    "moves": "Moves {count}",
-    "rows": "{valid}/4 rows",
+    "kicker": "Tessera · #{num} · {date}",
+    "kickerDemo": "Tessera · puzzle",
+    "movesStatus": "Moves {moves} · {valid}/{total} rows",
+    "demoTipL1": "Tap two tiles to swap them",
+    "demoTipL2": "to make a grid of 4 letter words",
+    "revealedStatus": "Revealed",
+    "solvedShort": "Solved",
+    "solvedIn": "Solved in {moves} {moveWord} · {tier}",
+    "moveSingular": "move",
+    "movePlural": "moves",
+    "swapSingular": "swap",
+    "swapPlural": "swaps",
+    "share": "Share",
+    "copied": "Copied",
     "showHints": "Show hints",
     "hideHints": "Hide hints",
     "reveal": "Reveal solution",
-    "share": "Share",
-    "copied": "Copied",
     "nextPuzzle": "Next puzzle in {countdown}",
     "legend": {
       "correctRow": "correct row",
       "correctWord": "correct word",
       "puzzleComplete": "puzzle complete"
     },
-    "history": "History"
+    "ariaHowToPlay": "How to play",
+    "ariaHistory": "History",
+    "revealConfirm": {
+      "kicker": "Reveal solution",
+      "title": "Give up for today?",
+      "body": "The board will snap to the solved grid. Today won’t count toward your streak (your current streak stays as it is).",
+      "cancel": "Keep trying",
+      "confirm": "Reveal"
+    }
   },
   "howto": {
     "title": "Tessera.",
+    "ariaClose": "Close",
     "tabs": {
       "how": "How to play",
       "words": "Today’s words",
@@ -29,7 +47,29 @@
       "credits": "Credits"
     },
     "play": "Play",
-    "close": "Close"
+    "step1": {
+      "title": "Tap two tiles to swap them.",
+      "body": "Each swap is one move."
+    },
+    "step2": {
+      "title": "Find today’s four words.",
+      "body": "Each row is one specific word. Tiles with a green outline are already on the right row. Tiles fill green when the whole row matches today’s word."
+    },
+    "step3": {
+      "title": "The columns spell words too.",
+      "body": "Use them as a check. When all four rows match, the columns will too, and the whole grid turns gold."
+    },
+    "words": {
+      "from": "from",
+      "missing": "Definition unavailable.",
+      "attribution": "Definitions from dictionaryapi.dev (en_GB)."
+    },
+    "credits": {
+      "createdBy": "Created by",
+      "soundEffects": "Sound effects",
+      "contributors": "Contributors",
+      "soundLicensePrefix": "by"
+    }
   },
   "settings": {
     "theme": {
@@ -39,6 +79,12 @@
       "light": "Light",
       "dark": "Dark"
     },
+    "language": {
+      "title": "Language",
+      "description": "Changes UI language. Puzzle words stay the same.",
+      "en": "English",
+      "es": "Español"
+    },
     "hideHints": {
       "title": "Hide row hints",
       "description": "Removes the dotted outline that marks tiles already on the right row. Harder mode."
@@ -46,15 +92,44 @@
     "mute": {
       "title": "Mute",
       "description": "Silences the win jingle when you solve the puzzle."
-    },
-    "language": {
-      "title": "Language",
-      "description": "Changes UI language. Puzzle words stay the same.",
-      "en": "English",
-      "es": "Español"
     }
   },
-  "footer": {
-    "subreddit": "r/TesseraPuzzle"
+  "history": {
+    "kicker": "History",
+    "title": "Your Tessera.",
+    "ariaClose": "Close",
+    "stats": {
+      "solved": "Solved",
+      "avgMoves": "Avg moves",
+      "streak": "Streak",
+      "best": "Best"
+    },
+    "byTier": "By tier",
+    "empty": "No puzzles solved yet. Today’s your day.",
+    "revealed": "revealed"
+  },
+  "tiers": {
+    "legendary": "Legendary",
+    "genius": "Genius",
+    "wordsmith": "Wordsmith",
+    "persistent": "Persistent",
+    "tenacious": "Tenacious"
+  },
+  "email": {
+    "title": "Daily reminder",
+    "dismiss": "No thanks",
+    "body": "One email at 09:00 UTC with today’s puzzle. Unsubscribe whenever.",
+    "placeholder": "you@example.com",
+    "submit": "Remind me",
+    "submitting": "Sending…",
+    "success": "Subscribed. We’ll send tomorrow’s grid at 09:00 UTC.",
+    "error": "Something went wrong. Check the address and try again.",
+    "notConfigured": "Reminders aren’t live yet. Come back soon."
+  },
+  "share": {
+    "headlineRevealed": "Tessera #{num} · revealed",
+    "headlineSolved": "Tessera #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
+    "streakMeta": "🔥 {streak}-day streak",
+    "bonusMeta": "✨ bonus"
   }
 }

@@ -4,9 +4,10 @@ import { TesseraGame } from "./TesseraGame";
 import { parseShareSlug, buildShareSlug } from "./lib/share";
 import { getTier } from "./lib/tier";
 import { LocaleProvider } from "./lib/locale-context";
+import { getDictionary, t } from "./lib/i18n";
 
-const description =
-  "A daily word puzzle. Swap tiles on a 4×4 grid until every row spells a word, and every column too. Same puzzle for everyone, every day.";
+const dict = getDictionary("en");
+const description = dict.meta.description;
 
 const gameSchema = {
   "@context": "https://schema.org",
@@ -46,16 +47,18 @@ export async function generateMetadata({
   if (revealed) ogParams.set("r", "1");
   const ogUrl = `/api/og?${ogParams.toString()}`;
 
+  const swapWord = (n: number) => (n === 1 ? "swap" : "swaps");
+  const tierName = moves !== null ? t(dict, `tiers.${getTier(moves).key}`) : "";
   const title = revealed
     ? `Tessera #${num} · revealed`
     : moves !== null
-    ? `Tessera #${num} · solved in ${moves} ${moves === 1 ? "swap" : "swaps"}${bonus ? " · bonus" : ""}`
+    ? `Tessera #${num} · solved in ${moves} ${swapWord(moves)}${bonus ? " · bonus" : ""}`
     : `Tessera #${num}`;
   const cardDescription =
     revealed
       ? "I revealed today's solution. Try the puzzle yourself."
       : moves !== null
-      ? `${getTier(moves).name} · solved in ${moves} ${moves === 1 ? "swap" : "swaps"}${bonus ? ", with the bonus columns" : ""}. Play today's grid.`
+      ? `${tierName} · solved in ${moves} ${swapWord(moves)}${bonus ? ", with the bonus columns" : ""}. Play today's grid.`
       : description;
 
   return {

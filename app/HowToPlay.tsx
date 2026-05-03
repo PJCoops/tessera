@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { LOCALES, LOCALE_COOKIE, type Locale, pathnameWithLocale } from "./lib/i18n";
+import { useLocale } from "./lib/locale-context";
 
 const SEEN_KEY = "tessera:seen-howto";
 const DEF_CACHE_PREFIX = "tessera:def:";
@@ -41,7 +42,6 @@ export function HowToPlay({
   onMutedChange,
   theme,
   onThemeChange,
-  locale,
 }: {
   open: boolean;
   onClose: () => void;
@@ -54,8 +54,8 @@ export function HowToPlay({
   onMutedChange: (v: boolean) => void;
   theme: ThemePref;
   onThemeChange: (v: ThemePref) => void;
-  locale: Locale;
 }) {
+  const { locale, t } = useLocale();
   const [tab, setTab] = useState<Tab>(initialTab);
 
   useEffect(() => {
@@ -94,28 +94,28 @@ export function HowToPlay({
           >
             <button
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("howto.ariaClose")}
               className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] rounded"
             >
               ×
             </button>
 
-            <h2 className="text-2xl font-light tracking-tight">Tessera.</h2>
+            <h2 className="text-2xl font-light tracking-tight">{t("howto.title")}</h2>
 
             <div className="mt-4 flex gap-1 border-b border-[color:var(--color-rule)]">
               <TabButton active={tab === "how"} onClick={() => setTab("how")}>
-                How to play
+                {t("howto.tabs.how")}
               </TabButton>
               {showWordsTab && (
                 <TabButton active={tab === "words"} onClick={() => setTab("words")}>
-                  Today&rsquo;s words
+                  {t("howto.tabs.words")}
                 </TabButton>
               )}
               <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>
-                Settings
+                {t("howto.tabs.settings")}
               </TabButton>
               <TabButton active={tab === "credits"} onClick={() => setTab("credits")}>
-                Credits
+                {t("howto.tabs.credits")}
               </TabButton>
             </div>
 
@@ -141,7 +141,7 @@ export function HowToPlay({
                 onClick={onClose}
                 className="mt-6 w-full px-4 py-2.5 text-sm bg-[color:var(--color-ink)] text-[color:var(--color-paper)] rounded-md hover:opacity-90 transition-opacity"
               >
-                Play
+                {t("howto.play")}
               </button>
             )}
           </motion.div>
@@ -175,33 +175,28 @@ function TabButton({
 }
 
 function HowToContent() {
+  const { t } = useLocale();
   return (
     <ol className="space-y-5 text-sm">
       <li className="flex gap-4 items-start">
         <Step n={1} />
         <div>
-          <p className="font-medium">Tap two tiles to swap them.</p>
-          <p className="text-[color:var(--color-muted)] mt-1">
-            Each swap is one move.
-          </p>
+          <p className="font-medium">{t("howto.step1.title")}</p>
+          <p className="text-[color:var(--color-muted)] mt-1">{t("howto.step1.body")}</p>
         </div>
       </li>
       <li className="flex gap-4 items-start">
         <Step n={2} />
         <div>
-          <p className="font-medium">Find today&rsquo;s four words.</p>
-          <p className="text-[color:var(--color-muted)] mt-1">
-            Each row is one specific word. Tiles with a green outline are already on the right row. Tiles fill green when the whole row matches today&rsquo;s word.
-          </p>
+          <p className="font-medium">{t("howto.step2.title")}</p>
+          <p className="text-[color:var(--color-muted)] mt-1">{t("howto.step2.body")}</p>
         </div>
       </li>
       <li className="flex gap-4 items-start">
         <Step n={3} />
         <div>
-          <p className="font-medium">The columns spell words too.</p>
-          <p className="text-[color:var(--color-muted)] mt-1">
-            Use them as a check. When all four rows match, the columns will too, and the whole grid turns gold.
-          </p>
+          <p className="font-medium">{t("howto.step3.title")}</p>
+          <p className="text-[color:var(--color-muted)] mt-1">{t("howto.step3.body")}</p>
         </div>
       </li>
     </ol>
@@ -277,6 +272,7 @@ async function fetchDefinition(word: string): Promise<DefCached> {
 }
 
 function WordsContent({ goldRows }: { goldRows: string[] }) {
+  const { t } = useLocale();
   const [entries, setEntries] = useState<DefEntry[]>([]);
 
   useEffect(() => {
@@ -332,18 +328,18 @@ function WordsContent({ goldRows }: { goldRows: string[] }) {
               )}
               {e.resolvedFrom && (
                 <span className="text-xs text-[color:var(--color-muted)]">
-                  from <span className="italic">{e.resolvedFrom}</span>
+                  {t("howto.words.from")} <span className="italic">{e.resolvedFrom}</span>
                 </span>
               )}
             </div>
             <p className="text-sm mt-1 text-[color:var(--color-ink-soft)]">
-              {e.loading ? "…" : (e.definition ?? "Definition unavailable.")}
+              {e.loading ? "…" : (e.definition ?? t("howto.words.missing"))}
             </p>
           </li>
         ))}
       </ul>
       <p className="mt-6 text-[10px] text-[color:var(--color-muted)]">
-        Definitions from dictionaryapi.dev (en_GB).
+        {t("howto.words.attribution")}
       </p>
     </>
   );
@@ -356,7 +352,6 @@ function SettingsContent({
   onMutedChange,
   theme,
   onThemeChange,
-  locale,
 }: {
   hideHints: boolean;
   onHideHintsChange: (v: boolean) => void;
@@ -364,8 +359,9 @@ function SettingsContent({
   onMutedChange: (v: boolean) => void;
   theme: ThemePref;
   onThemeChange: (v: ThemePref) => void;
-  locale: Locale;
 }) {
+  const { locale, t } = useLocale();
+
   // Locale change is a navigation, not local state. Write the cookie before
   // navigating — otherwise the proxy sees the stale value and redirects back.
   const onLanguageChange = (next: Locale) => {
@@ -379,42 +375,42 @@ function SettingsContent({
   return (
     <div className="divide-y divide-[color:var(--color-rule)] text-sm">
       <SettingRow
-        title="Theme"
-        description="System follows your device. Light or dark stays on this browser."
+        title={t("settings.theme.title")}
+        description={t("settings.theme.description")}
         control={
           <Segmented
             value={theme}
             onChange={onThemeChange}
             options={[
-              { value: "system", label: "System" },
-              { value: "light", label: "Light" },
-              { value: "dark", label: "Dark" },
+              { value: "system", label: t("settings.theme.system") },
+              { value: "light", label: t("settings.theme.light") },
+              { value: "dark", label: t("settings.theme.dark") },
             ]}
-            ariaLabel="Theme"
+            ariaLabel={t("settings.theme.title")}
           />
         }
       />
       <SettingRow
-        title="Language"
-        description="Changes UI language. Puzzle words stay the same."
+        title={t("settings.language.title")}
+        description={t("settings.language.description")}
         control={
           <Segmented
             value={locale}
             onChange={onLanguageChange}
             options={LOCALES.map((l) => ({ value: l, label: LANG_LABELS[l] }))}
-            ariaLabel="Language"
+            ariaLabel={t("settings.language.title")}
           />
         }
       />
       <SettingRow
-        title="Hide row hints"
-        description="Removes the dotted outline that marks tiles already on the right row. Harder mode."
-        control={<Toggle checked={hideHints} onChange={onHideHintsChange} ariaLabel="Hide row hints" />}
+        title={t("settings.hideHints.title")}
+        description={t("settings.hideHints.description")}
+        control={<Toggle checked={hideHints} onChange={onHideHintsChange} ariaLabel={t("settings.hideHints.title")} />}
       />
       <SettingRow
-        title="Mute"
-        description="Silences the win jingle when you solve the puzzle."
-        control={<Toggle checked={muted} onChange={onMutedChange} ariaLabel="Mute" />}
+        title={t("settings.mute.title")}
+        description={t("settings.mute.description")}
+        control={<Toggle checked={muted} onChange={onMutedChange} ariaLabel={t("settings.mute.title")} />}
       />
     </div>
   );
@@ -505,11 +501,12 @@ function Segmented<T extends string>({
 }
 
 function CreditsContent() {
+  const { t } = useLocale();
   return (
     <div className="space-y-5 text-sm max-h-[60vh] overflow-y-auto pr-1">
       <section>
         <h3 className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
-          Created by
+          {t("howto.credits.createdBy")}
         </h3>
         <p className="mt-2">
           <a
@@ -525,7 +522,7 @@ function CreditsContent() {
 
       <section>
         <h3 className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
-          Sound effects
+          {t("howto.credits.soundEffects")}
         </h3>
         <ul className="mt-2 space-y-2 text-[color:var(--color-ink-soft)]">
           <li>
@@ -537,7 +534,7 @@ function CreditsContent() {
             >
               Ice Cream Truck at Park Playground
             </a>
-            {" "}by fudgealtoid. License: Attribution 4.0.
+            {" "}{t("howto.credits.soundLicensePrefix")} fudgealtoid. License: Attribution 4.0.
           </li>
           <li>
             <a
@@ -548,7 +545,7 @@ function CreditsContent() {
             >
               Magic Game Win Success 2
             </a>
-            {" "}by MLaudio. License: Creative Commons 0.
+            {" "}{t("howto.credits.soundLicensePrefix")} MLaudio. License: Creative Commons 0.
           </li>
           <li>
             <a
@@ -559,14 +556,14 @@ function CreditsContent() {
             >
               Jingle Win Synth 04
             </a>
-            {" "}by LittleRobotSoundFactory. License: Attribution 4.0.
+            {" "}{t("howto.credits.soundLicensePrefix")} LittleRobotSoundFactory. License: Attribution 4.0.
           </li>
         </ul>
       </section>
 
       <section>
         <h3 className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
-          Contributors
+          {t("howto.credits.contributors")}
         </h3>
         <ul className="mt-2 space-y-1 text-[color:var(--color-ink-soft)]">
           <li>Christine Banfield</li>
