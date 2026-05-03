@@ -49,23 +49,31 @@ const BLOCK = new Set([
   // Profanity / explicit anatomy
   "puta", "puto", "coño", "cono", "joder", "mier", "caca", "culo",
   "teta", "tetas", "polla", "pija",
-  // Personal names that ride high in Wikipedia frequency and slip
-  // through the Spanish-words dictionary because they're also valid
-  // common nouns somewhere.
-  "luis", "lena",
-  // Archaic / niche conjugations of obscure verbs that look weird as
-  // puzzle answers (osar — to dare; aosar — etc.). Common Spanish
-  // speakers would not use these in casual conversation.
-  "osan", "osas", "osen", "oses",
   // Words derived from accent-stripping ñ words that change meaning
   // unfavourably (anos = años without the tilde, but reads as the
   // anatomical term).
   "anos",
-  // Politically sensitive / historical terms we don't want as a
-  // surprise puzzle answer.
-  "nazi",
-  // More common Spanish first names that sneak through.
-  "paco", "pepe", "pepa", "ines",
+  // Politically sensitive / historical terms.
+  "nazi", "inri",
+  // Personal names that ride high in Wikipedia frequency and slip
+  // through the Spanish-words dictionary because they're also valid
+  // common nouns somewhere. Conservative — only obvious ones.
+  "luis", "lena", "paco", "pepe", "pepa", "ines", "amir", "amis",
+  "bibi", "dina", "dine", "dino", "jaen", "jana", "jane", "jano",
+  "josa", "juba", "lina", "loli", "lulu", "paul", "rita", "rite",
+  "rene", "romi", "rose", "sofi", "tana", "vito", "yoda", "yale",
+  // English loanwords that aren't integrated into everyday Spanish.
+  "body", "deal", "dean", "home", "hope", "hall", "open", "opus",
+  "rail", "rain", "sexy", "sets", "tops", "lite", "mace", "grog",
+  "tory", "tony", "java", "zune", "lady", "barn", "bits", "cent",
+  "gray", "toad",
+  // Archaic / niche conjugations of obscure verbs that look weird as
+  // puzzle answers (osar — to dare). Common Spanish speakers would not
+  // use these in casual conversation.
+  "osan", "osas", "osen", "oses",
+  // Highly regional or archaic terms that don't read well as a daily
+  // puzzle answer.
+  "rola", "naos", "ichu", "icho",
 ]);
 
 async function loadCachedOrFetch(cachePath, url) {

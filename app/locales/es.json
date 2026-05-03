@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Tessera: Crucigrama diario",
-    "description": "Un crucigrama diario. Intercambia fichas en una cuadrícula de 4×4 hasta que cada fila forme una palabra, y también cada columna. La misma partida para todos, cada día."
+    "title": "Tessera: Juego de palabras diario",
+    "description": "Un juego de palabras diario. Intercambia fichas en una cuadrícula de 4×4 hasta que cada fila forme una palabra, y también cada columna. La misma partida para todos, cada día."
   },
   "game": {
     "kicker": "Tessera · #{num} · {date}",
@@ -31,7 +31,7 @@
     "ariaHistory": "Historial",
     "revealConfirm": {
       "kicker": "Ver solución",
-      "title": "¿Te rindes por hoy?",
+      "title": "¿Quieres rendirte por hoy?",
       "body": "El tablero se completará con la solución. Hoy no contará para tu racha (tu racha actual se mantiene).",
       "cancel": "Seguir intentando",
       "confirm": "Revelar"
@@ -52,8 +52,8 @@
       "body": "Cada intercambio es un movimiento."
     },
     "step2": {
-      "title": "Encuentra las cuatro palabras de hoy.",
-      "body": "Cada fila es una palabra concreta. Las fichas con borde verde ya están en la fila correcta. Las fichas se rellenan de verde cuando toda la fila coincide con la palabra de hoy."
+      "title": "Encuentra las cuatro palabras del día.",
+      "body": "Cada fila es una palabra concreta. Las fichas con borde verde ya están en la fila correcta. Las fichas se vuelven verdes cuando toda la fila coincide con la palabra del día."
     },
     "step3": {
       "title": "Las columnas también forman palabras.",
@@ -74,7 +74,7 @@
   "settings": {
     "theme": {
       "title": "Tema",
-      "description": "Sistema sigue tu dispositivo. Claro u oscuro se queda en este navegador.",
+      "description": "El sistema sigue tu dispositivo. Claro u oscuro se queda en este navegador.",
       "system": "Sistema",
       "light": "Claro",
       "dark": "Oscuro"
@@ -100,7 +100,7 @@
     "ariaClose": "Cerrar",
     "stats": {
       "solved": "Resueltos",
-      "avgMoves": "Mov. medios",
+      "avgMoves": "Promedio",
       "streak": "Racha",
       "best": "Mejor"
     },
@@ -111,7 +111,7 @@
   "tiers": {
     "legendary": "Legendario",
     "genius": "Genio",
-    "wordsmith": "Lingüista",
+    "wordsmith": "Hábil",
     "persistent": "Persistente",
     "tenacious": "Tenaz"
   },

@@ -45,6 +45,11 @@ function cleanWikitext(s) {
   // <ref>...</ref> with optional name attribute
   out = out.replace(/<ref[^>]*>[\s\S]*?<\/ref>/g, "");
   out = out.replace(/<ref[^/]*\/>/g, "");
+  // {{impropia|TEXT}} → TEXT inline (the template wraps a usage note that
+  // IS the definition for words like "hola" / "gran"). Run before generic
+  // template stripping. May contain nested templates that get cleaned in
+  // later passes.
+  out = out.replace(/\{\{impropia\|([\s\S]+?)\}\}/g, "$1");
   // {{plm|X}} → capitalised X (capitalises first letter of the word)
   out = out.replace(/\{\{plm\|([^|}]+)\}\}/g, (_, w) => w.charAt(0).toUpperCase() + w.slice(1));
   // {{l|es|X}} → X (link to Spanish word)
@@ -69,29 +74,105 @@ function cleanWikitext(s) {
   return out;
 }
 
+// Pull the first POSITIONAL argument out of a template body, ignoring
+// `key=value` parameters that often precede it (e.g.
+// "{{f.v|leng=es|amar|...}}" → "amar").
+function firstPositionalArg(body) {
+  for (const part of body.split("|")) {
+    if (!part.includes("=")) return part.trim();
+  }
+  return null;
+}
+
+// Pull the LAST positional argument (some templates put the base word at
+// the end, e.g. "{{comparativo|irreg=sí|malo}}" → "malo").
+function lastPositionalArg(body) {
+  const positional = body.split("|").filter((p) => !p.includes("="));
+  return positional.length ? positional[positional.length - 1].trim() : null;
+}
+
+// Inflected-form templates: when a definition is just one of these, the
+// page is a "plural of X" / "conjugation of X" / "see X" pointer. The
+// caller follows the link to fetch a real definition for X.
+//
+// Returned `tag` is a short Spanish prefix shown alongside the followed
+// definition so the player understands why the entry isn't a fresh
+// definition (e.g. "Plural de ala: …"). Each regex captures the whole
+// template body up to `}}`; the extractor runs `firstPositionalArg` on
+// the body to skip past `key=value` params (e.g. `leng=es`).
+const REDIRECT_TEMPLATES = [
+  { re: /\{\{forma sustantivo[ \w]*\|([^}]+)\}\}/, tag: "Plural de" },
+  { re: /\{\{forma adjetivo[ \w]*\|([^}]+)\}\}/, tag: "Forma de" },
+  { re: /\{\{forma pronombre[ \w]*\|([^}]+)\}\}/, tag: "Forma de" },
+  { re: /\{\{forma verbo[ \w]*\|([^}]+)\}\}/, tag: "Conjugación de" },
+  { re: /\{\{forma participio[ \w]*\|([^}]+)\}\}/, tag: "Participio de" },
+  { re: /\{\{f\.v\|([^}]+)\}\}/, tag: "Conjugación de" },
+  { re: /\{\{f\.s\|([^}]+)\}\}/, tag: "Plural de" },
+  { re: /\{\{f\.adj\|([^}]+)\}\}/, tag: "Forma de" },
+  { re: /\{\{grafía obsoleta\|([^}]+)\}\}/, tag: "Forma antigua de" },
+  { re: /\{\{grafía informal\|([^}]+)\}\}/, tag: "Forma informal de" },
+  { re: /\{\{variante obsoleta\|([^}]+)\}\}/, tag: "Variante antigua de" },
+  { re: /\{\{variante\|([^}]+)\}\}/, tag: "Variante de" },
+];
+
+// If the raw definition body is a redirect template ("plural of X",
+// "conjugation of X", etc.), return the base word and a Spanish prefix
+// telling the player what the relationship is. Returns null if the body
+// is a real definition (caller cleans it normally).
+function extractRedirect(rawBody) {
+  for (const { re, tag } of REDIRECT_TEMPLATES) {
+    const m = re.exec(rawBody);
+    if (m) {
+      const base = firstPositionalArg(m[1]);
+      if (base) return { base, tag };
+    }
+  }
+  // {{comparativo|irreg=sí|malo}} → "Comparativo de malo" (base is the
+  // LAST positional arg, not the first).
+  const compMatch = /\{\{comparativo\|([^}]+)\}\}/.exec(rawBody);
+  if (compMatch) {
+    const base = lastPositionalArg(compMatch[1]);
+    if (base) return { base, tag: "Comparativo de" };
+  }
+  return null;
+}
+
 // Pull the first numbered definition from the {{lengua|es}} section.
-// Definitions look like:
-//   ;1 {{csem|vivienda}}: {{plm|edificación}} destinada a [[vivienda]].
-//   ;2: {{plm|domicilio}}.
+// Returns either { kind: "def", text } or { kind: "redirect", base, tag }
+// or null. Caller resolves redirects by re-fetching `base` and prepending
+// `tag base: ` to the resolved definition.
 function extractFirstDefinition(wikitext) {
   if (!wikitext) return null;
-  const langStart = wikitext.indexOf("{{lengua|es}}");
-  if (langStart === -1) return null;
-  // Stop before the next top-level language section so we don't bleed
-  // into another language's definitions.
+  // Match {{lengua|es}} or {{lengua|es|N}} (numbered for ambiguous
+  // entries with multiple unrelated meanings, e.g. ACRE).
+  const langMatch = /\{\{lengua\|es(?:\|\d+)?\}\}/.exec(wikitext);
+  if (!langMatch) return null;
+  const langStart = langMatch.index;
   const after = wikitext.slice(langStart);
-  const nextLang = after.slice(13).search(/\n==\s*\{\{lengua\|/);
-  const section = nextLang === -1 ? after : after.slice(0, 13 + nextLang);
-  // Walk every numbered definition; return the first one that survives
-  // the cleanup with usable prose. Pages like "arbol" that consist of
-  // only `{{grafía obsoleta|árbol}}` strip down to "." — we skip those
-  // so the caller's accent-variant fallback can find the real entry.
+  const nextLang = after.slice(langMatch[0].length).search(/\n==\s*\{\{lengua\|/);
+  const section = nextLang === -1
+    ? after
+    : after.slice(0, langMatch[0].length + nextLang);
+  // Walk every numbered definition; the first viable one wins. Pages
+  // that are JUST a redirect template ("plural of X") return a redirect
+  // hint so the caller can resolve to X. Pages whose first def is some
+  // other useless template (e.g. {{impropia|...}}) skip to the next
+  // numbered line. Single-word "synonym pointer" defs like {{plm|cenit}}
+  // (clean to "Cenit.") are accepted at any length — they're real
+  // definitions, just terse.
   const defRe = /^;\s*\d+[^:]*:\s*(.+)$/gm;
   let m;
   while ((m = defRe.exec(section)) !== null) {
-    const cleaned = cleanWikitext(m[1]);
-    if (!cleaned || cleaned.length < 10) continue;
-    return cleaned.length > 280 ? cleaned.slice(0, 277) + "…" : cleaned;
+    const raw = m[1];
+    const redirect = extractRedirect(raw);
+    if (redirect) return { kind: "redirect", ...redirect };
+    const cleaned = cleanWikitext(raw);
+    if (!cleaned) continue;
+    // A pure synonym entry (just one word + period) is short but valid.
+    const isSynonym = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+\.?$/.test(cleaned);
+    if (!isSynonym && cleaned.length < 10) continue;
+    const text = cleaned.length > 280 ? cleaned.slice(0, 277) + "…" : cleaned;
+    return { kind: "def", text };
   }
   return null;
 }
@@ -126,10 +207,31 @@ function* accentVariants(word) {
   }
 }
 
+// Resolve a single page to a final string definition. Follows up to one
+// redirect (e.g. "alas" → forma sustantivo of "ala" → real definition of
+// "ala"). One-hop only: a chain of redirects is rare and not worth the
+// extra request budget.
+async function resolveDefinition(title, depth = 0) {
+  const wt = await fetchWikitext(title);
+  const result = extractFirstDefinition(wt);
+  if (!result) return null;
+  if (result.kind === "def") return result.text;
+  if (depth >= 1) return null; // don't chase further
+  // Resolve the base word (already accented, since it came out of the
+  // wikitext as-typed).
+  const baseWt = await fetchWikitext(result.base);
+  const baseResult = extractFirstDefinition(baseWt);
+  if (!baseResult || baseResult.kind !== "def") return null;
+  // "Plural de ala: " + the resolved definition. Capped to the same
+  // 280-char budget as a normal definition.
+  const prefix = `${result.tag} ${result.base}: `;
+  const combined = prefix + baseResult.text;
+  return combined.length > 280 ? combined.slice(0, 277) + "…" : combined;
+}
+
 async function fetchDefinitionFor(word) {
   for (const variant of accentVariants(word)) {
-    const wt = await fetchWikitext(variant);
-    const def = extractFirstDefinition(wt);
+    const def = await resolveDefinition(variant);
     if (def) return def;
   }
   return null;
@@ -172,11 +274,15 @@ for (let i = 0; i < todo.length; i += BATCH) {
 }
 console.log("");
 
-// Prune null entries from the shipped JSON — runtime treats absence as
-// "no definition" and shows the placeholder. Keeps the bundle small.
+// Prune null entries from the shipped JSON, AND restrict to words still
+// in the current solution list. After a blocklist tweak the cache may
+// hold definitions for words that have since been removed — those
+// shouldn't ride along in the bundle. Runtime treats absence as "no
+// definition" and shows the placeholder.
+const solutionSet = new Set(SOLUTION);
 const shipped = {};
 for (const [w, def] of Object.entries(cache)) {
-  if (def) shipped[w] = def;
+  if (def && solutionSet.has(w)) shipped[w] = def;
 }
 writeFileSync(outPath, JSON.stringify(shipped));
 const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
