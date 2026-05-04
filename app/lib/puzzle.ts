@@ -33,13 +33,34 @@ export function scramble(start: Tile[], rng: () => number, swaps: number): Tile[
   return p;
 }
 
-function everyRowHasHomeTile(p: Tile[]): boolean {
+// A scramble is legal as a starting position iff every row has at least
+// one tile from its home row (so the player has a foothold in each row),
+// AND no row or column is already fully equal to its gold solution. The
+// latter matters because random 12-swap scrambles occasionally land on a
+// fully-correct row or column — handing the player a freebie that can
+// also flash green/gold on first paint, which feels like a bug.
+function startIsLegal(p: Tile[], goldRows: string[]): boolean {
   for (let r = 0; r < 4; r++) {
     let any = false;
     for (let c = 0; c < 4; c++) {
       if (Math.floor(p[r * 4 + c].id / 4) === r) { any = true; break; }
     }
     if (!any) return false;
+  }
+  const goldUpper = goldRows.map((r) => r.toUpperCase());
+  for (let r = 0; r < 4; r++) {
+    let row = "";
+    for (let c = 0; c < 4; c++) row += p[r * 4 + c].letter;
+    if (row === goldUpper[r]) return false;
+  }
+  for (let c = 0; c < 4; c++) {
+    let col = "";
+    let goldCol = "";
+    for (let r = 0; r < 4; r++) {
+      col += p[r * 4 + c].letter;
+      goldCol += goldUpper[r][c];
+    }
+    if (col === goldCol) return false;
   }
   return true;
 }
@@ -164,7 +185,7 @@ export function generateDailyPuzzleFor(
   if (!goldRows) throw new Error(`No gold grid for ${locale} seed ${seed}`);
   const solved = tilesFromRows(goldRows);
   let startTiles = scramble(solved, rng, swaps);
-  for (let attempt = 0; attempt < 50 && !everyRowHasHomeTile(startTiles); attempt++) {
+  for (let attempt = 0; attempt < 50 && !startIsLegal(startTiles, goldRows); attempt++) {
     startTiles = scramble(solved, rng, swaps);
   }
   return { goldRows, startTiles, swaps };
@@ -182,7 +203,7 @@ export function scrambleGoldRows(goldRows: readonly string[], seed: number, swap
   const rng = mulberry32(seed);
   const solved = tilesFromRows(goldRows as string[]);
   let startTiles = scramble(solved, rng, swaps);
-  for (let attempt = 0; attempt < 50 && !everyRowHasHomeTile(startTiles); attempt++) {
+  for (let attempt = 0; attempt < 50 && !startIsLegal(startTiles, goldRows as string[]); attempt++) {
     startTiles = scramble(solved, rng, swaps);
   }
   return startTiles;
