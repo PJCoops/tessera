@@ -41,14 +41,18 @@ export function EmailSignup({
   const { locale, t } = useLocale();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
-  const [hidden, setHidden] = useState(false);
+  // Tri-state: null = hasn't checked yet (don't render), true = hide,
+  // false = show. The localStorage check has to wait for client mount
+  // so SSR markup matches first-paint markup; the initial-null flicker
+  // is invisible because the form is only mounted after a solve.
+  const [hidden, setHidden] = useState<boolean | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (hasSubscribed() || hasDismissed()) setHidden(true);
+    setHidden(hasSubscribed() || hasDismissed());
   }, []);
 
-  if (hidden) return null;
+  if (hidden !== false) return null;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
