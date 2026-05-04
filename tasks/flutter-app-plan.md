@@ -24,24 +24,34 @@ Living plan for porting Tessera to iOS and Android using Flutter. Web app stays 
 - Existing Vercel backend reused as-is — no new endpoints.
 - Native share via `share_plus`. Sound via `audioplayers`. Deep links via `app_links`.
 
+## Testing
+
+Both apps test the same pure logic on both sides — same seeds in, same gold grids out, same share slugs round-trip. Identical assertions in two languages.
+
+- **Web:** Vitest. `npm test` runs the suite. Tests live next to the code (`app/lib/*.test.ts`). Already covers `puzzle`, `rng`, `share`.
+- **Mobile:** `flutter_test` (built into the Flutter SDK). `flutter test` runs the suite. Tests live in `mobile/test/` mirroring `mobile/lib/`.
+- **Cross-platform parity:** every Dart port carries a snapshot test that asserts its output against a small fixture committed to the repo (`mobile/test/fixtures/`). The same fixture is asserted from a Vitest test on the web side, so any drift between the two implementations fails CI on whichever platform regresses first. Fixture covers: gold rows for puzzles #1, #7, #30, #100, #365 (en + es); start-tile id sequences for the same; share slug round-trips for a representative set.
+- **Regression guard for the "fully-solved row at start" bug:** `app/lib/puzzle.test.ts` already asserts no row or column is fully solved at start across 365 days per locale; the Dart port adds the same scan in `mobile/test/puzzle_test.dart`.
+
 ## Phases
 
 ### Phase 1 — Bootstrap & port logic (1–2 days)
 
 - `flutter create mobile/` with iOS + Android targets only.
-- Port to Dart:
-  - `app/lib/rng.ts` → `mobile/lib/rng.dart`
-  - `app/lib/puzzle.ts` → `mobile/lib/puzzle.dart`
-  - `app/lib/share.ts` → `mobile/lib/share.dart`
-  - `app/lib/streak.ts` → `mobile/lib/streak.dart`
-  - `app/lib/tier.ts` → `mobile/lib/tier.dart`
-  - `app/lib/i18n.ts` → `mobile/lib/i18n.dart`
+- Wire `flutter_test` (built into the SDK — no extra dep) and add `flutter test` to whatever CI runner we end up using. First test asserts an empty stub before any logic ports, so green-on-green is the starting state.
+- Port to Dart, each behind a paired test:
+  - `app/lib/rng.ts` → `mobile/lib/rng.dart` (+ `mobile/test/rng_test.dart`, mirrors `app/lib/rng.test.ts`)
+  - `app/lib/puzzle.ts` → `mobile/lib/puzzle.dart` (+ `mobile/test/puzzle_test.dart`, mirrors `app/lib/puzzle.test.ts` including the 365-day legal-start scan)
+  - `app/lib/share.ts` → `mobile/lib/share.dart` (+ `mobile/test/share_test.dart`, mirrors `app/lib/share.test.ts`)
+  - `app/lib/streak.ts` → `mobile/lib/streak.dart` (+ `mobile/test/streak_test.dart`)
+  - `app/lib/tier.ts` → `mobile/lib/tier.dart` (+ `mobile/test/tier_test.dart`)
+  - `app/lib/i18n.ts` → `mobile/lib/i18n.dart` (+ `mobile/test/i18n_test.dart`)
 - Bundle as Flutter assets (read directly from `app/`, do not copy):
   - `app/lib/words.json`, `solution-words.json`, `words-es.json`, `solution-words-es.json`, `accented-map-es.json`
   - `app/locales/en.json`, `app/locales/es.json`
   - `public/win.mp3`
   - Custom fonts from `app/_fonts/`
-- Snapshot tests: assert mobile-generated gold grids for puzzles #1, #7, #30, #100 match web output exactly.
+- Cross-platform parity fixture: write `mobile/test/fixtures/parity.json` containing gold rows + start-tile ids for puzzles #1, #7, #30, #100, #365 in both locales. Both `puzzle.test.ts` (web) and `puzzle_test.dart` (mobile) assert against this fixture, so a divergence fails on whichever side regresses.
 
 ### Phase 2 — Game screen (3–5 days)
 
