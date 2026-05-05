@@ -139,6 +139,11 @@ type LangRow = {
   revealed: number;
   avg_moves: number | null;
 };
+type TodayUniquesRow = {
+  visitors: number;
+  players: number;
+  solvers: number;
+};
 
 export default async function StatsPage({
   searchParams,
@@ -168,6 +173,7 @@ export default async function StatsPage({
   let recentIds: RecentIdRow[] = [];
   let cohorts: CohortRow[] = [];
   let langs: LangRow[] = [];
+  let todayUniques: TodayUniquesRow[] = [];
   let error: string | null = null;
   try {
     [
@@ -187,6 +193,7 @@ export default async function StatsPage({
       recentIds,
       cohorts,
       langs,
+      todayUniques,
     ] = await Promise.all([
         hogql<DailyRow>(`
           SELECT toString(toDate(timestamp)) AS day,
@@ -392,6 +399,18 @@ export default async function StatsPage({
           GROUP BY language
           ORDER BY started DESC
         `),
+        // Today's unique counts, for the at-a-glance "what's happening now"
+        // line under each Hero. Uses the same union-of-events trick as the
+        // all-time visitor count so an ad-blocker user who fires
+        // puzzle_started but not $pageview still counts as a visitor.
+        hogql<TodayUniquesRow>(`
+          SELECT
+            toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS visitors,
+            toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS players,
+            toInt(uniqIf(distinct_id, event = 'puzzle_solved')) AS solvers
+          FROM events
+          WHERE toDate(timestamp) = today()${EXCLUDE}
+        `),
       ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -401,6 +420,7 @@ export default async function StatsPage({
   const todayMeta = todayRows[0];
   const summ = summary[0];
   const at = allTime[0];
+  const td = todayUniques[0];
   const big = biggestDay[0];
   const ret = returning[0];
   const returningPct = ret?.total ? (ret.returning / ret.total) * 100 : 0;
@@ -493,12 +513,16 @@ export default async function StatsPage({
         </div>
       ) : (
         <>
-          {/* HERO — all-time big numbers */}
+          {/* HERO — all-time big numbers, with a small "today" sub-stat
+             top-right of each card. Today's figures come from a separate
+             HogQL query (`todayUniques`) scoped to toDate(timestamp) =
+             today() so the dashboard reflects live activity at a glance. */}
           <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
             <Hero
               label="Visitors"
               value={fmt(at?.unique_visitors ?? 0)}
               suffix="loaded the page"
+              today={fmt(td?.visitors ?? 0)}
             />
             <Hero
               label="Engaged players"
@@ -508,6 +532,7 @@ export default async function StatsPage({
                   ? `${visitorEngageRate.toFixed(0)}% of visitors started a puzzle`
                   : "started a puzzle"
               }
+              today={fmt(td?.players ?? 0)}
             />
             <Hero
               label="Solvers"
@@ -517,6 +542,7 @@ export default async function StatsPage({
                   ? `${playerSolveRate.toFixed(0)}% of players solved one`
                   : "solved at least one"
               }
+              today={fmt(td?.solvers ?? 0)}
             />
           </section>
 
@@ -860,19 +886,34 @@ function Hero({
   label,
   value,
   suffix,
+  today,
 }: {
   label: string;
   value: string;
   suffix?: string;
+  // Optional "today" sub-stat shown in the top-right of the card so the
+  // big number stays the all-time figure but a glance at the dashboard
+  // still tells you what's happening right now.
+  today?: string;
 }) {
   return (
     <div className="border border-[color:var(--color-rule)] rounded-lg p-6 bg-[color:var(--color-cream)]">
-      <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">{label}</p>
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">{label}</p>
+        {today && (
+          <p className="text-[10px] tabular-nums text-[color:var(--color-muted)]">
+            <span className="text-[color:var(--color-ink)] font-medium">{today}</span>{" "}
+            today
+          </p>
+        )}
+      </div>
       <p className="text-5xl sm:text-6xl font-light tabular-nums mt-2 leading-none tracking-tight">
         {value}
       </p>
       {suffix && (
-        <p className="text-[11px] text-[color:var(--color-muted)] mt-2">{suffix}</p>
+        <p className="text-[11px] text-[color:var(--color-muted)] mt-2">
+          all time · {suffix}
+        </p>
       )}
     </div>
   );
