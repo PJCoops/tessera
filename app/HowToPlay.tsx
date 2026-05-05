@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { LOCALES, LOCALE_COOKIE, type Locale, pathnameWithLocale } from "./lib/i18n";
 import { useLocale } from "./lib/locale-context";
+import { PushReminderToggle } from "./components/PushReminderToggle";
 import definitionsEs from "./locales/definitions-es.json";
 
 // Static Spanish definitions, baked at build time from es.wiktionary.org.
@@ -430,6 +431,7 @@ function SettingsContent({
         control={<Toggle checked={muted} onChange={onMutedChange} ariaLabel={t("settings.mute.title")} />}
         inlineControl
       />
+      <PushReminderToggle />
     </div>
   );
 }

@@ -98,6 +98,17 @@
     "mute": {
       "title": "Mute",
       "description": "Silences the win jingle when you solve the puzzle."
+    },
+    "reminder": {
+      "title": "Daily reminders",
+      "description": "Push this device when today's puzzle is ready (09:00 UTC). Stays on this device only.",
+      "enable": "Enable",
+      "disable": "Disable",
+      "enabling": "Enabling…",
+      "disabling": "Disabling…",
+      "unsupported": "This browser does not support push notifications.",
+      "iosNotInstalled": "On iPhone, add Tessera to your home screen first, then come back here.",
+      "denied": "Notifications are blocked. Enable them in browser settings to opt back in."
     }
   },
   "history": {
@@ -147,5 +158,22 @@
     "headlineSolved": "Tessera #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
     "streakMeta": "🔥 {streak}-day streak",
     "bonusMeta": "✨ bonus"
+  },
+  "push": {
+    "dailyTitle": "Today's Tessera is ready",
+    "dailyBody": "Puzzle #{num}. Take a moment."
+  },
+  "pwa": {
+    "installIOS": {
+      "title": "Add Tessera to your home screen",
+      "body": "Tap the share icon, then choose Add to Home Screen. Opens in one tap, and you can turn on a daily reminder.",
+      "dismiss": "Maybe later"
+    },
+    "installAndroid": {
+      "title": "Install Tessera",
+      "body": "Add it to your home screen for one-tap daily play.",
+      "cta": "Install",
+      "dismiss": "Maybe later"
+    }
   }
 }

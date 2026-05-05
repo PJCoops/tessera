@@ -98,6 +98,17 @@
     "mute": {
       "title": "Silenciar",
       "description": "Silencia el sonido de victoria al completar la partida."
+    },
+    "reminder": {
+      "title": "Recordatorios diarios",
+      "description": "Avisar a este dispositivo cuando esté lista la partida de hoy (09:00 UTC). Solo en este dispositivo.",
+      "enable": "Activar",
+      "disable": "Desactivar",
+      "enabling": "Activando…",
+      "disabling": "Desactivando…",
+      "unsupported": "Este navegador no admite notificaciones push.",
+      "iosNotInstalled": "En iPhone, añade Tessera a la pantalla de inicio primero y vuelve aquí.",
+      "denied": "Las notificaciones están bloqueadas. Actívalas en los ajustes del navegador para volver a suscribirte."
     }
   },
   "history": {
@@ -147,5 +158,22 @@
     "headlineSolved": "Tessera #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
     "streakMeta": "🔥 racha de {streak} días",
     "bonusMeta": "✨ bonus"
+  },
+  "push": {
+    "dailyTitle": "La Tessera de hoy está lista",
+    "dailyBody": "Partida #{num}. Date un momento."
+  },
+  "pwa": {
+    "installIOS": {
+      "title": "Añade Tessera a tu pantalla de inicio",
+      "body": "Toca el icono de compartir y elige Añadir a pantalla de inicio. Se abre en un toque y puedes activar el recordatorio diario.",
+      "dismiss": "Quizá más tarde"
+    },
+    "installAndroid": {
+      "title": "Instalar Tessera",
+      "body": "Añádelo a tu pantalla de inicio para jugar a diario en un toque.",
+      "cta": "Instalar",
+      "dismiss": "Quizá más tarde"
+    }
   }
 }

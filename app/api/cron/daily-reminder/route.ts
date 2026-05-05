@@ -29,8 +29,16 @@
 // Vercel show the body, so debugging without redeploys is possible.
 
 import { NextRequest, NextResponse } from "next/server";
+import webpush from "web-push";
 import { listSubscribers, isConfigured as kvConfigured } from "../../../lib/subscribers";
-import { LOCALES, type Locale } from "../../../lib/i18n";
+import {
+  listPushSubscribers,
+  removePushSubscriberFromAll,
+  type StoredPushSubscription,
+} from "../../../lib/push-subscribers";
+import { LOCALES, getDictionary, t, type Locale } from "../../../lib/i18n";
+import { puzzleNumber, todayUtc } from "../../../lib/rng";
+import { EPOCH } from "../../../lib/epoch";
 
 const LOOPS_EVENT_ENDPOINT = "https://app.loops.so/api/v1/events/send";
 
@@ -86,38 +94,103 @@ export async function GET(req: NextRequest) {
   // Fan out per locale. Each locale's subscriber set is fetched and
   // dispatched against its own event name. Per-locale stats are returned
   // so the cron logs show coverage at a glance.
-  const perLocale: Record<string, { attempted: number; succeeded: number; failed: number }> = {};
+  const perLocale: Record<
+    string,
+    {
+      email: { attempted: number; succeeded: number; failed: number };
+      push: { attempted: number; succeeded: number; failed: number; expired: number };
+    }
+  > = {};
   const failures: { email: string; locale: Locale; status: number; reason: string }[] = [];
   let totalAttempted = 0;
   let totalSucceeded = 0;
 
-  for (const locale of LOCALES) {
-    const emails = await listSubscribers(locale);
-    perLocale[locale] = { attempted: emails.length, succeeded: 0, failed: 0 };
-    if (emails.length === 0) continue;
-    totalAttempted += emails.length;
+  // Configure web-push once. If VAPID env is missing we'll skip push fan-out
+  // but still send email — a missing PWA setup shouldn't break email reminders.
+  const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+  const vapidSubject = process.env.VAPID_SUBJECT || "mailto:hello@tesserapuzzle.com";
+  const pushConfigured = Boolean(vapidPublic && vapidPrivate);
+  if (pushConfigured) {
+    webpush.setVapidDetails(vapidSubject, vapidPublic!, vapidPrivate!);
+  }
 
-    const queue = [...emails];
-    const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
-      while (queue.length) {
-        const email = queue.shift();
-        if (!email) break;
-        const result = await sendEvent(email, apiKey, eventNameFor(locale));
-        if (result.ok) {
-          perLocale[locale].succeeded++;
-          totalSucceeded++;
-        } else {
-          perLocale[locale].failed++;
-          failures.push({
-            email: maskEmail(email),
-            locale,
-            status: result.status,
-            reason: result.reason,
-          });
+  // Today's puzzle number — same arithmetic the client uses, so the
+  // notification body matches what the user sees when they tap through.
+  const todayNum = puzzleNumber(todayUtc(), EPOCH);
+
+  for (const locale of LOCALES) {
+    perLocale[locale] = {
+      email: { attempted: 0, succeeded: 0, failed: 0 },
+      push: { attempted: 0, succeeded: 0, failed: 0, expired: 0 },
+    };
+
+    // ---- Email fan-out (existing behaviour, untouched) ----
+    const emails = await listSubscribers(locale);
+    perLocale[locale].email.attempted = emails.length;
+    if (emails.length > 0) {
+      totalAttempted += emails.length;
+      const queue = [...emails];
+      const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+        while (queue.length) {
+          const email = queue.shift();
+          if (!email) break;
+          const result = await sendEvent(email, apiKey, eventNameFor(locale));
+          if (result.ok) {
+            perLocale[locale].email.succeeded++;
+            totalSucceeded++;
+          } else {
+            perLocale[locale].email.failed++;
+            failures.push({
+              email: maskEmail(email),
+              locale,
+              status: result.status,
+              reason: result.reason,
+            });
+          }
         }
+      });
+      await Promise.all(workers);
+    }
+
+    // ---- Push fan-out ----
+    if (pushConfigured) {
+      const subs = await listPushSubscribers(locale);
+      perLocale[locale].push.attempted = subs.length;
+      if (subs.length > 0) {
+        const dict = getDictionary(locale);
+        const localePath = locale === "en" ? "/" : `/${locale}`;
+        const payload = JSON.stringify({
+          title: t(dict, "push.dailyTitle"),
+          body: t(dict, "push.dailyBody", { num: todayNum }),
+          url: localePath,
+          tag: "tessera-daily",
+        });
+
+        const queue = [...subs];
+        const workers = Array.from(
+          { length: Math.min(CONCURRENCY, queue.length) },
+          async () => {
+            while (queue.length) {
+              const sub = queue.shift();
+              if (!sub) break;
+              const r = await sendPush(sub, payload);
+              if (r.ok) {
+                perLocale[locale].push.succeeded++;
+              } else if (r.expired) {
+                perLocale[locale].push.expired++;
+                // Best-effort cleanup of the dead endpoint so we don't
+                // keep retrying it tomorrow. Failure here is non-fatal.
+                removePushSubscriberFromAll(sub.endpoint, LOCALES).catch(() => {});
+              } else {
+                perLocale[locale].push.failed++;
+              }
+            }
+          }
+        );
+        await Promise.all(workers);
       }
-    });
-    await Promise.all(workers);
+    }
   }
 
   return NextResponse.json({
@@ -125,11 +198,41 @@ export async function GET(req: NextRequest) {
     attempted: totalAttempted,
     succeeded: totalSucceeded,
     failed: failures.length,
+    pushConfigured,
+    todayNum,
     perLocale,
     // Cap the failure detail in the response so a bad day doesn't
     // produce a 50KB JSON blob in the cron logs.
     failures: failures.slice(0, 20),
   });
+}
+
+// Send one push. Web-push throws an Error with a `statusCode` field on
+// HTTP failures; 404/410 = the subscription is permanently gone (user
+// revoked permission, uninstalled the PWA, browser garbage-collected
+// the endpoint) and we should drop it from storage.
+async function sendPush(
+  sub: StoredPushSubscription,
+  payload: string
+): Promise<{ ok: true } | { ok: false; expired: boolean; status: number; reason: string }> {
+  try {
+    await webpush.sendNotification(
+      { endpoint: sub.endpoint, keys: sub.keys },
+      payload,
+      { TTL: 60 * 60 * 12 } // 12h: don't try to deliver tomorrow's reminder
+    );
+    return { ok: true };
+  } catch (e: unknown) {
+    const err = e as { statusCode?: number; body?: string; message?: string };
+    const status = err.statusCode ?? 0;
+    const expired = status === 404 || status === 410;
+    return {
+      ok: false,
+      expired,
+      status,
+      reason: (err.body || err.message || "unknown").slice(0, 200),
+    };
+  }
 }
 
 async function sendEvent(

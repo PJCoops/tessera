@@ -42,6 +42,17 @@ export const metadata: Metadata = {
     creator: "@0xCoops",
   },
   manifest: "/manifest.webmanifest",
+  // iOS doesn't read the web app manifest — it relies on these meta tags
+  // to decide whether the home-screen launch is fullscreen, what colour
+  // the status bar is, and what title shows under the icon. Without
+  // `capable: true` the app opens in Safari with chrome instead of
+  // standalone mode, and push (which requires standalone install on iOS)
+  // never becomes available.
+  appleWebApp: {
+    capable: true,
+    title: "Tessera",
+    statusBarStyle: "default",
+  },
   verification: {
     other: {
       "facebook-domain-verification": "b7ev056dvv1igdi829y8b4kj7t2ob3",
