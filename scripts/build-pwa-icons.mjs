@@ -29,8 +29,10 @@ async function resize(size, file) {
 }
 
 // Maskable icon: the W3C spec reserves the outer 10% of each edge for the
-// platform mask. We pad the master into a square canvas (background-coloured
-// to match the manifest) so the brand mark sits in the safe zone.
+// platform mask. We pad the master into a square canvas filled with rust
+// (#b85a1c) so the brand mark sits in the safe zone and the bleed area
+// matches the master's own background — no visible seam if the platform
+// mask leaves more than the safe zone visible.
 async function maskable(size, file) {
   const safe = Math.round(size * 0.8);
   const inner = await sharp(masterBuf).resize(safe, safe, { fit: "cover" }).toBuffer();
@@ -39,7 +41,7 @@ async function maskable(size, file) {
       width: size,
       height: size,
       channels: 4,
-      background: { r: 0xfa, g: 0xfa, b: 0xf7, alpha: 1 },
+      background: { r: 0xb8, g: 0x5a, b: 0x1c, alpha: 1 },
     },
   })
     .composite([{ input: inner, gravity: "center" }])
