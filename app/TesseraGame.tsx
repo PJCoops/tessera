@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { DEMO_GRID, generateDailyPuzzleFor, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
 import { seedFromDate, todayUtc } from "./lib/rng";
@@ -142,6 +142,9 @@ export function TesseraGame() {
   const [idleTick, setIdleTick] = useState(0);
   const [demoSelected, setDemoSelected] = useState<number | null>(null);
   const [demoTap, setDemoTap] = useState<{ idx: number; key: number } | null>(null);
+  // Rotates the demo candidate each cycle so a stalled player sees a
+  // different pair on every replay. Survives renders without triggering them.
+  const demoOffsetRef = useRef(0);
   // Position of the synthetic cursor follower used in ?demo mode for cleaner
   // screen recordings. Null until the mouse first moves.
   const [demoCursor, setDemoCursor] = useState<{ x: number; y: number; down: boolean } | null>(null);
@@ -361,7 +364,8 @@ export function TesseraGame() {
   useEffect(() => {
     if (!demoPlaying || !puzzle) return;
     const snapshot = positions;
-    const [a, b] = pickDemoSwap(snapshot, puzzle.goldRows);
+    const [a, b] = pickDemoSwap(snapshot, puzzle.goldRows, demoOffsetRef.current);
+    demoOffsetRef.current += 1;
     let cancelled = false;
     let key = 0;
     const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -821,12 +825,17 @@ function TapRipple({ idx, tileSize, gap }: { idx: number; tileSize: number; gap:
 }
 
 // Pick a swap pair for the demo that won't accidentally validate a row
-// (which would flash a fake "you got one!" on screen). All candidates are
-// clearly non-adjacent (king-distance ≥ 2) so the demo doesn't read as
-// "you can only swap neighbours" — earlier viewers misread the adjacent
-// pairs as a rule. Falls back to opposite-corner [0, 15] if every
-// candidate would validate a row.
-function pickDemoSwap(positions: Tile[], goldRows: string[]): [number, number] {
+// (which would flash a fake "you got one!" on screen). All candidates
+// cross both axes — same-row and same-column pairs are excluded so the
+// demo can't read as "you can only swap inside a line." `offset` rotates
+// the starting point so successive demo loops show different pairs.
+// Falls back to opposite-corner [0, 15] if every candidate would
+// validate a row.
+function pickDemoSwap(
+  positions: Tile[],
+  goldRows: string[],
+  offset: number
+): [number, number] {
   const candidates: [number, number][] = [
     [0, 15],  // diagonal corners
     [3, 12],  // anti-diagonal corners
@@ -841,7 +850,9 @@ function pickDemoSwap(positions: Tile[], goldRows: string[]): [number, number] {
       (r) => Array.from({ length: N }, (_, c) => p[r * N + c].letter).join("") === upper[r]
     ).length;
   const before = validRows(positions);
-  for (const [a, b] of candidates) {
+  const start = ((offset % candidates.length) + candidates.length) % candidates.length;
+  for (let i = 0; i < candidates.length; i++) {
+    const [a, b] = candidates[(start + i) % candidates.length];
     if (a >= positions.length || b >= positions.length) continue;
     const after = validRows(swapAt(positions, a, b));
     if (after <= before) return [a, b];
