@@ -891,7 +891,7 @@ function tileClasses(rowValid: boolean, homeHint: boolean): string {
   // The solved (gold) state is driven by framer's animate prop so the cascade
   // can stagger per tile — see the motion.button in the grid render.
   if (rowValid) return "bg-[#7a9070] text-[#fafaf7]";
-  if (homeHint) return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] outline-[3px] outline-dashed outline-[color:var(--color-ink)] -outline-offset-[4px]";
+  if (homeHint) return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] outline-2 outline-dashed outline-[color:var(--color-ink)] -outline-offset-[3px]";
   return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]";
 }
 
