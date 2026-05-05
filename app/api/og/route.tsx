@@ -130,13 +130,21 @@ export async function GET(req: Request) {
                 <span style={{ color: ACCENT }}>.</span>
               </div>
             ) : m !== null ? (
-              <>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 24,
+                  width: 640,
+                }}
+              >
+                {/* Number + label baseline-aligned */}
                 <div
                   style={{
                     display: "flex",
-                    alignItems: "baseline",
-                    gap: 20,
-                    lineHeight: 1,
+                    alignItems: "flex-end",
+                    gap: 18,
+                    lineHeight: 0.85,
                   }}
                 >
                   <span
@@ -154,16 +162,18 @@ export async function GET(req: Request) {
                       fontSize: 56,
                       fontWeight: 300,
                       opacity: 0.85,
+                      paddingBottom: 18,
                     }}
                   >
                     {m === 1 ? "swap" : "swaps"}
                   </span>
                 </div>
+                {/* Tier line, stacked underneath the number */}
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 16,
+                    gap: 18,
                     fontSize: 56,
                     fontWeight: 300,
                     letterSpacing: "-0.02em",
@@ -174,11 +184,13 @@ export async function GET(req: Request) {
                   {bonus && (
                     <span
                       style={{
+                        display: "flex",
+                        alignItems: "center",
                         fontFamily: "FrauncesSmall",
                         fontSize: 22,
                         letterSpacing: 3,
                         textTransform: "uppercase",
-                        marginLeft: 12,
+                        marginLeft: 8,
                         padding: "8px 16px",
                         borderRadius: 999,
                         background: RUST,
@@ -189,7 +201,7 @@ export async function GET(req: Request) {
                     </span>
                   )}
                 </div>
-              </>
+              </div>
             ) : (
               <div
                 style={{
