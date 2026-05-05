@@ -6,10 +6,10 @@ Play at [tesserapuzzle.com](https://tesserapuzzle.com). Community at [r/TesseraP
 
 ## How it works
 
-- Each day, a deterministic seed (derived from the UTC date) generates a 4×4 gold grid where every row and every column is a valid 4-letter English word.
-- The grid is scrambled with 12 swaps. The player swaps tiles to recover the gold solution.
-- A row turns green when it matches that day's gold word. The whole grid turns gold on completion.
-- Strict matching: a row must exactly equal the gold word. Other accidental valid words don't count.
+- Each day, a deterministic seed (derived from the UTC date) generates a 4×4 solution grid where every row and every column is a valid 4-letter English word.
+- The grid is scrambled with 12 swaps. The player swaps tiles to recover the solution.
+- A row turns sage when it matches that day's target word. The whole grid turns rust on completion.
+- Strict matching: a row must exactly equal the target word. Other accidental valid words don't count.
 
 ## Develop
 
@@ -30,7 +30,7 @@ URL params:
 Two word lists power the game:
 
 - `app/lib/words.json` — full SOWPODS-derived list (~4000 four-letter words). Currently unused at runtime but kept for future "is this a real word?" needs.
-- `app/lib/solution-words.json` — curated subset (~2000 common English words). Gold rows AND columns are drawn from this list to avoid Scrabble fillers like ESES or PSST.
+- `app/lib/solution-words.json` — curated subset (~2000 common English words). Solution rows AND columns are drawn from this list to avoid Scrabble fillers like ESES or PSST.
 
 Regenerate with:
 

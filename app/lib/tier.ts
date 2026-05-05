@@ -24,7 +24,7 @@ export const TIER_COLORS: Record<TierKey, string> = {
   legendary: "#b85a1c",
   genius: "#7a9070",
   wordsmith: "#5b8aa8",
-  persistent: "#a87a5b",
+  persistent: "#6b7a8a",
   tenacious: "#7a6f8a",
 };
 

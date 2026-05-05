@@ -77,7 +77,7 @@ describe("buildSharePayload", () => {
     expect(out.url).toBe("https://tesserapuzzle.com/es/s/8-12");
   });
 
-  it("flips corner tiles to yellow on a bonus solve", () => {
+  it("flips corner tiles to orange on a bonus solve", () => {
     const out = buildSharePayload({
       puzzleNumber: 8,
       moves: 12,
@@ -87,7 +87,7 @@ describe("buildSharePayload", () => {
       locale: "en",
       dict,
     });
-    expect(out.text).toContain("🟨");
+    expect(out.text).toContain("🟧");
     expect(out.url).toBe("https://tesserapuzzle.com/s/8-12-b");
   });
 

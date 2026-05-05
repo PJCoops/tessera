@@ -34,11 +34,11 @@ const TIER_EMOJI: Record<TierKey, string> = {
 };
 
 const SOLVED_TILE = "🟩";
-const BONUS_TILE = "🟨";
+const BONUS_TILE = "🟧";
 const REVEALED_TILE = "⬜";
 
 // Render a 4×4 emoji grid encoding the player's result. Solved rows
-// fill green; on a bonus solve the corner tiles flip to yellow as a
+// fill green; on a bonus solve the corner tiles flip to orange as a
 // visual flourish ("rows + columns"); on a reveal the grid is empty.
 function buildGrid({
   revealed,
@@ -53,7 +53,7 @@ function buildGrid({
   if (!bonus) {
     return Array.from({ length: 4 }, () => SOLVED_TILE.repeat(4)).join("\n");
   }
-  // Bonus solve: corners become yellow to flag the columns-also-spell
+  // Bonus solve: corners become orange to flag the columns-also-spell
   // achievement. Reads as a "framed" grid.
   const corners = new Set(["0,0", "0,3", "3,0", "3,3"]);
   return Array.from({ length: 4 }, (_, r) =>
