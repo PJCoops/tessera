@@ -422,11 +422,13 @@ function SettingsContent({
         title={t("settings.hideHints.title")}
         description={t("settings.hideHints.description")}
         control={<Toggle checked={hideHints} onChange={onHideHintsChange} ariaLabel={t("settings.hideHints.title")} />}
+        inlineControl
       />
       <SettingRow
         title={t("settings.mute.title")}
         description={t("settings.mute.description")}
         control={<Toggle checked={muted} onChange={onMutedChange} ariaLabel={t("settings.mute.title")} />}
+        inlineControl
       />
     </div>
   );
@@ -436,11 +438,26 @@ function SettingRow({
   title,
   description,
   control,
+  inlineControl,
 }: {
   title: string;
   description: string;
   control: React.ReactNode;
+  // Compact controls (toggles) sit at the end of the title row on mobile;
+  // wide controls (segmented) drop below the description.
+  inlineControl?: boolean;
 }) {
+  if (inlineControl) {
+    return (
+      <div className="py-3 first:pt-0 last:pb-0">
+        <div className="flex items-center justify-between gap-4">
+          <p className="font-medium">{title}</p>
+          <div className="flex-shrink-0">{control}</div>
+        </div>
+        <p className="text-[color:var(--color-muted)] mt-0.5 text-xs leading-snug">{description}</p>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0 sm:flex-1">
@@ -585,6 +602,7 @@ function CreditsContent() {
           <li>Christine Banfield</li>
           <li>Don Brown</li>
           <li>Alison Burd</li>
+          <li>Stefan Kay</li>
           <li>Brett Pandora</li>
           <li>Richard Pattie</li>
         </ul>
