@@ -26,20 +26,29 @@ const TARGET_SIZE = 2000;
 // solutions even if frequent on Wikipedia. Mirrors build-words.mjs and
 // adds a few more obscure / unfriendly forms.
 const BLOCK = new Set([
-  // Mirrors build-words.mjs (slurs / explicit terms)
+  // Mirrors build-words.mjs (slurs / explicit terms / hostile content)
   "arse", "cock", "cunt", "dick", "fuck", "jism", "paki", "piss",
-  "shit", "spic", "tits", "twat", "wank", "wogs",
+  "rape", "shit", "spic", "tits", "twat", "wank", "wogs",
   // Proper nouns / brand names that ride high on Wikipedia frequency
   // but aren't really common English words.
-  "abba", "agha", "aida", "ajax", "alan", "alba", "alec", "alva",
-  "etna", "iago", "iban", "iggy", "jpeg", "knut", "kobe", "lego",
-  "loki", "mali", "mick", "mike", "naga", "nero", "nick", "ovid",
-  "pele", "phil", "pict", "rama", "remy", "rene", "reno", "rick",
-  "rico", "roma", "rosa", "ross", "rudi", "rudy", "russ", "sade",
-  "sega", "siam", "tito", "todd", "togo", "tojo", "tony", "vega",
-  "vlad", "yale", "zion",
+  "abba", "agha", "aida", "ajax", "alan", "alba", "alec", "alma",
+  "alva", "amin", "baal", "cain", "cobb", "cory", "cris", "dahl",
+  "davy", "dore", "eger", "emmy", "etna", "gaby", "gama", "iago",
+  "iban", "iggy", "jpeg", "kane", "keir", "knut", "kobe", "lang",
+  "lars", "lear", "lego", "loki", "mali", "mick", "mike", "modi",
+  "mura", "naga", "nero", "nick", "ovid", "pele", "phil", "pict",
+  "pugh", "rama", "raya", "rees", "reis", "remy", "rene", "reno",
+  "rick", "rico", "roma", "rosa", "ross", "rudi", "rudy", "russ",
+  "sade", "saul", "sega", "siam", "tate", "tito", "todd", "togo",
+  "tojo", "tony", "tora", "tung", "tyne", "vega", "vera", "vlad",
+  "yale", "zion",
+  // Foreign loanwords that read as non-English when isolated.
+  "chao", "jeux", "mano", "quai", "shri", "sith", "vive",
   // A few archaic / obscure forms still slipping through
   "alef", "alfa", "amah", "anil",
+  // Plural of regional Australian slang ("ute" → "utes"); fine in
+  // SOWPODS but reads as a Scrabble filler in en_GB.
+  "utes",
 ]);
 
 // 1. Load SOWPODS list.
