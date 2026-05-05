@@ -442,12 +442,12 @@ function SettingRow({
   control: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-      <div className="min-w-0 flex-1">
+    <div className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="min-w-0 sm:flex-1">
         <p className="font-medium">{title}</p>
         <p className="text-[color:var(--color-muted)] mt-0.5 text-xs leading-snug">{description}</p>
       </div>
-      <div className="flex-shrink-0 mt-0.5">{control}</div>
+      <div className="sm:flex-shrink-0 sm:mt-0.5">{control}</div>
     </div>
   );
 }
