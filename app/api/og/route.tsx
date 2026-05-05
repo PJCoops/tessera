@@ -31,6 +31,16 @@ const INK = "#0a0a0a";
 const PAPER = "#fafaf7";
 const ACCENT = "#e6007a";
 
+// Tier emoji mirror app/lib/share.ts so the OG card and the share-text
+// headline use the same visual language.
+const TIER_EMOJI: Record<string, string> = {
+  legendary: "🏆",
+  genius: "🧠",
+  wordsmith: "📖",
+  persistent: "🧩",
+  tenacious: "💪",
+};
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const n = parseInt(searchParams.get("n") ?? "", 10);
@@ -50,20 +60,18 @@ export async function GET(req: Request) {
     readFile(path.join(process.cwd(), "app/_fonts/Fraunces-Bold.ttf")),
   ]);
 
-  const tileSize = 88;
-  const tileGap = 10;
+  const tileSize = 70;
+  const tileGap = 8;
 
   // Pick the grid pattern based on outcome:
   //   solved (no bonus) → all sage
-  //   solved (bonus)    → sage with gold corners (mirrors share-text grid)
+  //   solved (bonus)    → sage with rust corners (mirrors share-text grid)
   //   revealed          → cream (empty)
   const pattern = buildPattern({ revealed, bonus });
 
-  const subhead = revealed
-    ? "revealed"
-    : m !== null
-    ? `${m} ${m === 1 ? "swap" : "swaps"} · ${t(ogDict, `tiers.${getTier(m).key}`)}${bonus ? " · ✨ bonus" : ""}`
-    : "today's puzzle";
+  const tierKey = m !== null ? getTier(m).key : null;
+  const tierName = tierKey ? t(ogDict, `tiers.${tierKey}`) : null;
+  const tierEmoji = tierKey ? TIER_EMOJI[tierKey] ?? "" : "";
 
   return new ImageResponse(
     (
@@ -79,56 +87,124 @@ export async function GET(req: Request) {
           fontFamily: "FrauncesDisplay",
         }}
       >
+        {/* Top: brand kicker + puzzle number */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             fontFamily: "FrauncesSmall",
-            fontSize: 20,
-            letterSpacing: 5,
+            fontSize: 22,
+            letterSpacing: 4,
             textTransform: "uppercase",
-            opacity: 0.65,
+            opacity: 0.7,
           }}
         >
-          <span>tesserapuzzle.com</span>
-          <span>Daily word puzzle</span>
+          <span>Tessera Puzzle™</span>
+          <span>#{n} · daily word puzzle</span>
         </div>
 
+        {/* Middle: result hero on the left, grid on the right */}
         <div
           style={{
             flex: 1,
             display: "flex",
-            alignItems: "flex-end",
+            alignItems: "center",
             justifyContent: "space-between",
             gap: 64,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                fontSize: 144,
-                fontWeight: 300,
-                letterSpacing: "-0.035em",
-                lineHeight: 1,
-              }}
-            >
-              <span>Tessera #{n}</span>
-              <span style={{ color: ACCENT }}>.</span>
-            </div>
-            <div
-              style={{
-                fontFamily: "FrauncesSmall",
-                fontSize: 28,
-                opacity: 0.75,
-                maxWidth: 560,
-                lineHeight: 1.25,
-              }}
-            >
-              {subhead}
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {revealed ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  fontSize: 168,
+                  fontWeight: 300,
+                  letterSpacing: "-0.035em",
+                  lineHeight: 1,
+                }}
+              >
+                <span>Revealed</span>
+                <span style={{ color: ACCENT }}>.</span>
+              </div>
+            ) : m !== null ? (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 20,
+                    lineHeight: 1,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 240,
+                      fontWeight: 300,
+                      letterSpacing: "-0.04em",
+                      color: RUST,
+                    }}
+                  >
+                    {m}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 56,
+                      fontWeight: 300,
+                      opacity: 0.85,
+                    }}
+                  >
+                    {m === 1 ? "swap" : "swaps"}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    fontSize: 56,
+                    fontWeight: 300,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  <span style={{ fontSize: 64 }}>{tierEmoji}</span>
+                  <span>{tierName}</span>
+                  {bonus && (
+                    <span
+                      style={{
+                        fontFamily: "FrauncesSmall",
+                        fontSize: 22,
+                        letterSpacing: 3,
+                        textTransform: "uppercase",
+                        marginLeft: 12,
+                        padding: "8px 16px",
+                        borderRadius: 999,
+                        background: RUST,
+                        color: PAPER,
+                      }}
+                    >
+                      ✨ Bonus
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  fontSize: 168,
+                  fontWeight: 300,
+                  letterSpacing: "-0.035em",
+                  lineHeight: 1,
+                }}
+              >
+                <span>Play today</span>
+                <span style={{ color: ACCENT }}>.</span>
+              </div>
+            )}
           </div>
 
           <div
@@ -136,6 +212,7 @@ export async function GET(req: Request) {
               display: "flex",
               flexDirection: "column",
               gap: tileGap,
+              flexShrink: 0,
             }}
           >
             {pattern.map((row, r) => (
@@ -149,7 +226,7 @@ export async function GET(req: Request) {
                         width: tileSize,
                         height: tileSize,
                         background: bg,
-                        borderRadius: 12,
+                        borderRadius: 10,
                       }}
                     />
                   );
@@ -157,6 +234,19 @@ export async function GET(req: Request) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Bottom: domain footer */}
+        <div
+          style={{
+            fontFamily: "FrauncesSmall",
+            fontSize: 22,
+            letterSpacing: 4,
+            textTransform: "uppercase",
+            opacity: 0.55,
+          }}
+        >
+          tesserapuzzle.com
         </div>
       </div>
     ),
