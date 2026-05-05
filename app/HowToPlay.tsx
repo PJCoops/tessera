@@ -557,31 +557,24 @@ function CreditsContent() {
 
       <section>
         <h3 className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
+          {t("howto.credits.contributors")}
+        </h3>
+        <ul className="mt-2 space-y-1 text-[color:var(--color-ink-soft)]">
+          <li>Christine Banfield</li>
+          <li>Don Brown</li>
+          <li>Alison Burd</li>
+          <li>Stanley Cooper</li>
+          <li>Stefan Kay</li>
+          <li>Brett Pandora</li>
+          <li>Richard Pattie</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
           {t("howto.credits.soundEffects")}
         </h3>
         <ul className="mt-2 space-y-2 text-[color:var(--color-ink-soft)]">
-          <li>
-            <a
-              href="https://freesound.org/s/808180/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline-offset-4 hover:underline"
-            >
-              Ice Cream Truck at Park Playground
-            </a>
-            {" "}{t("howto.credits.soundLicensePrefix")} fudgealtoid. License: Attribution 4.0.
-          </li>
-          <li>
-            <a
-              href="https://freesound.org/s/615100/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline-offset-4 hover:underline"
-            >
-              Magic Game Win Success 2
-            </a>
-            {" "}{t("howto.credits.soundLicensePrefix")} MLaudio. License: Creative Commons 0.
-          </li>
           <li>
             <a
               href="https://freesound.org/s/274183/"
@@ -593,20 +586,6 @@ function CreditsContent() {
             </a>
             {" "}{t("howto.credits.soundLicensePrefix")} LittleRobotSoundFactory. License: Attribution 4.0.
           </li>
-        </ul>
-      </section>
-
-      <section>
-        <h3 className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
-          {t("howto.credits.contributors")}
-        </h3>
-        <ul className="mt-2 space-y-1 text-[color:var(--color-ink-soft)]">
-          <li>Christine Banfield</li>
-          <li>Don Brown</li>
-          <li>Alison Burd</li>
-          <li>Stefan Kay</li>
-          <li>Brett Pandora</li>
-          <li>Richard Pattie</li>
         </ul>
       </section>
     </div>
