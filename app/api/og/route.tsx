@@ -25,7 +25,7 @@ const ogDict = getDictionary("en");
 const OG_SIZE = { width: 1200, height: 630 };
 
 const SAGE = "#7a9070";
-const GOLD = "#d9b25a";
+const RUST = "#b85a1c";
 const CREAM = "#f5f2e1";
 const INK = "#0a0a0a";
 const PAPER = "#fafaf7";
@@ -141,7 +141,7 @@ export async function GET(req: Request) {
             {pattern.map((row, r) => (
               <div key={r} style={{ display: "flex", gap: tileGap }}>
                 {row.map((cell, c) => {
-                  const bg = cell === 2 ? GOLD : cell === 1 ? SAGE : CREAM;
+                  const bg = cell === 2 ? RUST : cell === 1 ? SAGE : CREAM;
                   return (
                     <div
                       key={c}

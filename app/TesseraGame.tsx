@@ -673,8 +673,8 @@ export function TesseraGame() {
                   rotate: validity.isSolved ? [0, -3, 3, 0] : 0,
                   // Drive bg/text via framer when solved so we can stagger;
                   // otherwise leave undefined so the Tailwind class wins.
-                  backgroundColor: validity.isSolved ? "#d9b25a" : undefined,
-                  color: validity.isSolved ? "#0a0a0a" : undefined,
+                  backgroundColor: validity.isSolved ? "#b85a1c" : undefined,
+                  color: validity.isSolved ? "#fafaf7" : undefined,
                 }}
                 transition={{
                   type: "spring",
@@ -864,10 +864,10 @@ function Legend({ children, variant }: { children: React.ReactNode; variant: "ro
   // Mini tiles, styled to match the real grid 1:1 so the legend swatch is
   // visually identical to what you're looking for on the board.
   const isHint = variant === "hint";
-  const bg = isHint ? "var(--color-cream)" : variant === "bonus" ? "#d9b25a" : "#7a9070";
-  // Green/gold swatches have fixed backgrounds — pin their text contrast too so
+  const bg = isHint ? "var(--color-cream)" : variant === "bonus" ? "#b85a1c" : "#7a9070";
+  // Sage/rust swatches have fixed backgrounds — pin their text contrast too so
   // they read the same in light and dark themes. Hint tile follows the theme.
-  const color = isHint ? "var(--color-ink)" : variant === "row" ? "#fafaf7" : "#0a0a0a";
+  const color = isHint ? "var(--color-ink)" : "#fafaf7";
   const letter = isHint ? "A" : variant === "row" ? "B" : "C";
   return (
     <span className="inline-flex items-center gap-1.5">

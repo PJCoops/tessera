@@ -16,6 +16,18 @@ export const TIERS: readonly Tier[] = [
   { key: "tenacious", max: Infinity },
 ];
 
+// Single source of truth for tier colors. Used by the history modal chart,
+// the stats page, and any other tier swatch. Keep in sync with the game
+// tile colors in TesseraGame.tsx (legendary should match the "correct"
+// tile, genius should match the "valid row" tile).
+export const TIER_COLORS: Record<TierKey, string> = {
+  legendary: "#b85a1c",
+  genius: "#7a9070",
+  wordsmith: "#5b8aa8",
+  persistent: "#a87a5b",
+  tenacious: "#7a6f8a",
+};
+
 export function getTier(moves: number): Tier {
   for (const t of TIERS) if (moves <= t.max) return t;
   return TIERS[TIERS.length - 1];

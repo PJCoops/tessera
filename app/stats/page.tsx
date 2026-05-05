@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { hogql } from "../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../lib/rng";
+import { TIER_COLORS } from "../lib/tier";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
 
@@ -61,15 +62,15 @@ async function signOut() {
   redirect("/stats");
 }
 
-// Mirrors lib/tier.ts. Kept inline as a SQL fragment for HogQL multiIf().
-// If tier ranges change in lib/tier.ts, update both places.
+// Tier ranges and colors mirror lib/tier.ts (TIER_COLORS imported above).
+// If tier ranges change in lib/tier.ts, update the SQL fragment below.
 const TIER_ORDER = ["Legendary", "Genius", "Wordsmith", "Persistent", "Tenacious"] as const;
-const TIER_COLORS: Record<(typeof TIER_ORDER)[number], string> = {
-  Legendary: "#d9b25a",
-  Genius: "#7a9070",
-  Wordsmith: "#5b8aa8",
-  Persistent: "#a87a5b",
-  Tenacious: "#7a6f8a",
+const TIER_BAR_COLORS: Record<(typeof TIER_ORDER)[number], string> = {
+  Legendary: TIER_COLORS.legendary,
+  Genius: TIER_COLORS.genius,
+  Wordsmith: TIER_COLORS.wordsmith,
+  Persistent: TIER_COLORS.persistent,
+  Tenacious: TIER_COLORS.tenacious,
 };
 const TIER_SQL = `
   multiIf(
@@ -694,7 +695,7 @@ export default async function StatsPage({
             {allTotal === 0 ? <Empty /> : <TierBar rows={allTiersOrdered} total={allTotal} />}
             <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-[color:var(--color-muted)]">
               {TIER_ORDER.map((t) => (
-                <LegendDot key={t} color={TIER_COLORS[t]} label={t} />
+                <LegendDot key={t} color={TIER_BAR_COLORS[t]} label={t} />
               ))}
             </div>
           </Section>
@@ -934,7 +935,7 @@ function TierBar({ rows, total }: { rows: TierRow[]; total: number }) {
             <div
               key={r.tier}
               title={`${r.tier}: ${r.solves} (${pct.toFixed(0)}%)`}
-              style={{ width: `${pct}%`, background: TIER_COLORS[r.tier as keyof typeof TIER_COLORS] }}
+              style={{ width: `${pct}%`, background: TIER_BAR_COLORS[r.tier as keyof typeof TIER_BAR_COLORS] }}
             />
           );
         })}
@@ -946,7 +947,7 @@ function TierBar({ rows, total }: { rows: TierRow[]; total: number }) {
             <div key={r.tier} className="flex items-center gap-1.5 tabular-nums">
               <span
                 className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                style={{ background: TIER_COLORS[r.tier as keyof typeof TIER_COLORS] }}
+                style={{ background: TIER_BAR_COLORS[r.tier as keyof typeof TIER_BAR_COLORS] }}
               />
               <span className="text-[color:var(--color-muted)]">{r.tier}</span>
               <span className="ml-auto">

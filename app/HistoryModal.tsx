@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { dateFromPuzzleNumber, puzzleNumber, todayUtc } from "./lib/rng";
 import type { Streak } from "./lib/streak";
-import { TIERS, getTier } from "./lib/tier";
+import { TIERS, TIER_COLORS, getTier } from "./lib/tier";
 import { useLocale } from "./lib/locale-context";
 
 type Result = { moves: number; bonus: boolean; completedAt: number; revealed?: boolean };
@@ -147,21 +147,7 @@ export function HistoryModal({
                 {solvedCount > 0 && (
                   <div className="mt-4">
                     <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] mb-2">{t("history.byTier")}</p>
-                    <ul className="space-y-1">
-                      {TIERS.map((tier) => {
-                        const count = tierCounts.get(tier.key) ?? 0;
-                        const range = tier.max === Infinity ? `${(TIERS[TIERS.indexOf(tier) - 1]?.max ?? 0) + 1}+` : `≤${tier.max}`;
-                        return (
-                          <li key={tier.key} className="flex items-baseline justify-between text-sm">
-                            <span>
-                              <span className="font-medium">{t(`tiers.${tier.key}`)}</span>
-                              <span className="text-[color:var(--color-muted)] ml-2 text-xs">{range}</span>
-                            </span>
-                            <span className="tabular-nums text-[color:var(--color-muted)]">{count}</span>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    <TierDistribution tierCounts={tierCounts} t={t} />
                   </div>
                 )}
 
@@ -172,24 +158,33 @@ export function HistoryModal({
                     </p>
                   ) : (
                     <ul className="divide-y divide-[color:var(--color-rule)]">
-                      {entries.map((e) => (
-                        <li key={e.num} className="flex items-baseline justify-between px-2 py-2 text-sm">
-                          <span className="text-[color:var(--color-muted)] tabular-nums">
-                            #{e.num} · {e.date}
-                          </span>
-                          <span className="font-medium tabular-nums">
-                            {e.result.revealed
-                              ? <span className="text-[color:var(--color-muted)]">{t("history.revealed")}</span>
-                              : (
-                                <>
+                      {entries.map((e) => {
+                        const tierKey = e.result.revealed ? null : getTier(e.result.moves).key;
+                        return (
+                          <li key={e.num} className="flex items-center justify-between px-2 py-2 text-sm gap-3">
+                            <span className="text-[color:var(--color-muted)] tabular-nums whitespace-nowrap">
+                              #{e.num} · {e.date}
+                            </span>
+                            <span className="flex items-center gap-2 tabular-nums whitespace-nowrap">
+                              {tierKey && (
+                                <span
+                                  aria-label={t(`tiers.${tierKey}`)}
+                                  title={t(`tiers.${tierKey}`)}
+                                  className="inline-block w-2 h-2 rounded-full shrink-0"
+                                  style={{ background: TIER_COLORS[tierKey] }}
+                                />
+                              )}
+                              {e.result.revealed ? (
+                                <span className="text-[color:var(--color-muted)]">{t("history.revealed")}</span>
+                              ) : (
+                                <span className="font-medium">
                                   {e.result.moves} {t(e.result.moves === 1 ? "game.moveSingular" : "game.movePlural")}
-                                  <span className="text-[color:var(--color-muted)] ml-2 text-xs">{t(`tiers.${getTier(e.result.moves).key}`)}</span>
-                                </>
-                              )
-                            }
-                          </span>
-                        </li>
-                      ))}
+                                </span>
+                              )}
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
@@ -205,36 +200,38 @@ export function HistoryModal({
                     {pastNums.map((num) => {
                       const date = dateFromPuzzleNumber(num, epoch);
                       const result = resultByNum.get(num);
+                      const tierKey = result && !result.revealed ? getTier(result.moves).key : null;
                       return (
                         <li key={num} className="text-sm">
                           <a
                             href={`${localePrefix}/?day=${date}`}
                             aria-label={t("history.allPuzzles.ariaPlay", { num })}
-                            className="flex items-baseline justify-between px-2 py-2 hover:bg-[color:var(--color-cream)] transition-colors"
+                            className="flex items-center justify-between px-2 py-2 gap-3 hover:bg-[color:var(--color-cream)] transition-colors"
                           >
-                            <span className="text-[color:var(--color-muted)] tabular-nums">
+                            <span className="text-[color:var(--color-muted)] tabular-nums whitespace-nowrap">
                               #{num} · {date}
                             </span>
-                            <span className="tabular-nums">
+                            <span className="flex items-center gap-2 tabular-nums whitespace-nowrap">
+                              {tierKey && (
+                                <span
+                                  aria-label={t(`tiers.${tierKey}`)}
+                                  title={t(`tiers.${tierKey}`)}
+                                  className="inline-block w-2 h-2 rounded-full shrink-0"
+                                  style={{ background: TIER_COLORS[tierKey] }}
+                                />
+                              )}
                               {result?.revealed ? (
                                 <span className="text-[color:var(--color-muted)]">{t("history.revealed")}</span>
                               ) : result ? (
-                                <>
-                                  <span className="font-medium">
-                                    {result.moves} {t(result.moves === 1 ? "game.moveSingular" : "game.movePlural")}
-                                  </span>
-                                  <span className="text-[color:var(--color-muted)] ml-2 text-xs">
-                                    {t(`tiers.${getTier(result.moves).key}`)}
-                                  </span>
-                                </>
+                                <span className="font-medium">
+                                  {result.moves} {t(result.moves === 1 ? "game.moveSingular" : "game.movePlural")}
+                                </span>
                               ) : (
                                 <span className="text-[color:var(--color-muted)] text-xs">
                                   {t("history.allPuzzles.notPlayed")}
                                 </span>
                               )}
-                              <span className="text-[color:var(--color-muted)] ml-3 text-xs">
-                                {t("history.allPuzzles.replay")}
-                              </span>
+                              <span aria-hidden className="text-[color:var(--color-muted)] text-base leading-none">›</span>
                             </span>
                           </a>
                         </li>
@@ -280,5 +277,42 @@ function Stat({ label, value }: { label: string; value: number }) {
       <div className="text-xl font-light tabular-nums">{value}</div>
       <div className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">{label}</div>
     </div>
+  );
+}
+
+function TierDistribution({
+  tierCounts,
+  t,
+}: {
+  tierCounts: Map<string, number>;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const max = Math.max(1, ...Array.from(tierCounts.values()));
+  return (
+    <ul className="space-y-1">
+      {TIERS.map((tier) => {
+        const count = tierCounts.get(tier.key) ?? 0;
+        const pct = count === 0 ? 0 : Math.max(8, (count / max) * 100);
+        return (
+          <li key={tier.key} className="flex items-center gap-2 text-xs">
+            <span className="w-20 shrink-0 text-[color:var(--color-muted)]">{t(`tiers.${tier.key}`)}</span>
+            <div className="flex-1 h-5 rounded-sm overflow-hidden">
+              {count === 0 ? (
+                <div className="h-full flex items-center px-1.5 text-[10px] text-[color:var(--color-muted)] tabular-nums border border-[color:var(--color-rule)] rounded-sm">
+                  0
+                </div>
+              ) : (
+                <div
+                  className="h-full flex items-center justify-end px-1.5 text-[10px] font-medium tabular-nums text-white"
+                  style={{ width: `${pct}%`, background: TIER_COLORS[tier.key] }}
+                >
+                  {count}
+                </div>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

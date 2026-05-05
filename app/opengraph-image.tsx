@@ -8,7 +8,7 @@ export const size = OG_SIZE;
 export const contentType = "image/png" as const;
 
 // 4×4 mark: a partially-solved-looking grid for the OG card.
-// 0 = neutral (cream), 1 = green (in valid row), 2 = gold (column bonus on green).
+// 0 = neutral (cream), 1 = sage (in valid row), 2 = rust (column bonus on sage).
 const PATTERN: number[][] = [
   [1, 1, 1, 1],
   [1, 2, 1, 1],
@@ -17,7 +17,7 @@ const PATTERN: number[][] = [
 ];
 
 const SAGE = "#7a9070";
-const GOLD = "#d9b25a";
+const RUST = "#b85a1c";
 const CREAM = "#f5f2e1";
 const INK = "#0a0a0a";
 const PAPER = "#fafaf7";
@@ -108,7 +108,7 @@ export default async function Image() {
             {PATTERN.map((row, r) => (
               <div key={r} style={{ display: "flex", gap: tileGap }}>
                 {row.map((cell, c) => {
-                  const bg = cell === 2 ? GOLD : cell === 1 ? SAGE : CREAM;
+                  const bg = cell === 2 ? RUST : cell === 1 ? SAGE : CREAM;
                   return (
                     <div
                       key={c}
