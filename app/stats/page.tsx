@@ -288,7 +288,16 @@ export default async function StatsPage({
             toInt(countIf(event = 'puzzle_started')) AS total_started,
             toInt(countIf(event = 'puzzle_solved')) AS total_solved,
             toInt(countIf(event = 'puzzle_revealed')) AS total_revealed,
-            toInt(uniqIf(distinct_id, event = '$pageview')) AS unique_visitors,
+            -- Visitors counts anyone who fired EITHER $pageview OR
+            -- puzzle_started, not just $pageview alone. Ad-blocker filter
+            -- lists pattern-match the literal "$pageview" event name in
+            -- request payloads even through our /ingest proxy, so the
+            -- pageview-only count systematically under-counts the
+            -- ad-blocker cohort. puzzle_started is custom and slips
+            -- through. Logically every player is a visitor, so the union
+            -- is the honest upper bound and stops engagement rate ever
+            -- exceeding 100%.
+            toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS unique_visitors,
             toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS unique_players,
             toInt(uniqIf(distinct_id, event = 'puzzle_solved')) AS unique_solvers,
             toInt(sumIf(toInt(toString(properties.moves)), event = 'puzzle_solved')) AS total_moves,
