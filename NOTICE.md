@@ -1,6 +1,6 @@
 # Third-party assets and data sources
 
-Tessera is proprietary software (see [LICENSE](./LICENSE)). The following
+Tessera Puzzle™ is proprietary software (see [LICENSE](./LICENSE)). The following
 third-party data sets, libraries, and media files are incorporated into
 the build or the runtime experience. Each is listed with its source and
 the licence under which it is used.

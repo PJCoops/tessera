@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 
 const OG_SIZE = { width: 1200, height: 630 };
-export const alt = "Tessera, a daily word puzzle by Paul Cooper";
+export const alt = "Tessera Puzzle, a daily word puzzle by Paul Cooper";
 export const size = OG_SIZE;
 export const contentType = "image/png" as const;
 
@@ -82,7 +82,7 @@ export default async function Image() {
                 lineHeight: 1,
               }}
             >
-              <span>Tessera</span>
+              <span>Tessera Puzzle™</span>
               <span style={{ color: ACCENT }}>.</span>
             </div>
             <div

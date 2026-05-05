@@ -11,7 +11,7 @@ const dict = getDictionary("es");
 const gameSchema = {
   "@context": "https://schema.org",
   "@type": "VideoGame",
-  name: "Tessera",
+  name: "Tessera Puzzle",
   url: "https://www.tesserapuzzle.com/es",
   description: dict.meta.description,
   author: { "@type": "Person", name: "Paul Cooper", url: "https://pjcooper.design" },

@@ -12,7 +12,7 @@ const description = dict.meta.description;
 const gameSchema = {
   "@context": "https://schema.org",
   "@type": "VideoGame",
-  name: "Tessera",
+  name: "Tessera Puzzle",
   url: "https://www.tesserapuzzle.com",
   description,
   author: { "@type": "Person", name: "Paul Cooper", url: "https://pjcooper.design" },

@@ -10,9 +10,9 @@ const description =
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.tesserapuzzle.com"),
-  title: { default: "Tessera: Daily Word Puzzle", template: "%s · Tessera" },
+  title: { default: "Tessera Puzzle", template: "%s · Tessera Puzzle" },
   description,
-  applicationName: "Tessera",
+  applicationName: "Tessera Puzzle",
   authors: [{ name: "Paul Cooper", url: "https://pjcooper.design" }],
   creator: "Paul Cooper",
   publisher: "Paul Cooper",
@@ -28,16 +28,16 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
   openGraph: {
-    title: "Tessera: Daily Word Puzzle",
+    title: "Tessera Puzzle",
     description,
     url: "/",
-    siteName: "Tessera",
+    siteName: "Tessera Puzzle",
     type: "website",
     locale: "en_GB",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tessera: Daily Word Puzzle",
+    title: "Tessera Puzzle",
     description,
     creator: "@0xCoops",
   },
@@ -106,7 +106,7 @@ export default function RootLayout({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              alt="Tessera - A 4x4 word puzzle where rows and columns have to spell words | Product Hunt"
+              alt="Tessera Puzzle - A 4x4 word puzzle where rows and columns have to spell words | Product Hunt"
               width={180}
               height={39}
               src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1134416&theme=neutral&t=1777651610297"
@@ -121,7 +121,7 @@ export default function RootLayout({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              alt="Tessera - A 4x4 word puzzle where rows and columns have to spell words | Product Hunt"
+              alt="Tessera Puzzle - A 4x4 word puzzle where rows and columns have to spell words | Product Hunt"
               width={180}
               height={39}
               src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1134416&theme=dark&t=1777805167587"
@@ -137,7 +137,7 @@ export default function RootLayout({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="https://cdn.playlin.io/creators/featured-dark.svg"
-              alt="Tessera: Daily Word Puzzle featured on Playlin"
+              alt="Tessera Puzzle featured on Playlin"
               width={140}
             />
           </a>
