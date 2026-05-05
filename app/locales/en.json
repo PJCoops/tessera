@@ -35,6 +35,12 @@
       "body": "The board will snap to the solved grid. Today won’t count toward your streak (your current streak stays as it is).",
       "cancel": "Keep trying",
       "confirm": "Reveal"
+    },
+    "replay": {
+      "kicker": "Replay",
+      "subKicker": "Tessera · #{num} · {date}",
+      "backToToday": "← Back to today",
+      "movesStatus": "Moves {moves} · {valid}/{total} rows · replay"
     }
   },
   "howto": {
@@ -106,7 +112,17 @@
     },
     "byTier": "By tier",
     "empty": "No puzzles solved yet. Today’s your day.",
-    "revealed": "revealed"
+    "revealed": "revealed",
+    "tabs": {
+      "solves": "Your solves",
+      "all": "All puzzles"
+    },
+    "allPuzzles": {
+      "empty": "No past puzzles yet. Tessera #1 launched today.",
+      "notPlayed": "Not played",
+      "replay": "Replay",
+      "ariaPlay": "Replay puzzle #{num}"
+    }
   },
   "tiers": {
     "legendary": "Legendary",

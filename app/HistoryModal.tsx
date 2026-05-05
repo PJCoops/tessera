@@ -1,8 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useMemo } from "react";
-import { dateFromPuzzleNumber } from "./lib/rng";
+import { useEffect, useMemo, useState } from "react";
+import { dateFromPuzzleNumber, puzzleNumber, todayUtc } from "./lib/rng";
 import type { Streak } from "./lib/streak";
 import { TIERS, getTier } from "./lib/tier";
 import { useLocale } from "./lib/locale-context";
@@ -32,6 +32,8 @@ function readAllResults(epoch: string): Entry[] {
   return out;
 }
 
+type Tab = "solves" | "all";
+
 export function HistoryModal({
   open,
   onClose,
@@ -43,7 +45,9 @@ export function HistoryModal({
   streak: Streak;
   epoch: string;
 }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
+  const [tab, setTab] = useState<Tab>("solves");
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -67,6 +71,26 @@ export function HistoryModal({
     }
     return counts;
   }, [solved]);
+
+  // The "All puzzles" tab lists every past puzzle (#1 → today − 1) so
+  // players can replay anything they missed. Each row links to ?day=...
+  // which the resolver opens in isolated replay mode.
+  const todayNum = useMemo(
+    () => (open ? puzzleNumber(todayUtc(), epoch) : 0),
+    [open, epoch]
+  );
+  const resultByNum = useMemo(() => {
+    const m = new Map<number, Result>();
+    for (const e of entries) m.set(e.num, e.result);
+    return m;
+  }, [entries]);
+  const pastNums = useMemo(() => {
+    if (todayNum <= 1) return [] as number[];
+    const out: number[] = [];
+    for (let n = todayNum - 1; n >= 1; n--) out.push(n);
+    return out;
+  }, [todayNum]);
+  const localePrefix = locale === "en" ? "" : `/${locale}`;
 
   return (
     <AnimatePresence>
@@ -102,66 +126,151 @@ export function HistoryModal({
             </p>
             <h2 className="text-2xl font-light tracking-tight mt-1">{t("history.title")}</h2>
 
-            <div className="mt-5 grid grid-cols-4 gap-3 text-center">
-              <Stat label={t("history.stats.solved")} value={solvedCount} />
-              <Stat label={t("history.stats.avgMoves")} value={avgMoves} />
-              <Stat label={t("history.stats.streak")} value={streak.current} />
-              <Stat label={t("history.stats.best")} value={streak.max} />
+            <div className="mt-5 flex border-b border-[color:var(--color-rule)]">
+              <TabButton active={tab === "solves"} onClick={() => setTab("solves")}>
+                {t("history.tabs.solves")}
+              </TabButton>
+              <TabButton active={tab === "all"} onClick={() => setTab("all")}>
+                {t("history.tabs.all")}
+              </TabButton>
             </div>
 
-            {solvedCount > 0 && (
-              <div className="mt-4">
-                <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] mb-2">{t("history.byTier")}</p>
-                <ul className="space-y-1">
-                  {TIERS.map((tier) => {
-                    const count = tierCounts.get(tier.key) ?? 0;
-                    const range = tier.max === Infinity ? `${(TIERS[TIERS.indexOf(tier) - 1]?.max ?? 0) + 1}+` : `≤${tier.max}`;
-                    return (
-                      <li key={tier.key} className="flex items-baseline justify-between text-sm">
-                        <span>
-                          <span className="font-medium">{t(`tiers.${tier.key}`)}</span>
-                          <span className="text-[color:var(--color-muted)] ml-2 text-xs">{range}</span>
-                        </span>
-                        <span className="tabular-nums text-[color:var(--color-muted)]">{count}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
+            {tab === "solves" ? (
+              <div className="mt-5 flex-1 flex flex-col min-h-0">
+                <div className="grid grid-cols-4 gap-3 text-center">
+                  <Stat label={t("history.stats.solved")} value={solvedCount} />
+                  <Stat label={t("history.stats.avgMoves")} value={avgMoves} />
+                  <Stat label={t("history.stats.streak")} value={streak.current} />
+                  <Stat label={t("history.stats.best")} value={streak.max} />
+                </div>
+
+                {solvedCount > 0 && (
+                  <div className="mt-4">
+                    <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] mb-2">{t("history.byTier")}</p>
+                    <ul className="space-y-1">
+                      {TIERS.map((tier) => {
+                        const count = tierCounts.get(tier.key) ?? 0;
+                        const range = tier.max === Infinity ? `${(TIERS[TIERS.indexOf(tier) - 1]?.max ?? 0) + 1}+` : `≤${tier.max}`;
+                        return (
+                          <li key={tier.key} className="flex items-baseline justify-between text-sm">
+                            <span>
+                              <span className="font-medium">{t(`tiers.${tier.key}`)}</span>
+                              <span className="text-[color:var(--color-muted)] ml-2 text-xs">{range}</span>
+                            </span>
+                            <span className="tabular-nums text-[color:var(--color-muted)]">{count}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="mt-6 flex-1 overflow-y-auto -mx-2">
+                  {entries.length === 0 ? (
+                    <p className="text-sm text-[color:var(--color-muted)] px-2">
+                      {t("history.empty")}
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-[color:var(--color-rule)]">
+                      {entries.map((e) => (
+                        <li key={e.num} className="flex items-baseline justify-between px-2 py-2 text-sm">
+                          <span className="text-[color:var(--color-muted)] tabular-nums">
+                            #{e.num} · {e.date}
+                          </span>
+                          <span className="font-medium tabular-nums">
+                            {e.result.revealed
+                              ? <span className="text-[color:var(--color-muted)]">{t("history.revealed")}</span>
+                              : (
+                                <>
+                                  {e.result.moves} {t(e.result.moves === 1 ? "game.moveSingular" : "game.movePlural")}
+                                  <span className="text-[color:var(--color-muted)] ml-2 text-xs">{t(`tiers.${getTier(e.result.moves).key}`)}</span>
+                                </>
+                              )
+                            }
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 flex-1 overflow-y-auto -mx-2 min-h-0">
+                {pastNums.length === 0 ? (
+                  <p className="text-sm text-[color:var(--color-muted)] px-2">
+                    {t("history.allPuzzles.empty")}
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-[color:var(--color-rule)]">
+                    {pastNums.map((num) => {
+                      const date = dateFromPuzzleNumber(num, epoch);
+                      const result = resultByNum.get(num);
+                      return (
+                        <li key={num} className="text-sm">
+                          <a
+                            href={`${localePrefix}/?day=${date}`}
+                            aria-label={t("history.allPuzzles.ariaPlay", { num })}
+                            className="flex items-baseline justify-between px-2 py-2 hover:bg-[color:var(--color-cream)] transition-colors"
+                          >
+                            <span className="text-[color:var(--color-muted)] tabular-nums">
+                              #{num} · {date}
+                            </span>
+                            <span className="tabular-nums">
+                              {result?.revealed ? (
+                                <span className="text-[color:var(--color-muted)]">{t("history.revealed")}</span>
+                              ) : result ? (
+                                <>
+                                  <span className="font-medium">
+                                    {result.moves} {t(result.moves === 1 ? "game.moveSingular" : "game.movePlural")}
+                                  </span>
+                                  <span className="text-[color:var(--color-muted)] ml-2 text-xs">
+                                    {t(`tiers.${getTier(result.moves).key}`)}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-[color:var(--color-muted)] text-xs">
+                                  {t("history.allPuzzles.notPlayed")}
+                                </span>
+                              )}
+                              <span className="text-[color:var(--color-muted)] ml-3 text-xs">
+                                {t("history.allPuzzles.replay")}
+                              </span>
+                            </span>
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
             )}
-
-            <div className="mt-6 flex-1 overflow-y-auto -mx-2">
-              {entries.length === 0 ? (
-                <p className="text-sm text-[color:var(--color-muted)] px-2">
-                  {t("history.empty")}
-                </p>
-              ) : (
-                <ul className="divide-y divide-[color:var(--color-rule)]">
-                  {entries.map((e) => (
-                    <li key={e.num} className="flex items-baseline justify-between px-2 py-2 text-sm">
-                      <span className="text-[color:var(--color-muted)] tabular-nums">
-                        #{e.num} · {e.date}
-                      </span>
-                      <span className="font-medium tabular-nums">
-                        {e.result.revealed
-                          ? <span className="text-[color:var(--color-muted)]">{t("history.revealed")}</span>
-                          : (
-                            <>
-                              {e.result.moves} {t(e.result.moves === 1 ? "game.moveSingular" : "game.movePlural")}
-                              <span className="text-[color:var(--color-muted)] ml-2 text-xs">{t(`tiers.${getTier(e.result.moves).key}`)}</span>
-                            </>
-                          )
-                        }
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-2 text-sm border-b-2 -mb-px transition-colors ${
+        active
+          ? "border-[color:var(--color-ink)] text-[color:var(--color-ink)] font-medium"
+          : "border-transparent text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

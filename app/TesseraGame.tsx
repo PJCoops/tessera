@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { DEMO_GRID, generateDailyPuzzleFor, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
-import { puzzleNumber, seedFromDate, todayUtc } from "./lib/rng";
+import { seedFromDate, todayUtc } from "./lib/rng";
+import { resolvePuzzleFromParams } from "./lib/replay";
 import { readStreak, recordWin, visibleCurrent, type Streak } from "./lib/streak";
 import { buildSharePayload } from "./lib/share";
 import { getTier } from "./lib/tier";
@@ -122,6 +123,7 @@ export function TesseraGame() {
     goldRows: string[];
     forceSolved: boolean;
     demo: boolean;
+    replay: boolean;
   } | null>(null);
   const [positions, setPositions] = useState<Tile[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
@@ -151,9 +153,8 @@ export function TesseraGame() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const today = todayUtc();
-    const dateOverride = params.get("day"); // e.g. ?day=2026-05-01
-    const date = dateOverride ?? today;
-    const num = puzzleNumber(date, EPOCH);
+    const resolved = resolvePuzzleFromParams(params, today, EPOCH);
+    const { date, num, replay } = resolved;
     const seed = seedFromDate(date);
     const forceSolved = params.get("solve") !== null;
     const demo = params.get("demo") !== null;
@@ -169,11 +170,13 @@ export function TesseraGame() {
       startTiles = forceSolved ? tilesFromRows(goldRows) : generated.startTiles;
     }
 
-    setPuzzle({ num, date, startTiles, goldRows, forceSolved, demo });
+    setPuzzle({ num, date, startTiles, goldRows, forceSolved, demo, replay });
 
-    // Demo and force-solved modes are isolated from real player state — no
-    // stored result, no progress restore, no streak interaction.
-    const isolated = demo || forceSolved;
+    // Demo, force-solved, and replay modes are isolated from real player
+    // state — no stored result, no progress restore, no streak interaction,
+    // and no progress writes on tap. Replay also skips analytics events
+    // tied to the live daily flow (`puzzle_started`/`puzzle_solved` etc.).
+    const isolated = demo || forceSolved || replay;
     const stored = isolated ? null : readResult(num);
     setStoredResult(stored);
     setStreak(readStreak());
@@ -187,7 +190,12 @@ export function TesseraGame() {
     if (!isolated && !stored && !progress) {
       track("puzzle_started", { num, day: date });
     }
-    if (!demo) pruneOldProgress(num);
+    if (replay) {
+      track("puzzle_replay_opened", { num, day: date });
+    }
+    // `pruneOldProgress(num)` would wipe today's saved progress while we're
+    // replaying #5 — only run it on the live daily puzzle.
+    if (!demo && !replay) pruneOldProgress(num);
     if (!hasSeenHowTo()) setHowToOpen(true);
     try {
       const hh = window.localStorage.getItem(HIDE_HINTS_KEY);
@@ -263,10 +271,18 @@ export function TesseraGame() {
       !storedResult?.revealed &&
       !puzzle.forceSolved
     ) {
-      // Track move count locally even in demo mode so the status reads
-      // "Solved in N moves" — demo just skips the localStorage writes.
+      // Track move count locally even in demo/replay so the status reads
+      // "Solved in N moves" — those modes just skip the localStorage and
+      // streak writes. Replay fires its own analytics event so we can
+      // measure the feature without polluting the daily-solve funnel.
       setSolvedAt(moves);
-      if (!puzzle.demo) {
+      if (puzzle.replay) {
+        track("puzzle_replayed", {
+          num: puzzle.num,
+          moves,
+          bonus: validity.isBonus,
+        });
+      } else if (!puzzle.demo) {
         const r: Result = { moves, bonus: validity.isBonus, completedAt: Date.now() };
         writeResult(puzzle.num, r);
         clearProgress(puzzle.num);
@@ -394,7 +410,7 @@ export function TesseraGame() {
       .toUpperCase()
       .split("")
       .map((letter, id) => ({ id, letter }));
-    if (!puzzle.demo && !puzzle.forceSolved) {
+    if (!puzzle.demo && !puzzle.forceSolved && !puzzle.replay) {
       const r: Result = { moves, bonus: false, completedAt: Date.now(), revealed: true };
       writeResult(puzzle.num, r);
       clearProgress(puzzle.num);
@@ -417,7 +433,7 @@ export function TesseraGame() {
       if (selectedIdx === idx) return setSelectedIdx(null);
       setPositions((p) => {
         const next = swapAt(p, selectedIdx, idx);
-        if (puzzle && !puzzle.demo && !puzzle.forceSolved) {
+        if (puzzle && !puzzle.demo && !puzzle.forceSolved && !puzzle.replay) {
           writeProgress(puzzle.num, { positions: next, moves: moves + 1 });
         }
         return next;
@@ -559,9 +575,20 @@ export function TesseraGame() {
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} streak={streak} epoch={EPOCH} />
       <RevealConfirm open={confirmReveal} onClose={() => setConfirmReveal(false)} onConfirm={handleReveal} />
       <div className="mb-6 text-center">
-        <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
-          {puzzle.demo ? t("game.kickerDemo") : t("game.kicker", { num: puzzle.num, date: puzzle.date })}
-        </p>
+        {puzzle.replay ? (
+          <>
+            <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] font-medium text-[color:var(--color-ink)]">
+              {t("game.replay.kicker")}
+            </p>
+            <p className="text-[var(--text-kicker)] tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)] mt-1">
+              {t("game.replay.subKicker", { num: puzzle.num, date: puzzle.date })}
+            </p>
+          </>
+        ) : (
+          <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
+            {puzzle.demo ? t("game.kickerDemo") : t("game.kicker", { num: puzzle.num, date: puzzle.date })}
+          </p>
+        )}
         <div className="text-base mt-2 h-10 overflow-hidden flex items-center justify-center px-4 max-w-md mx-auto">
           <AnimatePresence mode="wait" initial={false}>
             {(() => {
@@ -712,13 +739,21 @@ export function TesseraGame() {
             </button>
           </div>
         )}
-        {finished && (
+        {finished && !puzzle.replay && (
           <p className="text-xs text-[color:var(--color-muted)]">{t("game.nextPuzzle", { countdown })}</p>
         )}
-        {finished && (
+        {finished && !puzzle.replay && (
           <div className="mt-2 w-full max-w-xs">
             <EmailSignup source={isRevealed ? "revealed" : "solved"} />
           </div>
+        )}
+        {puzzle.replay && (
+          <a
+            href={locale === "en" ? "/" : `/${locale}`}
+            className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition-colors"
+          >
+            {t("game.replay.backToToday")}
+          </a>
         )}
 
         <div className="mt-2 flex items-center gap-4 text-xs text-[color:var(--color-muted)]">
@@ -745,7 +780,7 @@ export function TesseraGame() {
               <path d="M6 3.2v3l1.8 1.1" />
             </svg>
           </button>
-          {liveStreak > 0 && (
+          {liveStreak > 0 && !puzzle.replay && (
             <span className="text-xs tabular-nums">
               🔥 {liveStreak}
             </span>

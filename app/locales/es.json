@@ -35,6 +35,12 @@
       "body": "El tablero se completará con la solución. Hoy no contará para tu racha (tu racha actual se mantiene).",
       "cancel": "Seguir intentando",
       "confirm": "Revelar"
+    },
+    "replay": {
+      "kicker": "Repetición",
+      "subKicker": "Tessera · #{num} · {date}",
+      "backToToday": "← Volver a hoy",
+      "movesStatus": "Movimientos {moves} · {valid}/{total} filas · repetición"
     }
   },
   "howto": {
@@ -106,7 +112,17 @@
     },
     "byTier": "Por nivel",
     "empty": "Aún no has resuelto ninguna partida. Hoy es tu día.",
-    "revealed": "revelado"
+    "revealed": "revelado",
+    "tabs": {
+      "solves": "Tus partidas",
+      "all": "Todas las partidas"
+    },
+    "allPuzzles": {
+      "empty": "Aún no hay partidas anteriores. Tessera #1 sale hoy.",
+      "notPlayed": "Sin jugar",
+      "replay": "Repetir",
+      "ariaPlay": "Repetir partida #{num}"
+    }
   },
   "tiers": {
     "legendary": "Legendario",

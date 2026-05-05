@@ -10,6 +10,8 @@ export type AnalyticsEvent =
   | "puzzle_started"
   | "puzzle_solved"
   | "puzzle_revealed"
+  | "puzzle_replay_opened"
+  | "puzzle_replayed"
   | "hide_hints_toggled"
   | "muted_toggled"
   | "theme_changed"

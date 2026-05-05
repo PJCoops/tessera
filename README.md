@@ -20,7 +20,7 @@ npm run dev
 
 URL params:
 
-- `?day=YYYY-MM-DD` — load a specific day's puzzle
+- `?day=YYYY-MM-DD` — replay a past puzzle (isolated: no result/progress writes, no streak update, no email signup, no `puzzle_solved` event). Today's date and any future date silently fall back to today's puzzle so the URL can't be used to peek at upcoming days. Linked from the History modal's "All puzzles" tab.
 - `?solve` — show today pre-solved (does not record)
 - `?demo` — load a fixed SHOW/HAVE/OVER/WERE grid for screen recordings (does not record)
 - combine: `?demo&solve`
