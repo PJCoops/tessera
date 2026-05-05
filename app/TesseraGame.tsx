@@ -828,8 +828,6 @@ function TapRipple({ idx, tileSize, gap }: { idx: number; tileSize: number; gap:
 // candidate would validate a row.
 function pickDemoSwap(positions: Tile[], goldRows: string[]): [number, number] {
   const candidates: [number, number][] = [
-    [0, 3],   // top row, opposite ends
-    [12, 15], // bottom row, opposite ends
     [0, 12],  // left column, top to bottom
     [3, 15],  // right column, top to bottom
     [0, 15],  // diagonal corners
