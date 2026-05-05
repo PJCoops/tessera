@@ -144,12 +144,10 @@ export function HistoryModal({
                   <Stat label={t("history.stats.best")} value={streak.max} />
                 </div>
 
-                {solvedCount > 0 && (
-                  <div className="mt-4">
-                    <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] mb-2">{t("history.byTier")}</p>
-                    <TierDistribution tierCounts={tierCounts} t={t} />
-                  </div>
-                )}
+                <div className="mt-4">
+                  <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] mb-2">{t("history.byTier")}</p>
+                  <TierDistribution tierCounts={tierCounts} t={t} />
+                </div>
 
                 <div className="mt-6 flex-1 overflow-y-auto -mx-2">
                   {entries.length === 0 ? (

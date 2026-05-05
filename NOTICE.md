@@ -31,7 +31,7 @@ checker.
 ### Solution list (`app/lib/solution-words.json`)
 
 The roughly two thousand four-letter words from which the daily puzzle
-solutions are drawn. Chosen so the gold grid is always built from
+solutions are drawn. Chosen so the solution grid is always built from
 recognisable English words rather than obscure Scrabble fillers.
 
 - **Source A (membership):** the validation list above (SOWPODS).

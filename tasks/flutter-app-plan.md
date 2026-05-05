@@ -12,7 +12,7 @@ Living plan for porting Tessera to iOS and Android using Flutter. Web app stays 
 
 ## Architecture
 
-- Puzzle generated **on-device** in Dart from the UTC-date seed. Day N produces the same gold grid on web and mobile (verified by snapshot tests).
+- Puzzle generated **on-device** in Dart from the UTC-date seed. Day N produces the same solution grid on web and mobile (verified by snapshot tests).
 - State per-device via `shared_preferences`, mirroring the six localStorage keys today:
   - `tessera:streak`
   - `tessera:result:<num>`
@@ -26,7 +26,7 @@ Living plan for porting Tessera to iOS and Android using Flutter. Web app stays 
 
 ## Testing
 
-Both apps test the same pure logic on both sides — same seeds in, same gold grids out, same share slugs round-trip. Identical assertions in two languages.
+Both apps test the same pure logic on both sides — same seeds in, same solution grids out, same share slugs round-trip. Identical assertions in two languages.
 
 - **Web:** Vitest. `npm test` runs the suite. Tests live next to the code (`app/lib/*.test.ts`). Already covers `puzzle`, `rng`, `share`.
 - **Mobile:** `flutter_test` (built into the Flutter SDK). `flutter test` runs the suite. Tests live in `mobile/test/` mirroring `mobile/lib/`.
@@ -57,7 +57,7 @@ Both apps test the same pure logic on both sides — same seeds in, same gold gr
 
 - 4×4 grid using `Stack` + `AnimatedPositioned` for swap animation. Spring physics tuned to feel like the framer-motion config in `TesseraGame.tsx`.
 - Tap-to-select / tap-to-swap flow.
-- Visual states: selection ring, hint dotted outline, row-valid green, solved gold cascade with stagger.
+- Visual states: selection ring, hint dotted outline, row-valid sage, solved rust cascade with stagger.
 - Win sound via `audioplayers` (respects mute setting).
 - Status line with rolling text transitions; moves counter; reveal-with-confirm flow.
 - Theme: light / dark / system using `ThemeData` and `MediaQuery.platformBrightness`.

@@ -44,7 +44,7 @@ Server-side generation is the only way to stop devtool extraction.
 ## Phases
 
 1. **Carve up `puzzle.ts`.** Pull the engine into `lib/server/puzzle.ts`; keep `Tile` and `tilesFromRows` in `app/lib/puzzle.ts`. No behaviour change yet.
-2. **Add the API endpoint.** `app/api/puzzle/route.ts` calls the server engine, gates by date, sets cache headers. Add a vitest test that covers: past date returns the same gold grid as the current client output (parity), today returns 200, future returns 403, malformed date returns 400, both locales work.
+2. **Add the API endpoint.** `app/api/puzzle/route.ts` calls the server engine, gates by date, sets cache headers. Add a vitest test that covers: past date returns the same solution grid as the current client output (parity), today returns 200, future returns 403, malformed date returns 400, both locales work.
 3. **Switch the client.** Replace the `generateDailyPuzzleFor` call in `TesseraGame.tsx` with a fetch + sessionStorage cache. Loading state in place.
 4. **Drop wordlists from the client bundle.** Verify with `npx next build` and bundle analyzer that `words*.json` and `solution-words*.json` no longer appear in any client chunk.
 5. **Update `/api/og`, `/s/[slug]`, and the email-cron** to use the server engine directly (they're already server-side).
