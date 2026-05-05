@@ -381,7 +381,7 @@ export function TesseraGame() {
       setPositions(swapAt(snapshot, a, b));
 
       // Hold the swapped state long enough to register
-      await wait(900);
+      await wait(1400);
       if (cancelled) return;
       setPositions(snapshot);
 
@@ -821,13 +821,23 @@ function TapRipple({ idx, tileSize, gap }: { idx: number; tileSize: number; gap:
 }
 
 // Pick a swap pair for the demo that won't accidentally validate a row
-// (which would flash a fake "you got one!" on screen). Falls back to [0,1]
-// if every candidate is risky.
+// (which would flash a fake "you got one!" on screen). All candidates are
+// clearly non-adjacent (king-distance ≥ 2) so the demo doesn't read as
+// "you can only swap neighbours" — earlier viewers misread the adjacent
+// pairs as a rule. Falls back to opposite-corner [0, 15] if every
+// candidate would validate a row.
 function pickDemoSwap(positions: Tile[], goldRows: string[]): [number, number] {
   const candidates: [number, number][] = [
-    [0, 1], [1, 2], [2, 3],
-    [4, 5], [5, 6], [6, 7],
-    [0, 4], [1, 5], [2, 6], [3, 7],
+    [0, 3],   // top row, opposite ends
+    [12, 15], // bottom row, opposite ends
+    [0, 12],  // left column, top to bottom
+    [3, 15],  // right column, top to bottom
+    [0, 15],  // diagonal corners
+    [3, 12],  // anti-diagonal corners
+    [0, 10],  // long diagonal
+    [1, 14],  // mid-grid span
+    [2, 13],  // mid-grid span
+    [5, 11],  // mid-grid span
   ];
   const upper = goldRows.map((r) => r.toUpperCase());
   const validRows = (p: Tile[]) =>
@@ -840,7 +850,7 @@ function pickDemoSwap(positions: Tile[], goldRows: string[]): [number, number] {
     const after = validRows(swapAt(positions, a, b));
     if (after <= before) return [a, b];
   }
-  return [0, 1];
+  return [0, 15];
 }
 
 function Legend({ children, variant }: { children: React.ReactNode; variant: "row" | "bonus" | "hint" }) {
