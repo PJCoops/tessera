@@ -4,6 +4,7 @@ import { TesseraGame } from "./TesseraGame";
 import { parseShareSlug } from "./lib/share";
 import { buildShareMetadata } from "./lib/share-metadata";
 import { LocaleProvider } from "./lib/locale-context";
+import { InstallBanner } from "./components/InstallBanner";
 import { getDictionary } from "./lib/i18n";
 
 const dict = getDictionary("en");
@@ -51,6 +52,7 @@ export default function Home() {
       />
       <LocaleProvider locale="en">
         <TesseraGame />
+        <InstallBanner />
       </LocaleProvider>
     </>
   );

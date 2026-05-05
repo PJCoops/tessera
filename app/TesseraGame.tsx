@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { DEMO_GRID, generateDailyPuzzleFor, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
 import { seedFromDate, todayUtc } from "./lib/rng";
+import { EPOCH } from "./lib/epoch";
 import { resolvePuzzleFromParams } from "./lib/replay";
 import { readStreak, recordWin, visibleCurrent, type Streak } from "./lib/streak";
 import { buildSharePayload } from "./lib/share";
@@ -15,7 +16,6 @@ import { track } from "./lib/analytics";
 import { useLocale } from "./lib/locale-context";
 
 const N = 4;
-const EPOCH = "2026-04-27"; // Tessera #1
 const TILE = 68;
 const GAP = 6;
 

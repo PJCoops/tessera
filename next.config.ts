@@ -14,6 +14,23 @@ const nextConfig: NextConfig = {
   // Required for the rewrites above so trailing-slash handling doesn't bounce
   // requests away from PostHog.
   skipTrailingSlashRedirect: true,
+
+  // Service worker is served from `public/sw.js`. We need it to update
+  // promptly when we redeploy (otherwise users keep an old worker until
+  // they manually evict it), and to be served with the right MIME type
+  // so browsers will register it. Per the Next 16 PWA guide.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
