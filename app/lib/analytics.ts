@@ -15,7 +15,12 @@ export type AnalyticsEvent =
   | "hide_hints_toggled"
   | "muted_toggled"
   | "theme_changed"
-  | "email_subscribed";
+  | "email_subscribed"
+  // PWA push notification funnel.
+  | "push_subscribed" // user accepted the browser permission + sub stored
+  | "push_unsubscribed" // user toggled off, or browser reported the sub dead
+  | "push_received" // service worker handled a push event
+  | "push_clicked"; // user tapped the resulting notification
 
 // Mirror to Meta only the events worth optimizing ad delivery against.
 // PageView is auto-fired by the Pixel snippet itself. ViewContent is a

@@ -24,6 +24,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale } from "../lib/locale-context";
+import { track } from "../lib/analytics";
 
 type Status =
   | "loading"
@@ -167,6 +168,7 @@ export function PushReminderToggle() {
       });
       if (!res.ok) throw new Error(`subscribe API ${res.status}`);
 
+      track("push_subscribed", { locale });
       setStatus("subscribed");
     } catch (e) {
       console.error("push subscribe failed:", e);
@@ -191,6 +193,7 @@ export function PushReminderToggle() {
           body: JSON.stringify({ endpoint, locale }),
         }).catch(() => {});
       }
+      track("push_unsubscribed", { locale });
       setStatus("idle");
     } catch (e) {
       console.error("push unsubscribe failed:", e);

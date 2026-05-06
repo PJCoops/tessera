@@ -5,6 +5,9 @@ import { revalidatePath, updateTag } from "next/cache";
 import { hogql } from "../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../lib/rng";
 import { TIER_COLORS } from "../lib/tier";
+import { subscriberCounts } from "../lib/subscribers";
+import { pushSubscriberCount } from "../lib/push-subscribers";
+import { LOCALES } from "../lib/i18n";
 // Metrics dictionary imports kept available for future migrations of
 // inline HogQL into app/lib/metrics/. Currently the page uses inline
 // queries everywhere — the dictionary is exercised mostly by the
@@ -176,6 +179,7 @@ type TodayUniquesRow = {
   solvers: number;
 };
 type DataSinceRow = { first_event: string | null };
+type PushFunnelRow = { received: number; clicked: number };
 
 export default async function StatsPage({
   searchParams,
@@ -207,6 +211,12 @@ export default async function StatsPage({
   let langs: LangRow[] = [];
   let todayUniques: TodayUniquesRow[] = [];
   let dataSince: DataSinceRow[] = [];
+  let pushFunnel: PushFunnelRow[] = [];
+  // Subscriber counts come from Redis (not HogQL) so they live outside
+  // the Promise.all destructure. Initialised here so the Big card
+  // render path always has a value even on a cold-start failure.
+  let pushSubs = 0;
+  let emailSubs = 0;
   let error: string | null = null;
   try {
     [
@@ -228,6 +238,7 @@ export default async function StatsPage({
       langs,
       todayUniques,
       dataSince,
+      pushFunnel,
     ] = await Promise.all([
         hogql<DailyRow>(`
           SELECT toString(toDate(timestamp)) AS day,
@@ -453,10 +464,40 @@ export default async function StatsPage({
           FROM events
           WHERE 1=1${EXCLUDE}
         `),
+        // Push notification funnel for today: how many `push_received`
+        // events fired (notifications shown) vs how many `push_clicked`
+        // events fired (user tapped through). Both originate from the
+        // service worker via /api/events/push.
+        hogql<PushFunnelRow>(`
+          SELECT
+            toInt(countIf(event = 'push_received')) AS received,
+            toInt(countIf(event = 'push_clicked')) AS clicked
+          FROM events
+          WHERE event IN ('push_received', 'push_clicked')
+            AND toDate(timestamp) = today()${EXCLUDE}
+        `),
       ]);
+
+    // Subscriber counts (Redis HLEN/SCARD per locale, summed). Done
+    // outside the HogQL Promise.all because Upstash is a separate
+    // backend. Failures here just leave the counts at 0 so the rest
+    // of the dashboard still renders.
+    try {
+      const [emailByLocale, pushByLocale] = await Promise.all([
+        subscriberCounts(),
+        Promise.all(LOCALES.map((l) => pushSubscriberCount(l))),
+      ]);
+      emailSubs = Object.values(emailByLocale).reduce((s, n) => s + n, 0);
+      pushSubs = pushByLocale.reduce((s, n) => s + n, 0);
+    } catch (e) {
+      console.error("[stats] subscriber counts failed:", e);
+    }
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
+
+  const pf = pushFunnel[0] ?? { received: 0, clicked: 0 };
+  const pushClickRate = pf.received ? (pf.clicked / pf.received) * 100 : 0;
 
   const today = daily[0];
   // Single source of truth for "today's solved count": the inline
@@ -655,6 +696,20 @@ export default async function StatsPage({
               }
             />
           </section>
+
+          {/* NOTIFICATIONS — daily-reminder reach + push funnel */}
+          <Section title="Notifications" freshness="live">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Big label="Email subscribers" value={fmt(emailSubs)} suffix="all locales" />
+              <Big label="Push subscribers" value={fmt(pushSubs)} suffix="all locales" />
+              <Big label="Push received today" value={fmt(pf.received)} />
+              <Big
+                label="Push clicks today"
+                value={fmt(pf.clicked)}
+                suffix={pf.received ? `${pushClickRate.toFixed(0)}% click-through` : undefined}
+              />
+            </div>
+          </Section>
 
           {/* MARKETING — fun derived all-time stats */}
           <section className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-12">

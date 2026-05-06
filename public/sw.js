@@ -22,6 +22,28 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// Fire-and-forget analytics relay for push events. The SW can't use
+// posthog-js, so we POST to /api/events/push which forwards to
+// PostHog server-side. keepalive lets the request finish even after
+// the SW finishes handling the event.
+function trackPushEvent(name, payload) {
+  try {
+    fetch("/api/events/push", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        event: name,
+        endpoint_hash: payload && payload.endpoint_hash,
+        tag: payload && payload.tag,
+        url: payload && payload.url,
+      }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch (e) {
+    // analytics must never break the notification flow
+  }
+}
+
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
@@ -46,16 +68,23 @@ self.addEventListener("push", (event) => {
     renotify: true,
     data: {
       url: payload.url || "/",
+      tag: payload.tag || "tessera-daily",
+      endpoint_hash: payload.endpoint_hash,
       sentAt: Date.now(),
     },
   };
+
+  trackPushEvent("push_received", options.data);
 
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || "/";
+  const data = event.notification.data || {};
+  const target = data.url || "/";
+
+  trackPushEvent("push_clicked", data);
 
   // Focus an existing tab on the same origin if the user already has
   // the puzzle open — feels less jarring than spawning a duplicate.
