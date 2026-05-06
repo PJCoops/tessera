@@ -38,6 +38,7 @@ import {
   revealedAllTime,
   todayPuzzleDetail,
   dailyLast14d,
+  allTimeTotals,
 } from "./definitions/puzzles";
 
 import { tiersToday, tiersLast30d } from "./definitions/tiers";
@@ -74,6 +75,7 @@ export const METRICS: Record<string, MetricDef<unknown>> = {
 
   [todayPuzzleDetail.key]: todayPuzzleDetail,
   [dailyLast14d.key]: dailyLast14d,
+  [allTimeTotals.key]: allTimeTotals,
 
   [tiersToday.key]: tiersToday,
   [tiersLast30d.key]: tiersLast30d,

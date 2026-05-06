@@ -132,6 +132,68 @@ export const todayPuzzleDetail: MetricDef<TodayPuzzleDetail> = {
   fallback: { num: null, solves: 0, fastest: null, avgMoves: null, bonus: 0, topStreak: null },
 };
 
+// All-time aggregates returned in a single row, used by the Hero
+// secondary cards (total moves, bonus solves, top streak ever).
+// Bundled rather than split into N metrics because they all derive
+// from the same scan of `puzzle_solved` and one query is cheaper.
+export type AllTimeTotals = {
+  totalStarted: number;
+  totalSolved: number;
+  totalRevealed: number;
+  totalMoves: number;
+  bonusSolves: number;
+  topStreak: number | null;
+};
+
+export const allTimeTotals: MetricDef<AllTimeTotals> = {
+  key: "puzzles.totals.alltime",
+  label: "All-time totals",
+  description:
+    "Single-row aggregate of started/solved/revealed counts, total moves, bonus solves, and top streak across all time.",
+  window: "alltime",
+  format: "raw",
+  source: "precomputed",
+  hogql: `
+    SELECT
+      toInt(countIf(event = 'puzzle_started')) AS total_started,
+      toInt(countIf(event = 'puzzle_solved')) AS total_solved,
+      toInt(countIf(event = 'puzzle_revealed')) AS total_revealed,
+      toInt(sumIf(toInt(toString(properties.moves)), event = 'puzzle_solved')) AS total_moves,
+      toInt(countIf(event = 'puzzle_solved' AND toString(properties.bonus) = 'true')) AS bonus_solves,
+      toInt(maxIf(toInt(toString(properties.streak)), event = 'puzzle_solved')) AS top_streak
+    FROM events
+    WHERE 1=1 \${WINDOW}\${EXCLUDE}
+  `,
+  parse: (rows) => {
+    const r = rows[0] as
+      | {
+          total_started?: number;
+          total_solved?: number;
+          total_revealed?: number;
+          total_moves?: number;
+          bonus_solves?: number;
+          top_streak?: number;
+        }
+      | undefined;
+    return {
+      totalStarted: Number(r?.total_started ?? 0),
+      totalSolved: Number(r?.total_solved ?? 0),
+      totalRevealed: Number(r?.total_revealed ?? 0),
+      totalMoves: Number(r?.total_moves ?? 0),
+      bonusSolves: Number(r?.bonus_solves ?? 0),
+      topStreak: r?.top_streak ?? null,
+    };
+  },
+  fallback: {
+    totalStarted: 0,
+    totalSolved: 0,
+    totalRevealed: 0,
+    totalMoves: 0,
+    bonusSolves: 0,
+    topStreak: null,
+  },
+};
+
 // Daily breakdown, last 14 days. Used for the trend chart.
 export type DailyRow = {
   day: string;

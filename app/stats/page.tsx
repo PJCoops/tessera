@@ -4,6 +4,13 @@ import { redirect } from "next/navigation";
 import { hogql } from "../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../lib/rng";
 import { TIER_COLORS } from "../lib/tier";
+import {
+  getMetric,
+  METRICS,
+} from "../lib/metrics";
+import type { MetricDef } from "../lib/metrics/types";
+import type { DailyRow as DictDailyRow, TodayPuzzleDetail, AllTimeTotals } from "../lib/metrics/definitions/puzzles";
+import type { TierRow as DictTierRow } from "../lib/metrics/definitions/tiers";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
 
@@ -416,6 +423,15 @@ export default async function StatsPage({
     error = e instanceof Error ? e.message : String(e);
   }
 
+  // Single source of truth for "today's solved count". Both the
+  // "Today solved" Big card and the "Today's tiers · X solves"
+  // section header now read this same value, so they cannot drift.
+  // See app/lib/metrics/ for why we route through getMetric() — the
+  // 98 vs 116 dashboard inconsistency was caused by ad-hoc queries
+  // each picking their own interpretation of "today".
+  const solvedTodayResult = await getMetric(METRICS["puzzles.solved.today"] as MetricDef<number>);
+  const todaySolvedAuthoritative = solvedTodayResult.value;
+
   const today = daily[0];
   const todayMeta = todayRows[0];
   const summ = summary[0];
@@ -454,7 +470,12 @@ export default async function StatsPage({
   const todayTiersOrdered = sortTiers(todayTiers);
   const allTiersOrdered = sortTiers(allTiers);
 
-  const todayTotal = todayTiersOrdered.reduce((s, r) => s + r.solves, 0);
+  // Authoritative count from the metrics dictionary. The tier-row sum
+  // can disagree by a handful of events because it's a separate scan
+  // and races against incoming traffic; we display the dictionary's
+  // value so the header agrees with "Today solved" elsewhere on the
+  // page. The bar still uses the tier rows for proportional widths.
+  const todayTotal = todaySolvedAuthoritative;
   const allTotal = allTiersOrdered.reduce((s, r) => s + r.solves, 0);
 
   const bonusRate = summ?.total_solves
@@ -561,7 +582,7 @@ export default async function StatsPage({
           {/* SECONDARY — today + headline records */}
           <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
             <Big label="Today started" value={today?.started ?? 0} />
-            <Big label="Today solved" value={today?.solved ?? 0} />
+            <Big label="Today solved" value={todaySolvedAuthoritative} />
             <Big
               label="Today fastest"
               value={todayMeta?.fastest != null ? String(todayMeta.fastest) : "—"}
