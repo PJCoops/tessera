@@ -330,11 +330,16 @@ export default async function StatsOverviewPage() {
               suffix={todayMeta?.fastest != null ? "moves" : undefined}
             />
             <Big
-              label="Bonus rate today"
+              label="Solve rate today"
               value={
-                todayMeta?.solves
-                  ? `${Math.round((todayMeta.bonus / todayMeta.solves) * 100)}%`
+                td?.players
+                  ? `${Math.round((td.solvers / td.players) * 100)}%`
                   : "—"
+              }
+              suffix={
+                td?.players
+                  ? `${td.solvers} of ${td.players} players`
+                  : undefined
               }
             />
           </section>

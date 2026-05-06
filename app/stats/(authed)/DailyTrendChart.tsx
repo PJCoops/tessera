@@ -267,6 +267,19 @@ export function DailyTrendChart({ data }: { data: TrendPoint[] }) {
                 <span>{view[activeIdx][s.key].toLocaleString()}</span>
               </div>
             ))}
+            {view[activeIdx].players > 0 && (
+              <div className="mt-1 pt-1 border-t border-[color:var(--color-rule)] flex items-center justify-between gap-3 tabular-nums">
+                <span className="text-[color:var(--color-muted)]">
+                  Solve rate
+                </span>
+                <span>
+                  {Math.round(
+                    (view[activeIdx].solvers / view[activeIdx].players) * 100
+                  )}
+                  %
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
