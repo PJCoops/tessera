@@ -83,6 +83,13 @@ export default async function RootLayout({
   // on the stats subdomain — they're for the puzzle audience, not the
   // dashboard. Detect via host header rather than pathname so it works
   // both before and after the proxy.ts rewrite.
+  //
+  // The same flag also gates PostHog and Meta Pixel: dashboard loads
+  // are admin traffic, not players, so we don't want them firing
+  // $pageview / PageView events that would inflate the very metrics
+  // the dashboard renders. With the tags absent, no init runs, no
+  // events fire, and STATS_EXCLUDE_IDS only needs to scrub gameplay
+  // distinct_ids (not dashboard ones).
   const host = (await headers()).get("host")?.toLowerCase().split(":")[0] ?? "";
   const isStats = host === "stats.tesserapuzzle.com";
 
@@ -94,33 +101,34 @@ export default async function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
-        <MetaPixelHead />
+        {!isStats && <MetaPixelHead />}
       </head>
       <body className="min-h-full flex flex-col">
-        <MetaPixelNoScript />
+        {!isStats && <MetaPixelNoScript />}
+        {isStats ? (
+          <main className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
+            {children}
+          </main>
+        ) : (
         <PHProvider>
           <main className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
             {children}
           </main>
-          {!isStats && (
-            <footer className="py-6 text-center text-xs text-[color:var(--color-muted)]">
-              <a
-                href="https://www.reddit.com/r/TesseraPuzzle/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline-offset-4 hover:underline hover:text-[color:var(--color-ink)] transition-colors"
-              >
-                r/TesseraPuzzle
-              </a>
-            </footer>
-          )}
+          <footer className="py-6 text-center text-xs text-[color:var(--color-muted)]">
+            <a
+              href="https://www.reddit.com/r/TesseraPuzzle/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline-offset-4 hover:underline hover:text-[color:var(--color-ink)] transition-colors"
+            >
+              r/TesseraPuzzle
+            </a>
+          </footer>
           <Analytics />
-          {!isStats && (
-            <>
-              {/* External directory badges. Fixed to viewport corners so they
-                 stay visible without intruding on the puzzle. Hidden on small
-                 screens where they'd overlap the grid. Suppressed on the stats
-                 subdomain — they're audience-facing chrome, not dashboard chrome. */}
+          {/* External directory badges. Fixed to viewport corners so they
+             stay visible without intruding on the puzzle. Hidden on small
+             screens where they'd overlap the grid. */}
+          <>
               <a
                 href="https://www.producthunt.com/products/tessera-5?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-tessera-5"
                 target="_blank"
@@ -165,9 +173,9 @@ export default async function RootLayout({
                   width={140}
                 />
               </a>
-            </>
-          )}
+          </>
         </PHProvider>
+        )}
       </body>
     </html>
   );
