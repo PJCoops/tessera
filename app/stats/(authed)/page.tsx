@@ -293,10 +293,10 @@ export default async function StatsOverviewPage() {
           </section>
 
           <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
-            <Big label="Today started" value={today?.started ?? 0} />
-            <Big label="Today solved" value={todaySolvedAuthoritative} />
+            <Big label="Grids started today" value={today?.started ?? 0} />
+            <Big label="Grids cracked today" value={todaySolvedAuthoritative} />
             <Big
-              label="Today fastest"
+              label="Fastest solve today"
               value={todayMeta?.fastest != null ? String(todayMeta.fastest) : "—"}
               suffix={todayMeta?.fastest != null ? "moves" : undefined}
             />
