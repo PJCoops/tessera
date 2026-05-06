@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { hogql } from "../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../lib/rng";
 import { TIER_COLORS } from "../lib/tier";
@@ -80,6 +81,15 @@ async function signOut() {
   const jar = await cookies();
   jar.delete({ name: COOKIE_NAME, path: "/", domain: COOKIE_DOMAIN });
   redirect("/stats");
+}
+
+// Forces a fresh server render. The `unstable_cache`-wrapped HogQL
+// queries and any precomputed Redis reads are unaffected (their TTLs
+// govern those), but the inline `force-dynamic` queries on this page
+// re-run, and the page re-renders without a full browser reload.
+async function refreshStats() {
+  "use server";
+  revalidatePath("/stats");
 }
 
 // Tier ranges and colors mirror lib/tier.ts (TIER_COLORS imported above).
@@ -164,6 +174,7 @@ type TodayUniquesRow = {
   players: number;
   solvers: number;
 };
+type DataSinceRow = { first_event: string | null };
 
 export default async function StatsPage({
   searchParams,
@@ -194,6 +205,7 @@ export default async function StatsPage({
   let cohorts: CohortRow[] = [];
   let langs: LangRow[] = [];
   let todayUniques: TodayUniquesRow[] = [];
+  let dataSince: DataSinceRow[] = [];
   let error: string | null = null;
   try {
     [
@@ -214,6 +226,7 @@ export default async function StatsPage({
       cohorts,
       langs,
       todayUniques,
+      dataSince,
     ] = await Promise.all([
         hogql<DailyRow>(`
           SELECT toString(toDate(timestamp)) AS day,
@@ -431,6 +444,14 @@ export default async function StatsPage({
           FROM events
           WHERE toDate(timestamp) = today()${EXCLUDE}
         `),
+        // Earliest event in the project. Used to show "Data since X" so
+        // the user knows the all-time numbers don't actually go back to
+        // day 1 of the puzzle — analytics started a few days later.
+        hogql<DataSinceRow>(`
+          SELECT toString(min(timestamp)) AS first_event
+          FROM events
+          WHERE 1=1${EXCLUDE}
+        `),
       ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -500,6 +521,18 @@ export default async function StatsPage({
   // even when there are no solves yet.
   const todayDate = todayUtc();
   const todayNum = puzzleNumber(todayDate, EPOCH);
+
+  // Data-collection start. PostHog wasn't wired up on day 1 of the
+  // puzzle, so all-time numbers undercount the early days. Surfacing
+  // this lets the dashboard say "all time" without lying.
+  const firstEventTs = dataSince[0]?.first_event ?? null;
+  const firstEventDate = firstEventTs ? firstEventTs.slice(0, 10) : null;
+  const firstEventPuzzle = firstEventDate
+    ? puzzleNumber(firstEventDate, EPOCH)
+    : null;
+  const firstEventLabel = firstEventDate
+    ? `Data since ${firstEventDate}${firstEventPuzzle ? ` · puzzle #${firstEventPuzzle}` : ""}`
+    : null;
   const todayPretty = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
     day: "numeric",
@@ -518,17 +551,30 @@ export default async function StatsPage({
 
   return (
     <div className="self-start w-full max-w-3xl">
-      <header className="mb-8 flex items-baseline justify-between">
+      <header className="mb-8 flex items-baseline justify-between gap-4 flex-wrap">
         <div>
           <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
             Tessera · stats
           </p>
           <h1 className="text-2xl font-light tracking-tight mt-1">Player activity</h1>
+          {firstEventLabel && (
+            <p className="text-[10px] text-[color:var(--color-muted)] mt-1">
+              {firstEventLabel}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <p className="text-xs text-[color:var(--color-muted)] tabular-nums">
             Fetched {new Date().toISOString().slice(11, 19)} UTC
           </p>
+          <form action={refreshStats}>
+            <button
+              type="submit"
+              className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] underline-offset-4 hover:underline"
+            >
+              Refresh
+            </button>
+          </form>
           <form action={signOut}>
             <button
               type="submit"
@@ -650,7 +696,7 @@ export default async function StatsPage({
 
 
           {/* Today tier split */}
-          <Section title={`Today’s tiers · ${todayTotal} solves`}>
+          <Section title={`Today’s tiers · ${todayTotal} solves`} freshness="live">
             {todayTotal === 0 ? (
               <Empty />
             ) : (
@@ -659,7 +705,7 @@ export default async function StatsPage({
           </Section>
 
           {/* Highlights row */}
-          <Section title="Highlights">
+          <Section title="Highlights" freshness="live">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <Highlight
                 label="Hardest puzzle (30d)"
@@ -694,7 +740,7 @@ export default async function StatsPage({
             </div>
           </Section>
 
-          <Section title="By language · last 30d">
+          <Section title="By language · last 30d" freshness="live">
             <div className="space-y-1">
               <div className="grid grid-cols-[60px_repeat(5,1fr)] gap-3 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
                 <span>Lang</span>
@@ -725,7 +771,7 @@ export default async function StatsPage({
             </p>
           </Section>
 
-          <Section title="Last 14 days">
+          <Section title="Last 14 days" freshness="live">
             <div className="space-y-2">
               <div className="grid grid-cols-[80px_1fr_1fr_1fr] gap-3 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
                 <span>Day</span>
@@ -750,7 +796,7 @@ export default async function StatsPage({
             </div>
           </Section>
 
-          <Section title="Cohort retention · weekly cohorts">
+          <Section title="Cohort retention · weekly cohorts" freshness="live">
             <p className="text-[11px] text-[color:var(--color-muted)] mb-3 max-w-prose">
               Each row is players whose first puzzle landed in that ISO week.
               Columns show the share of that cohort that came back N days later.
@@ -760,7 +806,7 @@ export default async function StatsPage({
             <CohortTable rows={cohorts} />
           </Section>
 
-          <Section title={`Tier distribution · last 30d · ${allTotal} solves`}>
+          <Section title={`Tier distribution · last 30d · ${allTotal} solves`} freshness="live">
             {allTotal === 0 ? <Empty /> : <TierBar rows={allTiersOrdered} total={allTotal} />}
             <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-[color:var(--color-muted)]">
               {TIER_ORDER.map((t) => (
@@ -769,7 +815,7 @@ export default async function StatsPage({
             </div>
           </Section>
 
-          <Section title="Moves to solve · last 30d">
+          <Section title="Moves to solve · last 30d" freshness="live">
             <div className="space-y-1.5">
               {moves.length === 0 && <Empty />}
               {moves.map((m) => (
@@ -782,7 +828,7 @@ export default async function StatsPage({
             </div>
           </Section>
 
-          <Section title="Per-puzzle difficulty · last 30d">
+          <Section title="Per-puzzle difficulty · last 30d" freshness="live">
             <div className="space-y-1">
               <div className="grid grid-cols-[60px_1fr_1fr_1fr] gap-3 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
                 <span>#</span>
@@ -802,7 +848,7 @@ export default async function StatsPage({
             </div>
           </Section>
 
-          <Section title="Hide hints toggle · last 30d">
+          <Section title="Hide hints toggle · last 30d" freshness="live">
             <div className="space-y-1.5 text-xs">
               {hints.length === 0 && <Empty />}
               {hints.map((h) => (
@@ -982,12 +1028,51 @@ function Highlight({ label, value, sub }: { label: string; value: string; sub?: 
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+type Freshness = "live" | "daily" | "static";
+function Section({
+  title,
+  children,
+  freshness,
+}: {
+  title: string;
+  children: React.ReactNode;
+  // What kind of data the section displays:
+  //   live    — server-side cached for ≤60s; refresh to force re-pull
+  //   daily   — refreshed by the 09:30 UTC precompute cron
+  //   static  — derived metadata that rarely changes
+  freshness?: Freshness;
+}) {
   return (
     <section className="mb-10">
-      <h2 className="text-sm font-medium mb-3">{title}</h2>
+      <div className="flex items-baseline gap-2 mb-3">
+        <h2 className="text-sm font-medium">{title}</h2>
+        {freshness && <FreshnessChip kind={freshness} />}
+      </div>
       {children}
     </section>
+  );
+}
+
+function FreshnessChip({ kind }: { kind: Freshness }) {
+  const label =
+    kind === "live"
+      ? "Live · 60s"
+      : kind === "daily"
+      ? "Daily · 09:30 UTC"
+      : "Static";
+  const title =
+    kind === "live"
+      ? "Cached on the server for up to 60 seconds. Hit Refresh to force a re-pull from PostHog."
+      : kind === "daily"
+      ? "Refreshed once a day at 09:30 UTC by the precompute cron. Won't change between then and the next run."
+      : "Derived metadata. Doesn't change often.";
+  return (
+    <span
+      title={title}
+      className="text-[9px] uppercase tracking-wider text-[color:var(--color-muted)] border border-[color:var(--color-rule)] px-1.5 py-0.5 rounded"
+    >
+      {label}
+    </span>
   );
 }
 
