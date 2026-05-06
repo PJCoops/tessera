@@ -1,26 +1,21 @@
+// Overview — the front page of /stats. Three things only:
+//   1. HERO — all-time visitors / engaged players / solvers, each with
+//      a "today" sub-stat in the top-right.
+//   2. SOCIAL BLURB — pre-formatted copy for r/TesseraPuzzle / X /
+//      newsletter, click-to-select.
+//   3. SECONDARY (today + records) — today started/solved/fastest/bonus
+//      and the headline all-time records (biggest day, top streak,
+//      most-played player, returning %, all-time solve rate, tiles).
+//
+// All section drilldowns live on dedicated routes — see the sidenav.
+// This page only fetches what it renders, so the Overview is fast
+// even when the rest of the dashboard is busy.
+
 import type { Metadata } from "next";
 import { hogql } from "../../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../../lib/rng";
-import { subscriberCounts } from "../../lib/subscribers";
-import { pushSubscriberCount } from "../../lib/push-subscribers";
-import { LOCALES } from "../../lib/i18n";
 import { EXCLUDE } from "../_lib";
-import {
-  Hero,
-  Big,
-  Highlight,
-  Section,
-  BarCell,
-  TierBar,
-  LegendDot,
-  Empty,
-  CohortTable,
-  TIER_ORDER,
-  TIER_BAR_COLORS,
-  TIER_SQL,
-  sortTiers,
-  fmt,
-} from "../_components";
+import { Hero, Big, fmt, sortTiers, type TierRow } from "../_components";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
 
@@ -29,21 +24,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Each request runs its own HogQL queries; the layout's auth gate has
-// already validated the cookie. unstable_cache wraps any metric
-// definition routed through getMetric() with a 60s TTL.
 export const dynamic = "force-dynamic";
 
+// Row shapes for the queries this page actually runs. Pruned from the
+// monolith: anything used only by another page (per-puzzle, cohorts,
+// languages, etc.) lives in that page's file now.
 type DailyRow = { day: string; started: number; solved: number; revealed: number };
-type MovesRow = { moves: number | null; solves: number };
-type HintsRow = { enabled: unknown; toggles: number; users: number };
-type PuzzleRow = {
-  num: number | null;
-  solves: number;
-  avg_moves: number | null;
-  median_moves: number | null;
-};
-type TierRow = { tier: string; solves: number };
 type TodayRow = {
   num: number | null;
   solves: number;
@@ -52,7 +38,6 @@ type TodayRow = {
   bonus: number;
   top_streak: number | null;
 };
-type ExtremeRow = { num: number | null; solves: number; avg_moves: number | null };
 type SummaryRow = {
   total_solves: number;
   bonus_solves: number;
@@ -68,353 +53,143 @@ type AllTimeRow = {
   unique_players: number;
   unique_solvers: number;
   total_moves: number;
-  bonus_solves: number;
+  bonus: number;
   top_streak: number | null;
 };
 type BiggestDayRow = { day: string; solves: number };
 type ReturningRow = { returning: number; total: number; top_player_solves: number };
-type RecentIdRow = { distinct_id: string; events: number; first_seen: string; last_seen: string };
-type CohortRow = {
-  cohort_week: string;
-  cohort_size: number;
-  d1: number;
-  d3: number;
-  d7: number;
-  d14: number;
-  d30: number;
-};
-type LangRow = {
-  language: string;
-  unique_players: number;
-  started: number;
-  solved: number;
-  revealed: number;
-  avg_moves: number | null;
-};
-type TodayUniquesRow = {
-  visitors: number;
-  players: number;
-  solvers: number;
-};
+type TodayUniquesRow = { visitors: number; players: number; solvers: number };
 type DataSinceRow = { first_event: string | null };
-type PushFunnelRow = { received: number; clicked: number };
 
-// The (authed) layout already gated this page behind isAuthenticated().
-// We don't repeat the cookie check here.
-export default async function StatsPage() {
+export default async function StatsOverviewPage() {
   let daily: DailyRow[] = [];
-  let moves: MovesRow[] = [];
-  let hints: HintsRow[] = [];
-  let puzzles: PuzzleRow[] = [];
-  let todayTiers: TierRow[] = [];
-  let allTiers: TierRow[] = [];
   let todayRows: TodayRow[] = [];
-  let hardest: ExtremeRow[] = [];
-  let easiest: ExtremeRow[] = [];
+  let todayTiers: TierRow[] = [];
   let summary: SummaryRow[] = [];
   let allTime: AllTimeRow[] = [];
   let biggestDay: BiggestDayRow[] = [];
   let returning: ReturningRow[] = [];
-  let recentIds: RecentIdRow[] = [];
-  let cohorts: CohortRow[] = [];
-  let langs: LangRow[] = [];
   let todayUniques: TodayUniquesRow[] = [];
   let dataSince: DataSinceRow[] = [];
-  let pushFunnel: PushFunnelRow[] = [];
-  // Subscriber counts come from Redis (not HogQL) so they live outside
-  // the Promise.all destructure. Initialised here so the Big card
-  // render path always has a value even on a cold-start failure.
-  let pushSubs = 0;
-  let emailSubs = 0;
   let error: string | null = null;
   try {
     [
       daily,
-      moves,
-      hints,
-      puzzles,
-      todayTiers,
-      allTiers,
       todayRows,
-      hardest,
-      easiest,
+      todayTiers,
       summary,
       allTime,
       biggestDay,
       returning,
-      recentIds,
-      cohorts,
-      langs,
       todayUniques,
       dataSince,
-      pushFunnel,
     ] = await Promise.all([
-        hogql<DailyRow>(`
-          SELECT toString(toDate(timestamp)) AS day,
-            toInt(countIf(event = 'puzzle_started')) AS started,
-            toInt(countIf(event = 'puzzle_solved')) AS solved,
-            toInt(countIf(event = 'puzzle_revealed')) AS revealed
-          FROM events
-          WHERE timestamp >= now() - INTERVAL 14 DAY
-            AND event IN ('puzzle_started', 'puzzle_solved', 'puzzle_revealed')${EXCLUDE}
-          GROUP BY day
-          ORDER BY day DESC
-        `),
-        hogql<MovesRow>(`
-          SELECT toInt(toString(properties.moves)) AS moves,
-            toInt(count()) AS solves
-          FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
-          GROUP BY moves
-          HAVING moves IS NOT NULL
-          ORDER BY moves
-        `),
-        hogql<HintsRow>(`
-          SELECT properties.enabled AS enabled,
-            toInt(count()) AS toggles,
-            toInt(uniq(distinct_id)) AS users
-          FROM events
-          WHERE event = 'hide_hints_toggled' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
-          GROUP BY enabled
-        `),
-        hogql<PuzzleRow>(`
-          SELECT toInt(toString(properties.num)) AS num,
-            toInt(count()) AS solves,
-            round(avg(toInt(toString(properties.moves))), 1) AS avg_moves,
-            quantile(0.5)(toInt(toString(properties.moves))) AS median_moves
-          FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
-          GROUP BY num
-          HAVING num IS NOT NULL
-          ORDER BY num DESC
-          LIMIT 14
-        `),
-        hogql<TierRow>(`
-          SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
-          FROM events
-          WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
-          GROUP BY tier
-        `),
-        hogql<TierRow>(`
-          SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
-          FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
-          GROUP BY tier
-        `),
-        hogql<TodayRow>(`
-          SELECT toInt(toString(properties.num)) AS num,
-            toInt(count()) AS solves,
-            toInt(min(toInt(toString(properties.moves)))) AS fastest,
-            round(avg(toInt(toString(properties.moves))), 1) AS avg_moves,
-            toInt(countIf(toString(properties.bonus) = 'true')) AS bonus,
-            toInt(max(toInt(toString(properties.streak)))) AS top_streak
-          FROM events
-          WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
-          GROUP BY num
-        `),
-        hogql<ExtremeRow>(`
-          SELECT toInt(toString(properties.num)) AS num,
-            toInt(count()) AS solves,
-            round(avg(toInt(toString(properties.moves))), 1) AS avg_moves
-          FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
-          GROUP BY num
-          HAVING solves >= 5
-          ORDER BY avg_moves DESC
-          LIMIT 1
-        `),
-        hogql<ExtremeRow>(`
-          SELECT toInt(toString(properties.num)) AS num,
-            toInt(count()) AS solves,
-            round(avg(toInt(toString(properties.moves))), 1) AS avg_moves
-          FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
-          GROUP BY num
-          HAVING solves >= 5
-          ORDER BY avg_moves ASC
-          LIMIT 1
-        `),
-        hogql<SummaryRow>(`
-          SELECT
-            toInt(count()) AS total_solves,
-            toInt(countIf(toString(properties.bonus) = 'true')) AS bonus_solves,
-            toInt(sumIf(toInt(toString(properties.moves)), timestamp >= now() - INTERVAL 7 DAY)) AS total_moves_week,
-            toInt(max(toInt(toString(properties.streak)))) AS top_streak,
-            toInt(uniq(distinct_id)) AS unique_solvers
-          FROM events
-          WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 90 DAY${EXCLUDE}
-        `),
-        hogql<AllTimeRow>(`
-          SELECT
-            toInt(countIf(event = 'puzzle_started')) AS total_started,
-            toInt(countIf(event = 'puzzle_solved')) AS total_solved,
-            toInt(countIf(event = 'puzzle_revealed')) AS total_revealed,
-            -- Visitors counts anyone who fired EITHER $pageview OR
-            -- puzzle_started, not just $pageview alone. Ad-blocker filter
-            -- lists pattern-match the literal "$pageview" event name in
-            -- request payloads even through our /ingest proxy, so the
-            -- pageview-only count systematically under-counts the
-            -- ad-blocker cohort. puzzle_started is custom and slips
-            -- through. Logically every player is a visitor, so the union
-            -- is the honest upper bound and stops engagement rate ever
-            -- exceeding 100%.
-            toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS unique_visitors,
-            toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS unique_players,
-            toInt(uniqIf(distinct_id, event = 'puzzle_solved')) AS unique_solvers,
-            toInt(sumIf(toInt(toString(properties.moves)), event = 'puzzle_solved')) AS total_moves,
-            toInt(countIf(event = 'puzzle_solved' AND toString(properties.bonus) = 'true')) AS bonus_solves,
-            toInt(maxIf(toInt(toString(properties.streak)), event = 'puzzle_solved')) AS top_streak
-          FROM events
-          WHERE 1=1${EXCLUDE}
-        `),
-        hogql<BiggestDayRow>(`
-          SELECT toString(toDate(timestamp)) AS day,
-            toInt(count()) AS solves
+      hogql<DailyRow>(`
+        SELECT toString(toDate(timestamp)) AS day,
+          toInt(countIf(event = 'puzzle_started')) AS started,
+          toInt(countIf(event = 'puzzle_solved')) AS solved,
+          toInt(countIf(event = 'puzzle_revealed')) AS revealed
+        FROM events
+        WHERE timestamp >= now() - INTERVAL 2 DAY
+          AND event IN ('puzzle_started', 'puzzle_solved', 'puzzle_revealed')${EXCLUDE}
+        GROUP BY day
+        ORDER BY day DESC
+        LIMIT 1
+      `),
+      hogql<TodayRow>(`
+        SELECT toInt(toString(properties.num)) AS num,
+          toInt(count()) AS solves,
+          toInt(min(toInt(toString(properties.moves)))) AS fastest,
+          round(avg(toInt(toString(properties.moves))), 1) AS avg_moves,
+          toInt(countIf(toString(properties.bonus) = 'true')) AS bonus,
+          toInt(max(toInt(toString(properties.streak)))) AS top_streak
+        FROM events
+        WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
+        GROUP BY num
+      `),
+      // Today's tier rows are still needed here so the social blurb
+      // can show "🏆 X% Legendary · Y% Genius · ..." without
+      // double-fetching when someone visits the Overview.
+      hogql<TierRow>(`
+        SELECT
+          multiIf(
+            toInt(toString(properties.moves)) <= 10, 'Legendary',
+            toInt(toString(properties.moves)) <= 20, 'Genius',
+            toInt(toString(properties.moves)) <= 35, 'Wordsmith',
+            toInt(toString(properties.moves)) <= 60, 'Persistent',
+            'Tenacious'
+          ) AS tier,
+          toInt(count()) AS solves
+        FROM events
+        WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
+        GROUP BY tier
+      `),
+      hogql<SummaryRow>(`
+        SELECT
+          toInt(count()) AS total_solves,
+          toInt(countIf(toString(properties.bonus) = 'true')) AS bonus_solves,
+          toInt(sumIf(toInt(toString(properties.moves)), timestamp >= now() - INTERVAL 7 DAY)) AS total_moves_week,
+          toInt(max(toInt(toString(properties.streak)))) AS top_streak,
+          toInt(uniq(distinct_id)) AS unique_solvers
+        FROM events
+        WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 90 DAY${EXCLUDE}
+      `),
+      hogql<AllTimeRow>(`
+        SELECT
+          toInt(countIf(event = 'puzzle_started')) AS total_started,
+          toInt(countIf(event = 'puzzle_solved')) AS total_solved,
+          toInt(countIf(event = 'puzzle_revealed')) AS total_revealed,
+          toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS unique_visitors,
+          toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS unique_players,
+          toInt(uniqIf(distinct_id, event = 'puzzle_solved')) AS unique_solvers,
+          toInt(sumIf(toInt(toString(properties.moves)), event = 'puzzle_solved')) AS total_moves,
+          toInt(countIf(event = 'puzzle_solved' AND toString(properties.bonus) = 'true')) AS bonus,
+          toInt(maxIf(toInt(toString(properties.streak)), event = 'puzzle_solved')) AS top_streak
+        FROM events
+        WHERE 1=1${EXCLUDE}
+      `),
+      hogql<BiggestDayRow>(`
+        SELECT toString(toDate(timestamp)) AS day,
+          toInt(count()) AS solves
+        FROM events
+        WHERE event = 'puzzle_solved'${EXCLUDE}
+        GROUP BY day
+        ORDER BY solves DESC
+        LIMIT 1
+      `),
+      hogql<ReturningRow>(`
+        SELECT
+          toInt(countIf(n >= 2)) AS returning,
+          toInt(count()) AS total,
+          toInt(max(n)) AS top_player_solves
+        FROM (
+          SELECT distinct_id, count() AS n
           FROM events
           WHERE event = 'puzzle_solved'${EXCLUDE}
-          GROUP BY day
-          ORDER BY solves DESC
-          LIMIT 1
-        `),
-        hogql<ReturningRow>(`
-          SELECT
-            toInt(countIf(n >= 2)) AS returning,
-            toInt(count()) AS total,
-            toInt(max(n)) AS top_player_solves
-          FROM (
-            SELECT distinct_id, count() AS n
-            FROM events
-            WHERE event = 'puzzle_solved'${EXCLUDE}
-            GROUP BY distinct_id
-          )
-        `),
-        // Diagnostic: NOT filtered by EXCLUDE so we can see *all* recently
-        // active distinct_ids and identify which ones are us.
-        hogql<RecentIdRow>(`
-          SELECT distinct_id,
-            toInt(count()) AS events,
-            toString(min(timestamp)) AS first_seen,
-            toString(max(timestamp)) AS last_seen
-          FROM events
-          WHERE timestamp >= now() - INTERVAL 7 DAY
           GROUP BY distinct_id
-          ORDER BY events DESC
-          LIMIT 20
-        `),
-        // Cohort retention. For each player, find the day of their first
-        // puzzle_started, bucket into ISO weeks, then count how many of
-        // that cohort fired any puzzle_started event N days later.
-        // Limited to the most recent 8 cohort-weeks; older ones are too
-        // sparse and clutter the table.
-        // distinct_id is device-scoped so cross-device players inflate
-        // cohort size and understate retention — accepted as directional
-        // until we can identify by email.
-        hogql<CohortRow>(`
-          WITH player_first AS (
-            SELECT distinct_id, min(toDate(timestamp)) AS first_day
-            FROM events
-            WHERE event = 'puzzle_started'${EXCLUDE}
-            GROUP BY distinct_id
-          ),
-          activity AS (
-            SELECT distinct distinct_id, toDate(timestamp) AS day
-            FROM events
-            WHERE event = 'puzzle_started'${EXCLUDE}
-          )
-          SELECT toString(toStartOfWeek(pf.first_day)) AS cohort_week,
-            toInt(uniq(pf.distinct_id)) AS cohort_size,
-            toInt(uniqIf(pf.distinct_id, dateDiff('day', pf.first_day, a.day) = 1)) AS d1,
-            toInt(uniqIf(pf.distinct_id, dateDiff('day', pf.first_day, a.day) = 3)) AS d3,
-            toInt(uniqIf(pf.distinct_id, dateDiff('day', pf.first_day, a.day) = 7)) AS d7,
-            toInt(uniqIf(pf.distinct_id, dateDiff('day', pf.first_day, a.day) = 14)) AS d14,
-            toInt(uniqIf(pf.distinct_id, dateDiff('day', pf.first_day, a.day) = 30)) AS d30
-          FROM player_first AS pf
-          LEFT JOIN activity AS a ON pf.distinct_id = a.distinct_id
-          WHERE pf.first_day >= today() - INTERVAL 56 DAY
-          GROUP BY cohort_week
-          ORDER BY cohort_week DESC
-          LIMIT 8
-        `),
-        // Locale split. PostHog records `language` on every event from
-        // LocaleProvider.register(). Events captured before that landed
-        // have language=null — coalesce them as 'en' since the only
-        // route that existed pre-i18n was /. ORDER BY started DESC so
-        // English (the bulk) leads the table.
-        hogql<LangRow>(`
-          SELECT coalesce(toString(properties.language), 'en') AS language,
-            toInt(uniq(distinct_id)) AS unique_players,
-            toInt(countIf(event = 'puzzle_started')) AS started,
-            toInt(countIf(event = 'puzzle_solved')) AS solved,
-            toInt(countIf(event = 'puzzle_revealed')) AS revealed,
-            round(avgIf(toInt(toString(properties.moves)), event = 'puzzle_solved'), 1) AS avg_moves
-          FROM events
-          WHERE timestamp >= now() - INTERVAL 30 DAY
-            AND event IN ('puzzle_started', 'puzzle_solved', 'puzzle_revealed')${EXCLUDE}
-          GROUP BY language
-          ORDER BY started DESC
-        `),
-        // Today's unique counts, for the at-a-glance "what's happening now"
-        // line under each Hero. Uses the same union-of-events trick as the
-        // all-time visitor count so an ad-blocker user who fires
-        // puzzle_started but not $pageview still counts as a visitor.
-        hogql<TodayUniquesRow>(`
-          SELECT
-            toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS visitors,
-            toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS players,
-            toInt(uniqIf(distinct_id, event = 'puzzle_solved')) AS solvers
-          FROM events
-          WHERE toDate(timestamp) = today()${EXCLUDE}
-        `),
-        // Earliest event in the project. Used to show "Data since X" so
-        // the user knows the all-time numbers don't actually go back to
-        // day 1 of the puzzle — analytics started a few days later.
-        hogql<DataSinceRow>(`
-          SELECT toString(min(timestamp)) AS first_event
-          FROM events
-          WHERE 1=1${EXCLUDE}
-        `),
-        // Push notification funnel for today: how many `push_received`
-        // events fired (notifications shown) vs how many `push_clicked`
-        // events fired (user tapped through). Both originate from the
-        // service worker via /api/events/push.
-        hogql<PushFunnelRow>(`
-          SELECT
-            toInt(countIf(event = 'push_received')) AS received,
-            toInt(countIf(event = 'push_clicked')) AS clicked
-          FROM events
-          WHERE event IN ('push_received', 'push_clicked')
-            AND toDate(timestamp) = today()${EXCLUDE}
-        `),
-      ]);
-
-    // Subscriber counts (Redis HLEN/SCARD per locale, summed). Done
-    // outside the HogQL Promise.all because Upstash is a separate
-    // backend. Failures here just leave the counts at 0 so the rest
-    // of the dashboard still renders.
-    try {
-      const [emailByLocale, pushByLocale] = await Promise.all([
-        subscriberCounts(),
-        Promise.all(LOCALES.map((l) => pushSubscriberCount(l))),
-      ]);
-      emailSubs = Object.values(emailByLocale).reduce((s, n) => s + n, 0);
-      pushSubs = pushByLocale.reduce((s, n) => s + n, 0);
-    } catch (e) {
-      console.error("[stats] subscriber counts failed:", e);
-    }
+        )
+      `),
+      hogql<TodayUniquesRow>(`
+        SELECT
+          toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS visitors,
+          toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS players,
+          toInt(uniqIf(distinct_id, event = 'puzzle_solved')) AS solvers
+        FROM events
+        WHERE toDate(timestamp) = today()${EXCLUDE}
+      `),
+      hogql<DataSinceRow>(`
+        SELECT toString(min(timestamp)) AS first_event
+        FROM events
+        WHERE 1=1${EXCLUDE}
+      `),
+    ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
 
-  const pf = pushFunnel[0] ?? { received: 0, clicked: 0 };
-  const pushClickRate = pf.received ? (pf.clicked / pf.received) * 100 : 0;
-
   const today = daily[0];
-  // Single source of truth for "today's solved count": the inline
-  // daily query's first row, since `daily` runs force-dynamic on every
-  // render and is known-good (the `puzzles.solved.today` dictionary
-  // metric was returning 0 due to a HogQL TZ-syntax issue). Both the
-  // "Today solved" Big card and the "Today's tiers · X solves"
-  // section header read this same value so they can't drift.
+  // Single source of truth for today's solve count: read from the
+  // daily query so the Big card and the social blurb agree.
   const todaySolvedAuthoritative = today?.solved ?? 0;
   const todayMeta = todayRows[0];
   const summ = summary[0];
@@ -422,6 +197,8 @@ export default async function StatsPage() {
   const td = todayUniques[0];
   const big = biggestDay[0];
   const ret = returning[0];
+
+  const todayTiersOrdered = sortTiers(todayTiers);
   const returningPct = ret?.total ? (ret.returning / ret.total) * 100 : 0;
   const allTimeSolveRate = at?.total_started ? (at.total_solved / at.total_started) * 100 : 0;
   const visitorEngageRate = at?.unique_visitors
@@ -431,77 +208,39 @@ export default async function StatsPage() {
     ? ((at.unique_solvers ?? 0) / at.unique_players) * 100
     : 0;
   const totalTilesFlippedAllTime = (at?.total_moves ?? 0) * 2;
-  const totals = daily.reduce(
-    (acc, d) => ({
-      started: acc.started + (d.started ?? 0),
-      solved: acc.solved + (d.solved ?? 0),
-      revealed: acc.revealed + (d.revealed ?? 0),
-    }),
-    { started: 0, solved: 0, revealed: 0 }
-  );
-  const solveRate = totals.started ? (totals.solved / totals.started) * 100 : 0;
-  const revealRate = totals.started ? (totals.revealed / totals.started) * 100 : 0;
-  const dailyMax = Math.max(1, ...daily.map((d) => Math.max(d.started, d.solved, d.revealed)));
-  const movesMax = Math.max(1, ...moves.map((m) => m.solves));
 
-  const todayTiersOrdered = sortTiers(todayTiers);
-  const allTiersOrdered = sortTiers(allTiers);
-
-  // Tier section header reuses `todaySolvedAuthoritative` (= today?.solved
-  // from the daily query) so the "Today's tiers · X solves" header
-  // agrees with the "Today solved" Big card. The bar uses the tier
-  // rows for proportional widths only — its visual sum doesn't need to
-  // match the header to the last event.
-  const todayTotal = todaySolvedAuthoritative;
-  const allTotal = allTiersOrdered.reduce((s, r) => s + r.solves, 0);
-
-  const bonusRate = summ?.total_solves
-    ? (summ.bonus_solves / summ.total_solves) * 100
-    : 0;
-  const totalTilesFlippedWeek = (summ?.total_moves_week ?? 0) * 2;
-
-  // Today's puzzle number, derived from UTC date so the blurb is correct
-  // even when there are no solves yet.
   const todayDate = todayUtc();
   const todayNum = puzzleNumber(todayDate, EPOCH);
-
-  // Data-collection start. PostHog wasn't wired up on day 1 of the
-  // puzzle, so all-time numbers undercount the early days. Surfacing
-  // this lets the dashboard say "all time" without lying.
-  const firstEventTs = dataSince[0]?.first_event ?? null;
-  const firstEventDate = firstEventTs ? firstEventTs.slice(0, 10) : null;
-  const firstEventPuzzle = firstEventDate
-    ? puzzleNumber(firstEventDate, EPOCH)
-    : null;
-  const firstEventLabel = firstEventDate
-    ? `Data since ${firstEventDate}${firstEventPuzzle ? ` · puzzle #${firstEventPuzzle}` : ""}`
-    : null;
   const todayPretty = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
     day: "numeric",
     month: "long",
     timeZone: "UTC",
   }).format(new Date(`${todayDate}T00:00:00Z`));
-  // Always render the blurb (even with zero solves so far) so it's available
-  // to copy-edit before posting.
+
+  // Data-collection start. PostHog wasn't wired up on day 1 of the
+  // puzzle, so all-time numbers undercount the early days.
+  const firstEventTs = dataSince[0]?.first_event ?? null;
+  const firstEventDate = firstEventTs ? firstEventTs.slice(0, 10) : null;
+  const firstEventPuzzle = firstEventDate ? puzzleNumber(firstEventDate, EPOCH) : null;
+  const firstEventLabel = firstEventDate
+    ? `Data since ${firstEventDate}${firstEventPuzzle ? ` · puzzle #${firstEventPuzzle}` : ""}`
+    : null;
+
   const social = buildSocialBlurb(
     todayMeta,
     todayTiersOrdered,
-    todayTotal,
+    todaySolvedAuthoritative,
     todayNum,
     todayPretty
   );
 
   return (
     <div>
-      {/* Page kicker. The (authed) layout owns the global header
-         (Tessera · stats / Refresh / Sign out / Fetched). */}
       <div className="mb-6">
         <h1 className="text-2xl font-light tracking-tight">Player activity</h1>
         {firstEventLabel && (
-          <p className="text-[10px] text-[color:var(--color-muted)] mt-1">
-            {firstEventLabel}
-          </p>
+          <p className="text-[10px] text-[color:var(--color-muted)] mt-1">{firstEventLabel}</p>
         )}
       </div>
 
@@ -512,10 +251,6 @@ export default async function StatsPage() {
         </div>
       ) : (
         <>
-          {/* HERO — all-time big numbers, with a small "today" sub-stat
-             top-right of each card. Today's figures come from a separate
-             HogQL query (`todayUniques`) scoped to toDate(timestamp) =
-             today() so the dashboard reflects live activity at a glance. */}
           <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
             <Hero
               label="Visitors"
@@ -545,19 +280,18 @@ export default async function StatsPage() {
             />
           </section>
 
-          {/* SOCIAL — pre-formatted blurb at the top so it's the first thing
-             you see when checking the dashboard each morning. */}
           <section className="mb-12">
             <div className="flex items-baseline justify-between mb-3">
               <h2 className="text-sm font-medium">Today’s social blurb</h2>
-              <p className="text-[10px] text-[color:var(--color-muted)]">Click to select all · tweak before posting</p>
+              <p className="text-[10px] text-[color:var(--color-muted)]">
+                Click to select all · tweak before posting
+              </p>
             </div>
             <pre className="whitespace-pre-wrap break-words p-5 rounded-md bg-[color:var(--color-cream)] border border-[color:var(--color-rule)] text-sm leading-relaxed font-[inherit] select-all cursor-text">
               {social}
             </pre>
           </section>
 
-          {/* SECONDARY — today + headline records */}
           <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
             <Big label="Today started" value={today?.started ?? 0} />
             <Big label="Today solved" value={todaySolvedAuthoritative} />
@@ -576,21 +310,6 @@ export default async function StatsPage() {
             />
           </section>
 
-          {/* NOTIFICATIONS — daily-reminder reach + push funnel */}
-          <Section title="Notifications" freshness="live">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Big label="Email subscribers" value={fmt(emailSubs)} suffix="all locales" />
-              <Big label="Push subscribers" value={fmt(pushSubs)} suffix="all locales" />
-              <Big label="Push received today" value={fmt(pf.received)} />
-              <Big
-                label="Push clicks today"
-                value={fmt(pf.clicked)}
-                suffix={pf.received ? `${pushClickRate.toFixed(0)}% click-through` : undefined}
-              />
-            </div>
-          </Section>
-
-          {/* MARKETING — fun derived all-time stats */}
           <section className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-12">
             <Big
               label="Biggest day ever"
@@ -621,186 +340,19 @@ export default async function StatsPage() {
               }
             />
             <Big
-              label="Tiles flipped (all time)"
+              label="Tiles flipped"
               value={fmt(totalTilesFlippedAllTime)}
-              suffix={`${fmt(at?.total_moves ?? 0)} swaps`}
+              suffix={`${fmt(at?.total_moves ?? 0)} swaps · all time`}
             />
           </section>
-
-
-          {/* Today tier split */}
-          <Section title={`Today’s tiers · ${todayTotal} solves`} freshness="live">
-            {todayTotal === 0 ? (
-              <Empty />
-            ) : (
-              <TierBar rows={todayTiersOrdered} total={todayTotal} />
-            )}
-          </Section>
-
-          {/* Highlights row */}
-          <Section title="Highlights" freshness="live">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <Highlight
-                label="Hardest puzzle (30d)"
-                value={hardest[0]?.num ? `#${hardest[0].num}` : "—"}
-                sub={hardest[0]?.avg_moves != null ? `avg ${hardest[0].avg_moves} moves` : ""}
-              />
-              <Highlight
-                label="Easiest puzzle (30d)"
-                value={easiest[0]?.num ? `#${easiest[0].num}` : "—"}
-                sub={easiest[0]?.avg_moves != null ? `avg ${easiest[0].avg_moves} moves` : ""}
-              />
-              <Highlight
-                label="Top streak (90d)"
-                value={summ?.top_streak ? `${summ.top_streak} 🔥` : "—"}
-                sub={summ?.unique_solvers ? `${summ.unique_solvers} solvers` : ""}
-              />
-              <Highlight
-                label="Bonus rate (90d)"
-                value={`${bonusRate.toFixed(0)}%`}
-                sub={summ?.total_solves ? `${summ.total_solves} solves` : ""}
-              />
-              <Highlight
-                label="Tiles flipped (7d)"
-                value={totalTilesFlippedWeek.toLocaleString()}
-                sub={`${(summ?.total_moves_week ?? 0).toLocaleString()} swaps`}
-              />
-              <Highlight
-                label="14d solve rate"
-                value={`${solveRate.toFixed(0)}%`}
-                sub={`${totals.solved}/${totals.started}`}
-              />
-            </div>
-          </Section>
-
-          <Section title="By language · last 30d" freshness="live">
-            <div className="space-y-1">
-              <div className="grid grid-cols-[60px_repeat(5,1fr)] gap-3 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
-                <span>Lang</span>
-                <span>Players</span>
-                <span>Started</span>
-                <span>Solved</span>
-                <span>Revealed</span>
-                <span>Avg moves</span>
-              </div>
-              {langs.length === 0 && <Empty />}
-              {langs.map((l) => (
-                <div
-                  key={l.language}
-                  className="grid grid-cols-[60px_repeat(5,1fr)] gap-3 text-xs tabular-nums"
-                >
-                  <span className="text-[color:var(--color-muted)] uppercase">{l.language}</span>
-                  <span>{l.unique_players}</span>
-                  <span>{l.started}</span>
-                  <span>{l.solved}</span>
-                  <span>{l.revealed}</span>
-                  <span>{l.avg_moves ?? "—"}</span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-3 text-[10px] text-[color:var(--color-muted)] max-w-prose">
-              Events from before the locale rollout have no <code>language</code> property
-              and are bucketed as <code>en</code> (the only route that existed then).
-            </p>
-          </Section>
-
-          <Section title="Last 14 days" freshness="live">
-            <div className="space-y-2">
-              <div className="grid grid-cols-[80px_1fr_1fr_1fr] gap-3 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
-                <span>Day</span>
-                <span>Started</span>
-                <span>Solved</span>
-                <span>Revealed</span>
-              </div>
-              {daily.length === 0 && <Empty />}
-              {daily.map((d) => (
-                <div key={d.day} className="grid grid-cols-[80px_1fr_1fr_1fr] gap-3 items-center text-xs">
-                  <span className="tabular-nums text-[color:var(--color-muted)]">{d.day.slice(5)}</span>
-                  <BarCell value={d.started} max={dailyMax} color="#0a0a0a" />
-                  <BarCell value={d.solved} max={dailyMax} color="#7a9070" />
-                  <BarCell value={d.revealed} max={dailyMax} color="#b88a3a" />
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 flex gap-3 text-[10px] text-[color:var(--color-muted)]">
-              <LegendDot color="#0a0a0a" label="Started" />
-              <LegendDot color="#7a9070" label="Solved" />
-              <LegendDot color="#b88a3a" label="Revealed" />
-            </div>
-          </Section>
-
-          <Section title="Cohort retention · weekly cohorts" freshness="live">
-            <p className="text-[11px] text-[color:var(--color-muted)] mb-3 max-w-prose">
-              Each row is players whose first puzzle landed in that ISO week.
-              Columns show the share of that cohort that came back N days later.
-              Device-scoped (PostHog distinct_id), so cross-device players
-              understate the numbers — directional, not exact.
-            </p>
-            <CohortTable rows={cohorts} />
-          </Section>
-
-          <Section title={`Tier distribution · last 30d · ${allTotal} solves`} freshness="live">
-            {allTotal === 0 ? <Empty /> : <TierBar rows={allTiersOrdered} total={allTotal} />}
-            <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-[color:var(--color-muted)]">
-              {TIER_ORDER.map((t) => (
-                <LegendDot key={t} color={TIER_BAR_COLORS[t]} label={t} />
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Moves to solve · last 30d" freshness="live">
-            <div className="space-y-1.5">
-              {moves.length === 0 && <Empty />}
-              {moves.map((m) => (
-                <div key={m.moves ?? "null"} className="grid grid-cols-[40px_1fr_40px] gap-3 items-center text-xs">
-                  <span className="tabular-nums text-[color:var(--color-muted)]">{m.moves}</span>
-                  <BarCell value={m.solves} max={movesMax} color="#7a9070" />
-                  <span className="tabular-nums text-right">{m.solves}</span>
-                </div>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Per-puzzle difficulty · last 30d" freshness="live">
-            <div className="space-y-1">
-              <div className="grid grid-cols-[60px_1fr_1fr_1fr] gap-3 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
-                <span>#</span>
-                <span>Solves</span>
-                <span>Avg moves</span>
-                <span>Median</span>
-              </div>
-              {puzzles.length === 0 && <Empty />}
-              {puzzles.map((p) => (
-                <div key={p.num ?? "null"} className="grid grid-cols-[60px_1fr_1fr_1fr] gap-3 text-xs tabular-nums">
-                  <span className="text-[color:var(--color-muted)]">#{p.num}</span>
-                  <span>{p.solves}</span>
-                  <span>{p.avg_moves ?? "—"}</span>
-                  <span>{p.median_moves ?? "—"}</span>
-                </div>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Hide hints toggle · last 30d" freshness="live">
-            <div className="space-y-1.5 text-xs">
-              {hints.length === 0 && <Empty />}
-              {hints.map((h) => (
-                <div key={String(h.enabled)} className="grid grid-cols-[80px_1fr_1fr] gap-3 tabular-nums">
-                  <span className="text-[color:var(--color-muted)]">
-                    {h.enabled === true || h.enabled === "true" ? "On" : "Off"}
-                  </span>
-                  <span>{h.toggles} toggles</span>
-                  <span>{h.users} users</span>
-                </div>
-              ))}
-            </div>
-          </Section>
         </>
       )}
     </div>
   );
 }
 
+// Pre-formatted blurb for r/TesseraPuzzle / X / newsletter. Kept on
+// the Overview page because that's the one place it shows.
 function buildSocialBlurb(
   today: TodayRow | undefined,
   tiers: TierRow[],
@@ -821,7 +373,7 @@ function buildSocialBlurb(
     return lines.join("\n");
   }
 
-  // Pick a phrasing that scales with solve count, so the blurb reads less
+  // Phrasing scales with solve count so the blurb reads less
   // formulaic on quiet days vs busy days.
   const solves = today.solves;
   const headlineLine =
@@ -843,9 +395,7 @@ function buildSocialBlurb(
   }
   if (today.bonus > 0) {
     lines.push(
-      today.bonus === 1
-        ? "1 perfect bonus grid ✦"
-        : `${today.bonus} perfect bonus grids ✦`
+      today.bonus === 1 ? "1 perfect bonus grid ✦" : `${today.bonus} perfect bonus grids ✦`
     );
   }
 
