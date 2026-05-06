@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { hogql } from "../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../lib/rng";
 import { TIER_COLORS } from "../lib/tier";
-import {
-  getMetric,
-  METRICS,
-} from "../lib/metrics";
-import type { MetricDef } from "../lib/metrics/types";
-import type { DailyRow as DictDailyRow, TodayPuzzleDetail, AllTimeTotals } from "../lib/metrics/definitions/puzzles";
-import type { TierRow as DictTierRow } from "../lib/metrics/definitions/tiers";
+// Metrics dictionary imports kept available for future migrations of
+// inline HogQL into app/lib/metrics/. Currently the page uses inline
+// queries everywhere — the dictionary is exercised mostly by the
+// 09:30 UTC precompute cron and unit tests.
 import { LoginSubmit } from "./login-submit";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
@@ -83,13 +80,17 @@ async function signOut() {
   redirect("/stats");
 }
 
-// Forces a fresh server render. The `unstable_cache`-wrapped HogQL
-// queries and any precomputed Redis reads are unaffected (their TTLs
-// govern those), but the inline `force-dynamic` queries on this page
-// re-run, and the page re-renders without a full browser reload.
+// Forces a fresh server render AND invalidates every metric in the
+// dictionary so unstable_cache entries don't keep serving stale 60s
+// values after the user explicitly clicks Refresh. revalidatePath
+// alone re-renders the page but doesn't touch unstable_cache
+// (they're independent in Next 16). `updateTag` (Server Actions only,
+// which this is) expires the tag immediately and the next request
+// waits for fresh data — exactly what an explicit Refresh wants.
 async function refreshStats() {
   "use server";
-  revalidatePath("/stats");
+  revalidatePath("/stats", "page");
+  updateTag("metrics");
 }
 
 // Tier ranges and colors mirror lib/tier.ts (TIER_COLORS imported above).
@@ -457,16 +458,14 @@ export default async function StatsPage({
     error = e instanceof Error ? e.message : String(e);
   }
 
-  // Single source of truth for "today's solved count". Both the
-  // "Today solved" Big card and the "Today's tiers · X solves"
-  // section header now read this same value, so they cannot drift.
-  // See app/lib/metrics/ for why we route through getMetric() — the
-  // 98 vs 116 dashboard inconsistency was caused by ad-hoc queries
-  // each picking their own interpretation of "today".
-  const solvedTodayResult = await getMetric(METRICS["puzzles.solved.today"] as MetricDef<number>);
-  const todaySolvedAuthoritative = solvedTodayResult.value;
-
   const today = daily[0];
+  // Single source of truth for "today's solved count": the inline
+  // daily query's first row, since `daily` runs force-dynamic on every
+  // render and is known-good (the `puzzles.solved.today` dictionary
+  // metric was returning 0 due to a HogQL TZ-syntax issue). Both the
+  // "Today solved" Big card and the "Today's tiers · X solves"
+  // section header read this same value so they can't drift.
+  const todaySolvedAuthoritative = today?.solved ?? 0;
   const todayMeta = todayRows[0];
   const summ = summary[0];
   const at = allTime[0];
@@ -504,11 +503,11 @@ export default async function StatsPage({
   const todayTiersOrdered = sortTiers(todayTiers);
   const allTiersOrdered = sortTiers(allTiers);
 
-  // Authoritative count from the metrics dictionary. The tier-row sum
-  // can disagree by a handful of events because it's a separate scan
-  // and races against incoming traffic; we display the dictionary's
-  // value so the header agrees with "Today solved" elsewhere on the
-  // page. The bar still uses the tier rows for proportional widths.
+  // Tier section header reuses `todaySolvedAuthoritative` (= today?.solved
+  // from the daily query) so the "Today's tiers · X solves" header
+  // agrees with the "Today solved" Big card. The bar uses the tier
+  // rows for proportional widths only — its visual sum doesn't need to
+  // match the header to the last event.
   const todayTotal = todaySolvedAuthoritative;
   const allTotal = allTiersOrdered.reduce((s, r) => s + r.solves, 0);
 

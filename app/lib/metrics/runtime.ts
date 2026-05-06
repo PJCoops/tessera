@@ -43,7 +43,14 @@ function liveExecutor<T>(def: MetricDef<T>): () => Promise<T> {
       return def.parse(rows as unknown[]);
     },
     cacheKey,
-    { revalidate: 60, tags: [`metric:${def.key}`] }
+    {
+      revalidate: 60,
+      // 'metrics' is the broad tag the dashboard's Refresh button hits
+      // via revalidateTag('metrics'), so a click bypasses the 60s TTL.
+      // 'metric:<key>' lets us invalidate a single metric in code if
+      // ever needed (e.g. after a backfill).
+      tags: ["metrics", `metric:${def.key}`],
+    }
   );
 }
 
