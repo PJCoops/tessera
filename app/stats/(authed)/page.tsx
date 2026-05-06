@@ -15,7 +15,7 @@ import type { Metadata } from "next";
 import { hogql } from "../../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../../lib/rng";
 import { EXCLUDE } from "../_lib";
-import { Hero, Big, fmt, sortTiers, type TierRow } from "../_components";
+import { Hero, Big, LineChart, Section, fmt, sortTiers, type TierRow } from "../_components";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
 
@@ -30,6 +30,12 @@ export const dynamic = "force-dynamic";
 // monolith: anything used only by another page (per-puzzle, cohorts,
 // languages, etc.) lives in that page's file now.
 type DailyRow = { day: string; started: number; solved: number; revealed: number };
+type DailyTrendRow = {
+  day: string;
+  visitors: number;
+  players: number;
+  solves: number;
+};
 type TodayRow = {
   num: number | null;
   solves: number;
@@ -63,6 +69,7 @@ type DataSinceRow = { first_event: string | null };
 
 export default async function StatsOverviewPage() {
   let daily: DailyRow[] = [];
+  let dailyTrend: DailyTrendRow[] = [];
   let todayRows: TodayRow[] = [];
   let todayTiers: TierRow[] = [];
   let summary: SummaryRow[] = [];
@@ -75,6 +82,7 @@ export default async function StatsOverviewPage() {
   try {
     [
       daily,
+      dailyTrend,
       todayRows,
       todayTiers,
       summary,
@@ -95,6 +103,21 @@ export default async function StatsOverviewPage() {
         GROUP BY day
         ORDER BY day DESC
         LIMIT 1
+      `),
+      // Trend over the launch window. Visitors and engaged players are
+      // unique distinct_ids per day (matches the Hero counts); solves
+      // is the raw event count (matches "Grids cracked today"). Window
+      // capped at 30d to keep the chart readable; we'll grow this as
+      // history accumulates.
+      hogql<DailyTrendRow>(`
+        SELECT toString(toDate(timestamp)) AS day,
+          toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS visitors,
+          toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS players,
+          toInt(countIf(event = 'puzzle_solved')) AS solves
+        FROM events
+        WHERE timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
+        GROUP BY day
+        ORDER BY day ASC
       `),
       hogql<TodayRow>(`
         SELECT toInt(toString(properties.num)) AS num,
@@ -279,6 +302,17 @@ export default async function StatsOverviewPage() {
               today={fmt(td?.solvers ?? 0)}
             />
           </section>
+
+          <Section title={`Daily trend · last ${dailyTrend.length} days`} freshness="live">
+            <LineChart
+              days={dailyTrend.map((d) => d.day)}
+              series={[
+                { label: "Visitors", color: "#0a0a0a", values: dailyTrend.map((d) => d.visitors) },
+                { label: "Engaged players", color: "#b88a3a", values: dailyTrend.map((d) => d.players) },
+                { label: "Solves", color: "#7a9070", values: dailyTrend.map((d) => d.solves) },
+              ]}
+            />
+          </Section>
 
           <section className="mb-12">
             <div className="flex items-baseline justify-between mb-3">
