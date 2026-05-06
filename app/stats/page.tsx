@@ -11,6 +11,7 @@ import {
 import type { MetricDef } from "../lib/metrics/types";
 import type { DailyRow as DictDailyRow, TodayPuzzleDetail, AllTimeTotals } from "../lib/metrics/definitions/puzzles";
 import type { TierRow as DictTierRow } from "../lib/metrics/definitions/tiers";
+import { LoginSubmit } from "./login-submit";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
 
@@ -905,12 +906,7 @@ function Login({ error }: { error: boolean }) {
         className="px-3 py-2 text-sm border border-[color:var(--color-rule)] rounded-md bg-[color:var(--color-paper)]"
       />
       {error && <p className="text-xs text-red-700">Wrong token.</p>}
-      <button
-        type="submit"
-        className="px-4 py-2 text-sm bg-[color:var(--color-ink)] text-[color:var(--color-paper)] rounded-md hover:opacity-90"
-      >
-        Open
-      </button>
+      <LoginSubmit />
     </form>
   );
 }
