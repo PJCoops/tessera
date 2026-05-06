@@ -35,7 +35,7 @@ type DailyTrendRow = {
   day: string;
   visitors: number;
   players: number;
-  solves: number;
+  solvers: number;
 };
 type TodayRow = {
   num: number | null;
@@ -105,16 +105,17 @@ export default async function StatsOverviewPage() {
         ORDER BY day DESC
         LIMIT 1
       `),
-      // Trend over the launch window. Visitors and engaged players are
-      // unique distinct_ids per day (matches the Hero counts); solves
-      // is the raw event count (matches "Grids cracked today"). Pull
-      // 90d server-side; the chart's range pills (7/30/90) slice
-      // client-side so switching is instant.
+      // Trend over the launch window. All three series are unique
+      // distinct_ids per day so they line up with the Hero counts
+      // (visitors / engaged players / solvers) — the chart is the
+      // trend version of the heroes, not a separate "events" view.
+      // Pull 90d server-side; the chart's range pills (7/30/90)
+      // slice client-side so switching is instant.
       hogql<DailyTrendRow>(`
         SELECT toString(toDate(timestamp)) AS day,
           toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS visitors,
           toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS players,
-          toInt(countIf(event = 'puzzle_solved')) AS solves
+          toInt(uniqIf(distinct_id, event = 'puzzle_solved')) AS solvers
         FROM events
         WHERE timestamp >= now() - INTERVAL 90 DAY${EXCLUDE}
         GROUP BY day

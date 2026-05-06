@@ -14,14 +14,14 @@ export type TrendPoint = {
   day: string;
   visitors: number;
   players: number;
-  solves: number;
+  solvers: number;
 };
 
 const RANGES = [7, 30, 90] as const;
 type Range = (typeof RANGES)[number];
 
 type SeriesDef = {
-  key: "visitors" | "players" | "solves";
+  key: "visitors" | "players" | "solvers";
   label: string;
   color: string;
 };
@@ -29,7 +29,7 @@ type SeriesDef = {
 const SERIES: SeriesDef[] = [
   { key: "visitors", label: "Visitors", color: "var(--color-ink)" },
   { key: "players", label: "Engaged players", color: "#b88a3a" },
-  { key: "solves", label: "Solves", color: "#7a9070" },
+  { key: "solvers", label: "Solvers", color: "#7a9070" },
 ];
 
 export function DailyTrendChart({ data }: { data: TrendPoint[] }) {
@@ -49,7 +49,7 @@ export function DailyTrendChart({ data }: { data: TrendPoint[] }) {
 
   const max = Math.max(
     1,
-    ...view.flatMap((p) => [p.visitors, p.players, p.solves])
+    ...view.flatMap((p) => [p.visitors, p.players, p.solvers])
   );
 
   const xAt = (i: number) =>
