@@ -1,18 +1,11 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { revalidatePath, updateTag } from "next/cache";
-import { hogql } from "../lib/posthog-api";
-import { puzzleNumber, todayUtc } from "../lib/rng";
-import { TIER_COLORS } from "../lib/tier";
-import { subscriberCounts } from "../lib/subscribers";
-import { pushSubscriberCount } from "../lib/push-subscribers";
-import { LOCALES } from "../lib/i18n";
-// Metrics dictionary imports kept available for future migrations of
-// inline HogQL into app/lib/metrics/. Currently the page uses inline
-// queries everywhere — the dictionary is exercised mostly by the
-// 09:30 UTC precompute cron and unit tests.
-import { LoginSubmit } from "./login-submit";
+import { hogql } from "../../lib/posthog-api";
+import { puzzleNumber, todayUtc } from "../../lib/rng";
+import { TIER_COLORS } from "../../lib/tier";
+import { subscriberCounts } from "../../lib/subscribers";
+import { pushSubscriberCount } from "../../lib/push-subscribers";
+import { LOCALES } from "../../lib/i18n";
+import { EXCLUDE } from "../_lib";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
 
@@ -21,80 +14,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Always fetch fresh-ish data; underlying hogql() caches each query 5 min.
-// Refreshes pull from PostHog when the cache window expires.
+// Each request runs its own HogQL queries; the layout's auth gate has
+// already validated the cookie. unstable_cache wraps any metric
+// definition routed through getMetric() with a 60s TTL.
 export const dynamic = "force-dynamic";
-
-const COOKIE_NAME = "stats_auth";
-// 1 year. Sign in once per device per year. With the move to
-// stats.tesserapuzzle.com, the cookie's domain has to widen to the
-// apex so the same session works across both hosts.
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-// Set on the apex so both tesserapuzzle.com and stats.tesserapuzzle.com
-// receive it. Production only — locally we want the default host-only
-// cookie so different ports / hosts don't share state.
-const COOKIE_DOMAIN =
-  process.env.NODE_ENV === "production" ? ".tesserapuzzle.com" : undefined;
-
-// Comma-separated PostHog distinct_ids to exclude from every query, so your
-// own test sessions don't pollute the dashboard. Append new IDs as you test
-// from new devices (find them in PostHog → Activity → click any event).
-function buildExcludeClause(): string {
-  const raw = process.env.STATS_EXCLUDE_IDS;
-  if (!raw) return "";
-  const ids = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    // Defensive: HogQL strings are single-quoted, so escape any embedded
-    // single quotes.
-    .map((id) => `'${id.replace(/'/g, "''")}'`);
-  if (ids.length === 0) return "";
-  return ` AND distinct_id NOT IN (${ids.join(",")})`;
-}
-const EXCLUDE = buildExcludeClause();
-
-async function signIn(formData: FormData) {
-  "use server";
-  const token = String(formData.get("t") ?? "");
-  const expected = process.env.STATS_TOKEN;
-  if (!expected || token !== expected) {
-    redirect("/stats?e=1");
-  }
-  const jar = await cookies();
-  jar.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: COOKIE_MAX_AGE,
-    // Path is `/` (not `/stats`) so the cookie is sent on every request
-    // to the stats subdomain, where the page lives at `/` after the
-    // middleware rewrite.
-    path: "/",
-    domain: COOKIE_DOMAIN,
-  });
-  redirect("/stats");
-}
-
-async function signOut() {
-  "use server";
-  const jar = await cookies();
-  jar.delete({ name: COOKIE_NAME, path: "/", domain: COOKIE_DOMAIN });
-  redirect("/stats");
-}
-
-// Forces a fresh server render AND invalidates every metric in the
-// dictionary so unstable_cache entries don't keep serving stale 60s
-// values after the user explicitly clicks Refresh. revalidatePath
-// alone re-renders the page but doesn't touch unstable_cache
-// (they're independent in Next 16). `updateTag` (Server Actions only,
-// which this is) expires the tag immediately and the next request
-// waits for fresh data — exactly what an explicit Refresh wants.
-async function refreshStats() {
-  "use server";
-  revalidatePath("/stats", "page");
-  updateTag("metrics");
-}
 
 // Tier ranges and colors mirror lib/tier.ts (TIER_COLORS imported above).
 // If tier ranges change in lib/tier.ts, update the SQL fragment below.
@@ -181,18 +104,9 @@ type TodayUniquesRow = {
 type DataSinceRow = { first_event: string | null };
 type PushFunnelRow = { received: number; clicked: number };
 
-export default async function StatsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ e?: string }>;
-}) {
-  const params = await searchParams;
-  const expected = process.env.STATS_TOKEN;
-  const cookieToken = (await cookies()).get(COOKIE_NAME)?.value;
-  if (!expected || cookieToken !== expected) {
-    return <Login error={params.e === "1"} />;
-  }
-
+// The (authed) layout already gated this page behind isAuthenticated().
+// We don't repeat the cookie check here.
+export default async function StatsPage() {
   let daily: DailyRow[] = [];
   let moves: MovesRow[] = [];
   let hints: HintsRow[] = [];
@@ -590,41 +504,17 @@ export default async function StatsPage({
   );
 
   return (
-    <div className="self-start w-full max-w-3xl">
-      <header className="mb-8 flex items-baseline justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
-            Tessera · stats
+    <div>
+      {/* Page kicker. The (authed) layout owns the global header
+         (Tessera · stats / Refresh / Sign out / Fetched). */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-light tracking-tight">Player activity</h1>
+        {firstEventLabel && (
+          <p className="text-[10px] text-[color:var(--color-muted)] mt-1">
+            {firstEventLabel}
           </p>
-          <h1 className="text-2xl font-light tracking-tight mt-1">Player activity</h1>
-          {firstEventLabel && (
-            <p className="text-[10px] text-[color:var(--color-muted)] mt-1">
-              {firstEventLabel}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          <p className="text-xs text-[color:var(--color-muted)] tabular-nums">
-            Fetched {new Date().toISOString().slice(11, 19)} UTC
-          </p>
-          <form action={refreshStats}>
-            <button
-              type="submit"
-              className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] underline-offset-4 hover:underline"
-            >
-              Refresh
-            </button>
-          </form>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] underline-offset-4 hover:underline"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
+        )}
+      </div>
 
       {error ? (
         <div className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-900">
@@ -990,25 +880,6 @@ function buildSocialBlurb(
   lines.push("New grid drops at UTC midnight.");
   lines.push("tesserapuzzle.com");
   return lines.join("\n");
-}
-
-function Login({ error }: { error: boolean }) {
-  return (
-    <form className="self-start w-full max-w-xs flex flex-col gap-3" action={signIn}>
-      <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
-        Tessera · stats
-      </p>
-      <input
-        type="password"
-        name="t"
-        autoFocus
-        placeholder="Token"
-        className="px-3 py-2 text-sm border border-[color:var(--color-rule)] rounded-md bg-[color:var(--color-paper)]"
-      />
-      {error && <p className="text-xs text-red-700">Wrong token.</p>}
-      <LoginSubmit />
-    </form>
-  );
 }
 
 function Hero({
