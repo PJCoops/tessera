@@ -292,7 +292,9 @@ export function LineChart({
             {days[n - 1].slice(5)}
           </text>
         )}
-        {/* series: line + per-point dots so single-day data is still visible */}
+        {/* series: line + per-point dots so single-day data is still
+            visible, with an invisible larger hit circle carrying a
+            <title> for a native browser tooltip on hover. */}
         {series.map((s) => {
           const pts = s.values.map((v, i) => `${xAt(i)},${yAt(v)}`).join(" ");
           return (
@@ -307,13 +309,12 @@ export function LineChart({
                 vectorEffect="non-scaling-stroke"
               />
               {s.values.map((v, i) => (
-                <circle
-                  key={i}
-                  cx={xAt(i)}
-                  cy={yAt(v)}
-                  r="2.5"
-                  fill={s.color}
-                />
+                <g key={i}>
+                  <circle cx={xAt(i)} cy={yAt(v)} r="2.5" fill={s.color} />
+                  <circle cx={xAt(i)} cy={yAt(v)} r="10" fill="transparent" style={{ cursor: "default" }}>
+                    <title>{`${days[i].slice(5)} · ${s.label}: ${v.toLocaleString()}`}</title>
+                  </circle>
+                </g>
               ))}
             </g>
           );

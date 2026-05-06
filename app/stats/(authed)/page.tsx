@@ -307,7 +307,7 @@ export default async function StatsOverviewPage() {
             <LineChart
               days={dailyTrend.map((d) => d.day)}
               series={[
-                { label: "Visitors", color: "#0a0a0a", values: dailyTrend.map((d) => d.visitors) },
+                { label: "Visitors", color: "var(--color-ink)", values: dailyTrend.map((d) => d.visitors) },
                 { label: "Engaged players", color: "#b88a3a", values: dailyTrend.map((d) => d.players) },
                 { label: "Solves", color: "#7a9070", values: dailyTrend.map((d) => d.solves) },
               ]}
