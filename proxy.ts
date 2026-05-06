@@ -1,6 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { LOCALES, LOCALE_COOKIE, isLocale } from "./app/lib/i18n";
 
+// Two responsibilities:
+//
+// 1. Host-based routing for stats.tesserapuzzle.com — rewrites all
+//    paths to /stats/* so the existing app/stats/* routes serve the
+//    subdomain's UI. Also redirects /stats/* on the apex to the
+//    subdomain so old bookmarks keep working.
+//
+// 2. Locale routing on the apex — redirect first-time visitors to
+//    /es when their browser prefers Spanish, with a cookie override.
+
+const STATS_HOST = "stats.tesserapuzzle.com";
+const APEX_HOSTS = new Set(["tesserapuzzle.com", "www.tesserapuzzle.com"]);
+
 // Detect the user's preferred locale and route them on first visit. English
 // stays at /, other locales live at /<code>. Cookie set by the app overrides
 // the browser hint so a manual choice sticks.
@@ -27,6 +40,34 @@ function pickLocaleFromAcceptLanguage(header: string | null): string | null {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // Vercel hostnames include the port in dev. Normalise.
+  const host = (request.headers.get("host") ?? "").toLowerCase().split(":")[0];
+
+  // ---- Stats subdomain ----
+  // Rewrite every request on stats.tesserapuzzle.com to /stats/* so
+  // the existing dashboard routes serve the subdomain. We return
+  // immediately so locale redirects don't fire on the dashboard.
+  if (host === STATS_HOST) {
+    if (!pathname.startsWith("/stats")) {
+      const url = request.nextUrl.clone();
+      url.pathname = pathname === "/" ? "/stats" : `/stats${pathname}`;
+      return NextResponse.rewrite(url);
+    }
+    return NextResponse.next();
+  }
+
+  // ---- Apex /stats redirect ----
+  // Old bookmarks like tesserapuzzle.com/stats now live on the
+  // subdomain. 308 keeps the method intact (sign-in form posts).
+  if (
+    APEX_HOSTS.has(host) &&
+    (pathname === "/stats" || pathname.startsWith("/stats/"))
+  ) {
+    const dest = request.nextUrl.clone();
+    dest.host = STATS_HOST;
+    dest.pathname = pathname === "/stats" ? "/" : pathname.slice("/stats".length);
+    return NextResponse.redirect(dest, 308);
+  }
 
   // Already on a locale-prefixed path: pass through.
   for (const loc of LOCALES) {

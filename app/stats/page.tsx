@@ -24,7 +24,15 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 const COOKIE_NAME = "stats_auth";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+// 1 year. Sign in once per device per year. With the move to
+// stats.tesserapuzzle.com, the cookie's domain has to widen to the
+// apex so the same session works across both hosts.
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+// Set on the apex so both tesserapuzzle.com and stats.tesserapuzzle.com
+// receive it. Production only — locally we want the default host-only
+// cookie so different ports / hosts don't share state.
+const COOKIE_DOMAIN =
+  process.env.NODE_ENV === "production" ? ".tesserapuzzle.com" : undefined;
 
 // Comma-separated PostHog distinct_ids to exclude from every query, so your
 // own test sessions don't pollute the dashboard. Append new IDs as you test
@@ -57,7 +65,11 @@ async function signIn(formData: FormData) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: COOKIE_MAX_AGE,
-    path: "/stats",
+    // Path is `/` (not `/stats`) so the cookie is sent on every request
+    // to the stats subdomain, where the page lives at `/` after the
+    // middleware rewrite.
+    path: "/",
+    domain: COOKIE_DOMAIN,
   });
   redirect("/stats");
 }
@@ -65,7 +77,7 @@ async function signIn(formData: FormData) {
 async function signOut() {
   "use server";
   const jar = await cookies();
-  jar.delete({ name: COOKIE_NAME, path: "/stats" });
+  jar.delete({ name: COOKIE_NAME, path: "/", domain: COOKIE_DOMAIN });
   redirect("/stats");
 }
 
