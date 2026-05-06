@@ -59,7 +59,7 @@
     },
     "step2": {
       "title": "Find today’s four words.",
-      "body": "Each row is one specific word. Tiles with a green outline are already on the right row. Tiles fill green when the whole row matches today’s word."
+      "body": "Each row is one specific word. Tiles with a dashed outline are already on the right row. Tiles fill green when the whole row matches today’s word."
     },
     "step3": {
       "title": "The columns spell words too.",

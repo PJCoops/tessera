@@ -59,7 +59,7 @@
     },
     "step2": {
       "title": "Encuentra las cuatro palabras del día.",
-      "body": "Cada fila es una palabra concreta. Las fichas con borde verde ya están en la fila correcta. Las fichas se vuelven verdes cuando toda la fila coincide con la palabra del día."
+      "body": "Cada fila es una palabra concreta. Las fichas con borde discontinuo ya están en la fila correcta. Las fichas se vuelven verdes cuando toda la fila coincide con la palabra del día."
     },
     "step3": {
       "title": "Las columnas también forman palabras.",
