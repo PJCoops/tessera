@@ -15,7 +15,8 @@ import type { Metadata } from "next";
 import { hogql } from "../../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../../lib/rng";
 import { EXCLUDE } from "../_lib";
-import { Hero, Big, LineChart, Section, fmt, sortTiers, type TierRow } from "../_components";
+import { Hero, Big, Section, fmt, sortTiers, type TierRow } from "../_components";
+import { DailyTrendChart } from "./DailyTrendChart";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
 
@@ -106,16 +107,16 @@ export default async function StatsOverviewPage() {
       `),
       // Trend over the launch window. Visitors and engaged players are
       // unique distinct_ids per day (matches the Hero counts); solves
-      // is the raw event count (matches "Grids cracked today"). Window
-      // capped at 30d to keep the chart readable; we'll grow this as
-      // history accumulates.
+      // is the raw event count (matches "Grids cracked today"). Pull
+      // 90d server-side; the chart's range pills (7/30/90) slice
+      // client-side so switching is instant.
       hogql<DailyTrendRow>(`
         SELECT toString(toDate(timestamp)) AS day,
           toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS visitors,
           toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS players,
           toInt(countIf(event = 'puzzle_solved')) AS solves
         FROM events
-        WHERE timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
+        WHERE timestamp >= now() - INTERVAL 90 DAY${EXCLUDE}
         GROUP BY day
         ORDER BY day ASC
       `),
@@ -303,15 +304,8 @@ export default async function StatsOverviewPage() {
             />
           </section>
 
-          <Section title={`Daily trend · last ${dailyTrend.length} days`} freshness="live">
-            <LineChart
-              days={dailyTrend.map((d) => d.day)}
-              series={[
-                { label: "Visitors", color: "var(--color-ink)", values: dailyTrend.map((d) => d.visitors) },
-                { label: "Engaged players", color: "#b88a3a", values: dailyTrend.map((d) => d.players) },
-                { label: "Solves", color: "#7a9070", values: dailyTrend.map((d) => d.solves) },
-              ]}
-            />
+          <Section title="Daily trend" freshness="live">
+            <DailyTrendChart data={dailyTrend} />
           </Section>
 
           <section className="mb-12">
