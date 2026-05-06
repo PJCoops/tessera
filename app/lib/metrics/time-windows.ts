@@ -29,12 +29,20 @@ export type TimeWindowKey = (typeof TIME_WINDOW_KEYS)[number];
 // HogQL clause for each window, applied as part of the query's WHERE.
 // Always returned as `AND <clause>` so it composes cleanly behind any
 // other filter the metric's HogQL declares first.
+//
+// Note on TZ: HogQL's toDate() only accepts a single argument
+// (validated empirically: `toDate(timestamp, 'UTC')` errors with
+// "Function 'toDate' expects 1 argument, found 2"). PostHog evaluates
+// toDate() and today() in the project's session timezone — the
+// Tessera project is set to UTC, so today() and toDate(timestamp)
+// produce calendar-UTC days for us. If the project TZ is ever
+// changed, this clause silently shifts; document it loudly there.
 export function windowClause(key: TimeWindowKey): string {
   switch (key) {
     case "today":
-      return "AND toDate(timestamp, 'UTC') = toDate(now(), 'UTC')";
+      return "AND toDate(timestamp) = today()";
     case "yesterday":
-      return "AND toDate(timestamp, 'UTC') = toDate(now() - INTERVAL 1 DAY, 'UTC')";
+      return "AND toDate(timestamp) = today() - 1";
     case "last24h":
       return "AND timestamp >= now() - INTERVAL 1 DAY";
     case "last7d":

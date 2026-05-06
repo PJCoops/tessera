@@ -211,7 +211,7 @@ export const dailyLast14d: MetricDef<DailyRow[]> = {
   format: "raw",
   source: "precomputed",
   hogql: `
-    SELECT toString(toDate(timestamp, 'UTC')) AS day,
+    SELECT toString(toDate(timestamp)) AS day,
       toInt(countIf(event = 'puzzle_started')) AS started,
       toInt(countIf(event = 'puzzle_solved')) AS solved,
       toInt(countIf(event = 'puzzle_revealed')) AS revealed

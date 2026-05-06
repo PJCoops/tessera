@@ -8,11 +8,14 @@ import { applyWindow, windowClause, windowLabel, TIME_WINDOW_KEYS } from "./time
 import { METRICS, precomputedMetrics, liveMetrics } from "./index";
 
 describe("windowClause", () => {
-  it("today and yesterday use UTC explicitly so timezone is unambiguous", () => {
-    expect(windowClause("today")).toContain("toDate(timestamp, 'UTC')");
-    expect(windowClause("today")).toContain("toDate(now(), 'UTC')");
-    expect(windowClause("yesterday")).toContain("toDate(timestamp, 'UTC')");
-    expect(windowClause("yesterday")).toContain("INTERVAL 1 DAY");
+  it("today and yesterday filter on the calendar day boundary", () => {
+    // HogQL's toDate() rejects a 2-arg form, so we use the
+    // single-arg version. Trusts the project's session TZ (set to UTC
+    // for Tessera) — see time-windows.ts comment.
+    expect(windowClause("today")).toContain("toDate(timestamp)");
+    expect(windowClause("today")).toContain("today()");
+    expect(windowClause("yesterday")).toContain("toDate(timestamp)");
+    expect(windowClause("yesterday")).toContain("today() - 1");
   });
 
   it("rolling windows use INTERVAL not toDate", () => {
@@ -45,7 +48,7 @@ describe("windowLabel", () => {
 describe("applyWindow", () => {
   it("substitutes ${WINDOW} placeholder", () => {
     const out = applyWindow("SELECT 1 FROM events WHERE 1=1 ${WINDOW}", "today");
-    expect(out).toContain("toDate(timestamp, 'UTC')");
+    expect(out).toContain("toDate(timestamp) = today()");
     expect(out).not.toContain("${WINDOW}");
   });
 
@@ -119,19 +122,18 @@ describe("METRICS registry", () => {
     expect(precomputedMetrics().length + liveMetrics().length).toBe(all);
   });
 
-  it("today and yesterday windows produce different SQL — regression guard for the 98/116 bug", () => {
+  it("today metrics all filter the same way — regression guard for the 98/116 bug", () => {
     // The exact failure mode that caused the visible inconsistency:
     // two metrics meant to share "today" semantics ended up with one
-    // bucketing by toDate() in session timezone and the other
-    // filtering by `today()`. They returned different counts.
-    // After this refactor the only legitimate way to write "today"
-    // is windowClause('today'), which is UTC-explicit and singular.
+    // bucketing by toDate() and the other filtering by `today()`,
+    // returning different counts under load. After this refactor the
+    // only way to write "today" is windowClause('today'), so every
+    // "today" metric resolves to the same WHERE clause.
     const todayMetrics = Object.values(METRICS).filter((m) => m.window === "today");
     expect(todayMetrics.length).toBeGreaterThan(0);
     for (const def of todayMetrics) {
       const resolved = applyWindow(def.hogql, "today");
-      expect(resolved).toContain("toDate(timestamp, 'UTC')");
-      expect(resolved).not.toContain("today()"); // legacy session-TZ pattern, banned
+      expect(resolved).toContain("toDate(timestamp) = today()");
     }
   });
 });
