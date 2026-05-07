@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
 import { PHProvider } from "./lib/posthog-provider";
 import { MetaPixelHead, MetaPixelNoScript } from "./lib/meta-pixel";
+import { XPixelHead } from "./lib/x-pixel";
 import "./globals.css";
 
 const description =
@@ -84,7 +85,7 @@ export default async function RootLayout({
   // dashboard. Detect via host header rather than pathname so it works
   // both before and after the proxy.ts rewrite.
   //
-  // The same flag also gates PostHog and Meta Pixel: dashboard loads
+  // The same flag also gates PostHog, Meta Pixel and the X Pixel: dashboard loads
   // are admin traffic, not players, so we don't want them firing
   // $pageview / PageView events that would inflate the very metrics
   // the dashboard renders. With the tags absent, no init runs, no
@@ -102,6 +103,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
         {!isStats && <MetaPixelHead />}
+        {!isStats && <XPixelHead />}
       </head>
       <body className="min-h-full flex flex-col">
         {!isStats && <MetaPixelNoScript />}
