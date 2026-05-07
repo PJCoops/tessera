@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
 import { PHProvider } from "./lib/posthog-provider";
 import { MetaPixelHead, MetaPixelNoScript } from "./lib/meta-pixel";
-import { XPixelHead } from "./lib/x-pixel";
+import { XPixel } from "./lib/x-pixel";
 import "./globals.css";
 
 const description =
@@ -103,10 +103,10 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
         {!isStats && <MetaPixelHead />}
-        {!isStats && <XPixelHead />}
       </head>
       <body className="min-h-full flex flex-col">
         {!isStats && <MetaPixelNoScript />}
+        {!isStats && <XPixel />}
         {isStats ? (
           <main className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
             {children}

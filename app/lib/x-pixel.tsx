@@ -1,28 +1,51 @@
-// Standard X (Twitter) website tag. Lives in <head> alongside the Meta
-// Pixel so retargeting/conversion audiences can be built from the same
-// PageView traffic. Custom events can be fired later via window.twq.
+"use client";
+
+// X (Twitter) website tag, mounted via a client useEffect to guarantee a
+// single execution. We previously used an inline <script> in <head>, but
+// React/RSC hydration was re-executing the snippet, which X's Pixel Helper
+// flagged as "activated more than once" even with a window-flag guard.
+//
+// Imperative injection from a useEffect cleanly sidesteps that — the effect
+// only fires after mount, only once per page load, and only on the client.
+import { useEffect } from "react";
 
 const X_PIXEL_ID = process.env.NEXT_PUBLIC_X_PIXEL_ID;
 
-// The loader IIFE is idempotent (e.twq guard), but the original snippet
-// calls twq('config', id) unconditionally. If Next ever re-evaluates this
-// inline script (hydration, route remount), config fires twice and the X
-// Pixel Helper warns "activated more than once". Gate the config call on
-// a window flag so it only runs the first time.
-const pixelScript = (id: string) => `
-!function(e,t,n,s,u,a){e.twq||(s=e.twq=function(){s.exe?s.exe.apply(s,arguments):s.queue.push(arguments);
-},s.version='1.1',s.queue=[],u=t.createElement(n),u.async=!0,u.src='https://static.ads-twitter.com/uwt.js',
-a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,'script');
-window.__twqConfigured||(twq('config','${id}'),window.__twqConfigured=true);
-`;
-
-export function XPixelHead() {
-  if (!X_PIXEL_ID) return null;
-  return <script dangerouslySetInnerHTML={{ __html: pixelScript(X_PIXEL_ID) }} />;
-}
-
 declare global {
   interface Window {
-    twq?: (...args: unknown[]) => void;
+    twq?: ((...args: unknown[]) => void) & {
+      version?: string;
+      queue?: unknown[];
+      exe?: (...args: unknown[]) => void;
+    };
+    __twqConfigured?: boolean;
   }
+}
+
+export function XPixel() {
+  useEffect(() => {
+    if (!X_PIXEL_ID) return;
+    if (window.__twqConfigured) return;
+    window.__twqConfigured = true;
+
+    if (!window.twq) {
+      const stub: Window["twq"] = function (...args: unknown[]) {
+        if (stub!.exe) stub!.exe.apply(stub, args);
+        else stub!.queue!.push(args);
+      } as Window["twq"];
+      stub!.version = "1.1";
+      stub!.queue = [];
+      window.twq = stub;
+
+      const s = document.createElement("script");
+      s.async = true;
+      s.src = "https://static.ads-twitter.com/uwt.js";
+      const first = document.getElementsByTagName("script")[0];
+      first?.parentNode?.insertBefore(s, first);
+    }
+
+    window.twq!("config", X_PIXEL_ID);
+  }, []);
+
+  return null;
 }
