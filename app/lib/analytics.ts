@@ -32,6 +32,12 @@ const META_EVENT_MAP: Partial<Record<AnalyticsEvent, { name: string; standard: b
   puzzle_solved: { name: "PuzzleSolved", standard: false },
 };
 
+// X conversion event IDs (set up in ads.x.com → Conversions). Mirror only the
+// events worth optimizing campaigns against.
+const X_EVENT_MAP: Partial<Record<AnalyticsEvent, string>> = {
+  puzzle_solved: "tw-onksr-rcb1q",
+};
+
 function makeEventId(): string {
   // crypto.randomUUID is widely supported (>97% of browsers as of 2026); fall
   // back to a non-cryptographic random for the long tail. Either way, the id
@@ -50,6 +56,16 @@ export function track(event: AnalyticsEvent, props?: Props): void {
     posthog.capture(event, props);
   } catch {
     // analytics must never break gameplay
+  }
+
+  // X (Twitter) Pixel
+  const xEventId = X_EVENT_MAP[event];
+  if (xEventId && typeof window.twq === "function") {
+    try {
+      window.twq("event", xEventId, {});
+    } catch {
+      // analytics must never break gameplay
+    }
   }
 
   // Meta: fire Pixel and CAPI with the same event_id so Meta dedupes.
