@@ -17,6 +17,7 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated, refreshStats, signOut } from "../_lib";
 import { Sidenav } from "../sidenav";
+import { HiddenPath, RefreshSubmit } from "./RefreshButton";
 
 export const dynamic = "force-dynamic";
 
@@ -47,12 +48,8 @@ export default async function AuthedLayout({
             Fetched {fetchedAt} UTC
           </p>
           <form action={refreshStats}>
-            <button
-              type="submit"
-              className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] underline-offset-4 hover:underline"
-            >
-              Refresh
-            </button>
+            <HiddenPath />
+            <RefreshSubmit />
           </form>
           <form action={signOut}>
             <button
