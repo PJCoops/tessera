@@ -564,9 +564,11 @@ function CreditsContent() {
           <li>Don Brown</li>
           <li>Alison Burd</li>
           <li>Stanley Cooper</li>
+          <li>Matt Desmier</li>
           <li>Stefan Kay</li>
           <li>Brett Pandora</li>
           <li>Richard Pattie</li>
+          <li>Alex Watson</li>
         </ul>
       </section>
 
