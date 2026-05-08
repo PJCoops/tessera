@@ -20,7 +20,9 @@
     "copied": "Copied",
     "showHints": "Show hints",
     "hideHints": "Hide hints",
-    "reveal": "Reveal solution",
+    "howToPlay": "How to play",
+    "reveal": "Reveal",
+    "seeWords": "What do they mean?",
     "nextPuzzle": "Next puzzle in {countdown}",
     "legend": {
       "correctRow": "correct row",
@@ -54,16 +56,16 @@
     },
     "play": "Play",
     "step1": {
-      "title": "Tap two tiles to swap them.",
-      "body": "Each swap is one move."
+      "title": "The goal.",
+      "body": "Eight hidden words: four across and four down. Find them all to solve today’s puzzle."
     },
     "step2": {
-      "title": "Find today’s four words.",
-      "body": "Each row is one specific word. Tiles with a dashed outline are already on the right row. Tiles fill green when the whole row matches today’s word."
+      "title": "How you play.",
+      "body": "Tap two tiles to swap their letters. Each swap counts as one move. Fewer moves earns a higher tier."
     },
     "step3": {
-      "title": "The columns spell words too.",
-      "body": "Use them as a check. When all four rows match, the columns will too, and the whole grid turns rust."
+      "title": "Reading the board.",
+      "body": "A dashed tile is already on the right row. A green row means that word is correct. When all four rows are right, the columns spell words too, and the whole grid turns rust."
     },
     "words": {
       "from": "from",

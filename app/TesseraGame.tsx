@@ -38,6 +38,35 @@ const PROGRESS_PREFIX = "tessera:progress:";
 const HIDE_HINTS_KEY = "tessera:hide-hints";
 const MUTED_KEY = "tessera:muted";
 const THEME_KEY = "tessera:theme";
+const DEMO_PLAYED_KEY = "tessera:demo-played";
+
+// True if this device has any prior puzzle result. Used to skip the
+// idle-swap animation for returning players — they know the mechanic.
+function hasAnyResult(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith(RESULT_PREFIX)) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+function hasPlayedDemo(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(DEMO_PLAYED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function markDemoPlayed() {
+  try {
+    window.localStorage.setItem(DEMO_PLAYED_KEY, "1");
+  } catch {}
+}
 
 export type ThemePref = "system" | "light" | "dark";
 function isThemePref(v: unknown): v is ThemePref {
@@ -139,7 +168,6 @@ export function TesseraGame() {
   const [helpTab, setHelpTab] = useState<"how" | "words">("how");
   const [confirmReveal, setConfirmReveal] = useState(false);
   const [demoPlaying, setDemoPlaying] = useState(false);
-  const [idleTick, setIdleTick] = useState(0);
   const [demoSelected, setDemoSelected] = useState<number | null>(null);
   const [demoTap, setDemoTap] = useState<{ idx: number; key: number } | null>(null);
   // Rotates the demo candidate each cycle so a stalled player sees a
@@ -346,15 +374,23 @@ export function TesseraGame() {
   }, [puzzle?.demo]);
 
   // Show a one-shot demo swap if the player has stalled before their first move.
-  // Replays every 7s of continued inactivity so it's always there when they look up.
+  // First-time players only: skip if they've played the demo before on this
+  // device, or if they have any prior solve (returning players know the
+  // mechanic). Hold the timer while the how-to modal is open — otherwise
+  // first-launch consumes the 7s window and the demo never gets seen.
   useEffect(() => {
     if (!mounted || !puzzle) return;
+    if (howToOpen) return;
     if (demoPlaying) return;
     if (moves > 0 || selectedIdx !== null) return;
     if (validity.isSolved || storedResult) return;
-    const id = setTimeout(() => setDemoPlaying(true), 7000);
+    if (hasPlayedDemo() || hasAnyResult()) return;
+    const id = setTimeout(() => {
+      markDemoPlayed();
+      setDemoPlaying(true);
+    }, 7000);
     return () => clearTimeout(id);
-  }, [mounted, puzzle, demoPlaying, moves, selectedIdx, validity.isSolved, storedResult, idleTick]);
+  }, [mounted, puzzle, howToOpen, demoPlaying, moves, selectedIdx, validity.isSolved, storedResult]);
 
   // When demoPlaying flips true, run the sequence: tap A (ripple + ring),
   // tap B (ripple), real swap, hold, real revert. Positions are snapshotted
@@ -393,7 +429,6 @@ export function TesseraGame() {
       if (cancelled) return;
       setDemoTap(null);
       setDemoPlaying(false);
-      setIdleTick((n) => n + 1);
     };
     run();
 
@@ -632,9 +667,9 @@ export function TesseraGame() {
                   </motion.span>
                 );
               }
-              if (demoPlaying) {
+              if (moves === 0 && selectedIdx === null) {
                 return (
-                  <motion.span key="demo" {...rollProps} className="block text-sm leading-snug text-[color:var(--color-muted)] text-center">
+                  <motion.span key="tip" {...rollProps} className="block text-sm leading-snug text-[color:var(--color-muted)] text-center">
                     {t("game.demoTipL1")}
                     <br />
                     {t("game.demoTipL2")}
@@ -719,16 +754,34 @@ export function TesseraGame() {
       </div>
 
       <div className="mt-8 flex flex-col items-center gap-4">
-        {canShare && (
-          <button
-            onClick={onShare}
-            className="px-5 py-2 text-sm border border-[color:var(--color-rule)] rounded-md hover:bg-[color:var(--color-cream)] transition-colors"
-          >
-            {copied ? t("game.copied") : t("game.share")}
-          </button>
+        {(canShare || finished) && (
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {canShare && (
+              <button
+                onClick={onShare}
+                className="px-5 py-2 text-sm border border-[color:var(--color-rule)] rounded-md hover:bg-[color:var(--color-cream)] transition-colors"
+              >
+                {copied ? t("game.copied") : t("game.share")}
+              </button>
+            )}
+            {finished && (
+              <button
+                onClick={() => openHelp("words")}
+                className="px-5 py-2 text-sm border border-[color:var(--color-rule)] rounded-md hover:bg-[color:var(--color-cream)] transition-colors"
+              >
+                {t("game.seeWords")}
+              </button>
+            )}
+          </div>
         )}
         {!validity.isSolved && !storedResult && (
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => openHelp("how")}
+              className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] bg-[color:var(--color-cream)] rounded-md hover:text-[color:var(--color-ink)] transition-colors"
+            >
+              {t("game.howToPlay")}
+            </button>
             <button
               onClick={() => updateHideHints(!hideHints)}
               className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] bg-[color:var(--color-cream)] rounded-md hover:text-[color:var(--color-ink)] transition-colors"

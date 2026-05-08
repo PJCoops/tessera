@@ -20,7 +20,9 @@
     "copied": "Copiado",
     "showHints": "Mostrar pistas",
     "hideHints": "Ocultar pistas",
-    "reveal": "Ver solución",
+    "howToPlay": "Cómo jugar",
+    "reveal": "Revelar",
+    "seeWords": "¿Qué significan?",
     "nextPuzzle": "Próxima partida en {countdown}",
     "legend": {
       "correctRow": "fila correcta",
@@ -54,16 +56,16 @@
     },
     "play": "Jugar",
     "step1": {
-      "title": "Toca dos fichas para intercambiarlas.",
-      "body": "Cada intercambio es un movimiento."
+      "title": "El objetivo.",
+      "body": "Ocho palabras ocultas: cuatro en horizontal y cuatro en vertical. Encuéntralas todas para resolver la partida de hoy."
     },
     "step2": {
-      "title": "Encuentra las cuatro palabras del día.",
-      "body": "Cada fila es una palabra concreta. Las fichas con borde discontinuo ya están en la fila correcta. Las fichas se vuelven verdes cuando toda la fila coincide con la palabra del día."
+      "title": "Cómo se juega.",
+      "body": "Toca dos fichas para intercambiar sus letras. Cada intercambio cuenta como un movimiento. Menos movimientos te dan un nivel más alto."
     },
     "step3": {
-      "title": "Las columnas también forman palabras.",
-      "body": "Úsalas para comprobar. Cuando las cuatro filas coincidan, también lo harán las columnas, y toda la cuadrícula se vuelve color óxido."
+      "title": "Cómo leer el tablero.",
+      "body": "Una ficha con borde discontinuo ya está en la fila correcta. Una fila verde significa que esa palabra está bien. Cuando las cuatro filas estén bien, las columnas también formarán palabras y toda la cuadrícula se volverá color óxido."
     },
     "words": {
       "from": "de",
