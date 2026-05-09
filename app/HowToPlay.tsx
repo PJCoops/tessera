@@ -7,6 +7,7 @@ import { useLocale } from "./lib/locale-context";
 import { PushReminderToggle } from "./components/PushReminderToggle";
 import { CLASSIC, type ModeConfig } from "./lib/mode";
 import definitionsEs from "./locales/definitions-es.json";
+import definitionsEn from "./locales/definitions-en.json";
 
 // Static Spanish definitions, baked at build time from es.wiktionary.org.
 // Coverage isn't 100% — words without an entry render the same
@@ -14,6 +15,12 @@ import definitionsEs from "./locales/definitions-es.json";
 const STATIC_DEFS: Record<string, Record<string, string>> = {
   es: definitionsEs as Record<string, string>,
 };
+
+// English definitions fallback: a hand-maintained map of niche words
+// that dictionaryapi.dev doesn't cover (architectural / archaic /
+// loan terms etc). Consulted ONLY when the API and lemma fallbacks
+// all return nothing — keeps the live lookup as the primary path.
+const STATIC_DEFS_EN: Record<string, string> = definitionsEn as Record<string, string>;
 
 const SEEN_KEY = "tessera:seen-howto";
 const DEF_CACHE_PREFIX = "tessera:def:";
@@ -287,6 +294,12 @@ async function fetchDefinition(word: string): Promise<DefCached> {
   for (const cand of lemmaCandidates(word)) {
     const r = await lookupOne(cand);
     if (r.definition) return { ...r, resolvedFrom: cand, ts: Date.now() };
+  }
+  // Last-resort fallback: hand-maintained map of niche English words
+  // the API doesn't cover (e.g. architectural / archaic terms).
+  const staticDef = STATIC_DEFS_EN[word.toLowerCase()];
+  if (staticDef) {
+    return { definition: staticDef, partOfSpeech: null, resolvedFrom: null, ts: Date.now() };
   }
   return { definition: null, partOfSpeech: null, resolvedFrom: null, ts: Date.now() };
 }
