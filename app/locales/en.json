@@ -122,6 +122,11 @@
   "history": {
     "kicker": "History",
     "title": "Your Tessera.",
+    "titleHard": "Your Tessera · Hard",
+    "mode": {
+      "classic": "Classic",
+      "hard": "Hard"
+    },
     "ariaClose": "Close",
     "stats": {
       "solved": "Solved",

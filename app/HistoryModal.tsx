@@ -3,11 +3,11 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { dateFromPuzzleNumber, puzzleNumber, seedFromDate, todayUtc } from "./lib/rng";
-import type { Streak } from "./lib/streak";
+import { readStreak, type Streak } from "./lib/streak";
 import { TIERS, TIER_COLORS, getTier } from "./lib/tier";
 import { generateDailyPuzzleFor } from "./lib/puzzle";
 import { useLocale } from "./lib/locale-context";
-import { CLASSIC, homePath, type ModeConfig } from "./lib/mode";
+import { CLASSIC, HARD, homePath, type ModeConfig, type ModeId } from "./lib/mode";
 import type { Locale } from "./lib/i18n";
 
 type Result = { moves: number; bonus: boolean; completedAt: number; revealed?: boolean };
@@ -68,12 +68,36 @@ export function HistoryModal({
 }: {
   open: boolean;
   onClose: () => void;
+  // Streak for the mode the modal was opened from. The other mode's
+  // streak is read from localStorage when the user switches tabs.
   streak: Streak;
   epoch: string;
   mode?: ModeConfig;
 }) {
   const { locale, t } = useLocale();
   const [tab, setTab] = useState<Tab>("solves");
+  const [activeModeId, setActiveModeId] = useState<ModeId>(mode.id);
+
+  // Reset the active tab back to the mode the modal was opened from
+  // each time it re-opens. Without this, returning players would land
+  // on whichever mode they last viewed instead of the mode they're
+  // currently playing.
+  useEffect(() => {
+    if (open) setActiveModeId(mode.id);
+  }, [open, mode.id]);
+
+  const activeMode = activeModeId === "hard" ? HARD : CLASSIC;
+  // The streak prop is for the mode the page is rendered in. When the
+  // user switches tabs, read the other mode's streak from localStorage
+  // directly. Done lazily inside the modal so the parent component
+  // doesn't have to plumb both streaks.
+  const otherStreak = useMemo<Streak | null>(() => {
+    if (!open) return null;
+    if (activeModeId === mode.id) return null;
+    const otherMode = activeModeId === "hard" ? HARD : CLASSIC;
+    return readStreak(otherMode.streakKey);
+  }, [open, activeModeId, mode.id]);
+  const activeStreak = otherStreak ?? streak;
 
   useEffect(() => {
     if (!open) return;
@@ -85,8 +109,8 @@ export function HistoryModal({
   }, [open, onClose]);
 
   const entries = useMemo(
-    () => (open ? readAllResults(epoch, mode.resultPrefix) : []),
-    [open, epoch, mode.resultPrefix]
+    () => (open ? readAllResults(epoch, activeMode.resultPrefix) : []),
+    [open, epoch, activeMode.resultPrefix]
   );
   const solved = entries.filter((e) => !e.result.revealed);
   const solvedCount = solved.length;
@@ -96,12 +120,12 @@ export function HistoryModal({
   const tierCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const e of solved) {
-      const ms = minSwapsForPuzzle(e.num, mode, locale, epoch);
+      const ms = minSwapsForPuzzle(e.num, activeMode, locale, epoch);
       const k = getTier(e.result.moves, ms).key;
       counts.set(k, (counts.get(k) ?? 0) + 1);
     }
     return counts;
-  }, [solved, mode, locale, epoch]);
+  }, [solved, activeMode, locale, epoch]);
 
   // The "All puzzles" tab lists every past puzzle (#1 → today − 1) so
   // players can replay anything they missed. Each row links to ?day=...
@@ -121,7 +145,7 @@ export function HistoryModal({
     for (let n = todayNum - 1; n >= 1; n--) out.push(n);
     return out;
   }, [todayNum]);
-  const replayBase = homePath(mode, locale);
+  const replayBase = homePath(activeMode, locale);
 
   return (
     <AnimatePresence>
@@ -155,9 +179,20 @@ export function HistoryModal({
             <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
               {t("history.kicker")}
             </p>
-            <h2 className="text-2xl font-light tracking-tight mt-1">{t("history.title")}</h2>
+            <h2 className="text-2xl font-light tracking-tight mt-1">
+              {t(activeModeId === "hard" ? "history.titleHard" : "history.title")}
+            </h2>
 
-            <div className="mt-5 flex border-b border-[color:var(--color-rule)]">
+            <ModeToggle
+              value={activeModeId}
+              onChange={setActiveModeId}
+              labels={{
+                classic: t("history.mode.classic"),
+                hard: t("history.mode.hard"),
+              }}
+            />
+
+            <div className="mt-4 flex border-b border-[color:var(--color-rule)]">
               <TabButton active={tab === "solves"} onClick={() => setTab("solves")}>
                 {t("history.tabs.solves")}
               </TabButton>
@@ -171,8 +206,8 @@ export function HistoryModal({
                 <div className="grid grid-cols-4 gap-3 text-center">
                   <Stat label={t("history.stats.solved")} value={solvedCount} />
                   <Stat label={t("history.stats.avgMoves")} value={avgMoves} />
-                  <Stat label={t("history.stats.streak")} value={streak.current} />
-                  <Stat label={t("history.stats.best")} value={streak.max} />
+                  <Stat label={t("history.stats.streak")} value={activeStreak.current} />
+                  <Stat label={t("history.stats.best")} value={activeStreak.max} />
                 </div>
 
                 <div className="mt-4">
@@ -188,7 +223,7 @@ export function HistoryModal({
                   ) : (
                     <ul className="divide-y divide-[color:var(--color-rule)]">
                       {entries.map((e) => {
-                        const ms = minSwapsForPuzzle(e.num, mode, locale, epoch);
+                        const ms = minSwapsForPuzzle(e.num, activeMode, locale, epoch);
                         const tierKey = e.result.revealed ? null : getTier(e.result.moves, ms).key;
                         return (
                           <li key={e.num} className="flex items-center justify-between px-2 py-2 text-sm gap-3">
@@ -230,7 +265,7 @@ export function HistoryModal({
                     {pastNums.map((num) => {
                       const date = dateFromPuzzleNumber(num, epoch);
                       const result = resultByNum.get(num);
-                      const ms = result && !result.revealed ? minSwapsForPuzzle(num, mode, locale, epoch) : 1;
+                      const ms = result && !result.revealed ? minSwapsForPuzzle(num, activeMode, locale, epoch) : 1;
                       const tierKey = result && !result.revealed ? getTier(result.moves, ms).key : null;
                       return (
                         <li key={num} className="text-sm">
@@ -276,6 +311,48 @@ export function HistoryModal({
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+// Segmented Classic / Hard switcher. Lives just under the modal title
+// so the player can flip between mode-scoped stats without leaving the
+// modal. Doesn't change which mode the page is rendering — it only
+// scopes the contents of the history view.
+function ModeToggle({
+  value,
+  onChange,
+  labels,
+}: {
+  value: ModeId;
+  onChange: (next: ModeId) => void;
+  labels: { classic: string; hard: string };
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Game mode"
+      className="mt-3 inline-flex rounded-md bg-[color:var(--color-cream)] border border-[color:var(--color-rule)] p-0.5 self-start"
+    >
+      {(["classic", "hard"] as const).map((id) => {
+        const active = id === value;
+        return (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(id)}
+            className={`px-3 py-1 text-xs rounded transition-colors ${
+              active
+                ? "bg-[color:var(--color-paper)] text-[color:var(--color-ink)] shadow-sm"
+                : "text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]"
+            }`}
+          >
+            {labels[id]}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
