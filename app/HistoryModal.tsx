@@ -179,9 +179,7 @@ export function HistoryModal({
             <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
               {t("history.kicker")}
             </p>
-            <h2 className="text-2xl font-light tracking-tight mt-1">
-              {t(activeModeId === "hard" ? "history.titleHard" : "history.title")}
-            </h2>
+            <h2 className="text-2xl font-light tracking-tight mt-1">{t("history.title")}</h2>
 
             <ModeToggle
               value={activeModeId}
