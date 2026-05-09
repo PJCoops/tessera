@@ -558,27 +558,17 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   const demoSelectedTileId =
     demoSelected !== null ? positions[demoSelected]?.id ?? null : null;
 
-  // Per-tile "letter belongs to this row's gold solution" hint, multiset-aware.
-  // Prefer actual home tiles so duplicate letters don't get spuriously hinted.
+  // Per-tile "this tile is on its home row" hint. Earlier rule also dotted
+  // tiles whose letter happened to be useful elsewhere in the current row,
+  // which painted half the board on 4×4 and would be visually noisier on
+  // 5×5. Tightened: only tiles physically on their home row earn the
+  // dot, so the hint actually tells the player something they didn't
+  // already know from the green-row signal.
   const homeHintByIdx = new Array<boolean>(positions.length).fill(false);
-  for (let r = 0; r < N; r++) {
-    const remaining = new Map<string, number>();
-    for (const ch of puzzle.goldRows[r].toUpperCase()) {
-      remaining.set(ch, (remaining.get(ch) ?? 0) + 1);
-    }
-    const order = Array.from({ length: N }, (_, c) => r * N + c).sort((a, b) => {
-      const aHome = Math.floor(positions[a].id / N) === r ? 0 : 1;
-      const bHome = Math.floor(positions[b].id / N) === r ? 0 : 1;
-      return aHome - bHome;
-    });
-    for (const idx of order) {
-      const ch = positions[idx].letter;
-      const left = remaining.get(ch) ?? 0;
-      if (left > 0) {
-        homeHintByIdx[idx] = true;
-        remaining.set(ch, left - 1);
-      }
-    }
+  for (let idx = 0; idx < positions.length; idx++) {
+    const tileRow = Math.floor(positions[idx].id / N);
+    const currentRow = Math.floor(idx / N);
+    if (tileRow === currentRow) homeHintByIdx[idx] = true;
   }
 
   const liveStreak = visibleCurrent(streak, puzzle.num);
