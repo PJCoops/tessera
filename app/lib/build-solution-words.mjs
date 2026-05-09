@@ -67,6 +67,12 @@ const BLOCK = new Set([
   "alef", "alfa", "amah", "anil",
   // 4-letter slang / regional plurals
   "utes",
+  // 4-letter US spellings (Tessera is en-GB; we use UK forms only).
+  // Some have UK equivalents already in the list (GREY, TYRE, DISC) so
+  // dropping the US variant just removes the duplicate. Others (COZY,
+  // MOLD, ODOR, PLOW) have no fitting 4-letter UK equivalent and drop
+  // out entirely; UK forms (cosy, mould, odour, plough) are 5–6 letters.
+  "cozy", "disk", "gray", "mold", "odor", "plow", "tire",
   // 5-letter proper nouns / brand names
   "abbas", "argus", "atlas", "audi", "bates", "bosch",
   "denis", "dukes", "dumas", "earls",
@@ -78,6 +84,14 @@ const BLOCK = new Set([
   // 5-letter loanwords / coopted non-English
   "adieu", "ciao", "entree", "haute", "henri", "jefe", "outre",
   "regis", "salam",
+  // 5-letter US spellings — Tessera is en-GB. Most -or → -our pairs
+  // (COLOUR, HONOUR, etc.) are 6 letters and don't fit a 5×5 grid, so
+  // dropping the US form removes the word entirely from the answer
+  // pool. The -er → -re pairs (METER/METRE, FIBER/FIBRE) have both
+  // forms in our list; blocking the US form leaves the UK alone.
+  "armor", "arbor", "color", "favor", "fiber", "honor", "humor",
+  "labor", "liter", "meter", "rumor", "saber", "tumor", "valor",
+  "vapor", "vigor",
 ]);
 
 // Words that end in -s or -es but aren't plurals — keep them even when
