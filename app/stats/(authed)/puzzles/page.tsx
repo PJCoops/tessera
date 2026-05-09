@@ -7,14 +7,15 @@ import { EXCLUDE } from "../../_lib";
 import {
   Highlight,
   Section,
-  TierBar,
+  TierBarByMode,
   LegendDot,
   Empty,
   TIER_ORDER,
   TIER_BAR_COLORS,
   TIER_SQL,
-  sortTiers,
-  type TierRow,
+  MODE_SQL,
+  groupTiersByMode,
+  type TierByModeRow,
 } from "../../_components";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +30,8 @@ type ExtremeRow = { num: number | null; solves: number; avg_moves: number | null
 
 export default async function PuzzlesStatsPage() {
   let puzzles: PuzzleRow[] = [];
-  let todayTiers: TierRow[] = [];
-  let allTiers: TierRow[] = [];
+  let todayTiers: TierByModeRow[] = [];
+  let allTiers: TierByModeRow[] = [];
   let hardest: ExtremeRow[] = [];
   let easiest: ExtremeRow[] = [];
   let error: string | null = null;
@@ -48,17 +49,17 @@ export default async function PuzzlesStatsPage() {
         ORDER BY num DESC
         LIMIT 14
       `),
-      hogql<TierRow>(`
-        SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
+      hogql<TierByModeRow>(`
+        SELECT ${TIER_SQL} AS tier, ${MODE_SQL} AS mode, toInt(count()) AS solves
         FROM events
         WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
-        GROUP BY tier
+        GROUP BY tier, mode
       `),
-      hogql<TierRow>(`
-        SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
+      hogql<TierByModeRow>(`
+        SELECT ${TIER_SQL} AS tier, ${MODE_SQL} AS mode, toInt(count()) AS solves
         FROM events
         WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
-        GROUP BY tier
+        GROUP BY tier, mode
       `),
       hogql<ExtremeRow>(`
         SELECT toInt(toString(properties.num)) AS num,
@@ -87,10 +88,10 @@ export default async function PuzzlesStatsPage() {
     error = e instanceof Error ? e.message : String(e);
   }
 
-  const todayTiersOrdered = sortTiers(todayTiers);
-  const allTiersOrdered = sortTiers(allTiers);
-  const todayTotal = todayTiersOrdered.reduce((s, r) => s + r.solves, 0);
-  const allTotal = allTiersOrdered.reduce((s, r) => s + r.solves, 0);
+  const todayByMode = groupTiersByMode(todayTiers);
+  const allByMode = groupTiersByMode(allTiers);
+  const todayTotal = todayTiers.reduce((s, r) => s + r.solves, 0);
+  const allTotal = allTiers.reduce((s, r) => s + r.solves, 0);
 
   return (
     <div>
@@ -104,7 +105,7 @@ export default async function PuzzlesStatsPage() {
       ) : (
         <>
           <Section title={`Today's tiers · ${todayTotal} solves`} freshness="live">
-            {todayTotal === 0 ? <Empty /> : <TierBar rows={todayTiersOrdered} total={todayTotal} />}
+            {todayTotal === 0 ? <Empty /> : <TierBarByMode byMode={todayByMode} />}
           </Section>
 
           <Section title="Hardest & easiest · last 30d" freshness="live">
@@ -127,7 +128,7 @@ export default async function PuzzlesStatsPage() {
           </Section>
 
           <Section title={`Tier distribution · last 30d · ${allTotal} solves`} freshness="live">
-            {allTotal === 0 ? <Empty /> : <TierBar rows={allTiersOrdered} total={allTotal} />}
+            {allTotal === 0 ? <Empty /> : <TierBarByMode byMode={allByMode} />}
             <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-[color:var(--color-muted)]">
               {TIER_ORDER.map((t) => (
                 <LegendDot key={t} color={TIER_BAR_COLORS[t]} label={t} />

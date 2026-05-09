@@ -15,7 +15,7 @@ import type { Metadata } from "next";
 import { hogql } from "../../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../../lib/rng";
 import { EXCLUDE } from "../_lib";
-import { Hero, Big, Section, fmt, sortTiers, type TierRow } from "../_components";
+import { Hero, Big, Section, fmt, sortTiers, TIER_SQL, type TierRow } from "../_components";
 import { DailyTrendChart } from "./DailyTrendChart";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
@@ -136,15 +136,7 @@ export default async function StatsOverviewPage() {
       // can show "🏆 X% Legendary · Y% Genius · ..." without
       // double-fetching when someone visits the Overview.
       hogql<TierRow>(`
-        SELECT
-          multiIf(
-            toInt(toString(properties.moves)) <= 10, 'Legendary',
-            toInt(toString(properties.moves)) <= 20, 'Genius',
-            toInt(toString(properties.moves)) <= 35, 'Wordsmith',
-            toInt(toString(properties.moves)) <= 60, 'Persistent',
-            'Tenacious'
-          ) AS tier,
-          toInt(count()) AS solves
+        SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
         FROM events
         WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
         GROUP BY tier

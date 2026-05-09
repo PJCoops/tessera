@@ -5,6 +5,7 @@
 import { TIER_COLORS } from "../lib/tier";
 
 export type TierRow = { tier: string; solves: number };
+export type TierByModeRow = { tier: string; mode: "classic" | "hard"; solves: number };
 export type CohortRow = {
   cohort_week: string;
   cohort_size: number;
@@ -23,17 +24,43 @@ export const TIER_BAR_COLORS: Record<(typeof TIER_ORDER)[number], string> = {
   Persistent: TIER_COLORS.persistent,
   Tenacious: TIER_COLORS.tenacious,
 };
-// HogQL fragment that turns a `properties.moves` count into a tier
-// label. Mirrors the thresholds in lib/tier.ts; if those move, edit
-// here too. Pasted into every tier-bucketing query as `${TIER_SQL}`.
+// HogQL fragment that buckets a `puzzle_solved` event into a tier.
+// Mirrors the thresholds in lib/tier.ts — keep in lockstep.
+//
+// The new tier system is ratio-based (moves / minSwaps); events fired
+// after the analytics extension carry both, so we compute the ratio
+// directly. Events from before that ship don't have minSwaps and fall
+// through to the OLD absolute thresholds — those events were graded
+// against absolutes when the player saw their tier in-app, so this
+// keeps history bands accurate. Once ~30 days of fresh data have
+// accumulated, the legacy branch can be deleted.
 export const TIER_SQL = `
   multiIf(
-    toInt(toString(properties.moves)) <= 10, 'Legendary',
-    toInt(toString(properties.moves)) <= 20, 'Genius',
-    toInt(toString(properties.moves)) <= 35, 'Wordsmith',
-    toInt(toString(properties.moves)) <= 60, 'Persistent',
-    'Tenacious'
+    toIntOrZero(toString(properties.minSwaps)) > 0,
+      multiIf(
+        toFloatOrZero(toString(properties.moves)) / toFloatOrZero(toString(properties.minSwaps)) <= 1.5, 'Legendary',
+        toFloatOrZero(toString(properties.moves)) / toFloatOrZero(toString(properties.minSwaps)) <= 2.5, 'Genius',
+        toFloatOrZero(toString(properties.moves)) / toFloatOrZero(toString(properties.minSwaps)) <= 4.5, 'Wordsmith',
+        toFloatOrZero(toString(properties.moves)) / toFloatOrZero(toString(properties.minSwaps)) <= 7.0, 'Persistent',
+        'Tenacious'
+      ),
+    multiIf(
+      toIntOrZero(toString(properties.moves)) <= 10, 'Legendary',
+      toIntOrZero(toString(properties.moves)) <= 20, 'Genius',
+      toIntOrZero(toString(properties.moves)) <= 35, 'Wordsmith',
+      toIntOrZero(toString(properties.moves)) <= 60, 'Persistent',
+      'Tenacious'
+    )
   )
+`;
+
+// HogQL fragment that resolves the puzzle's mode from event properties,
+// defaulting unknown / pre-launch events to 'classic'. Hard mode shipped
+// with the analytics extension on 2026-05-09; every prior event was a
+// 4×4 puzzle by definition, so the coalesce is provably correct rather
+// than a fudge.
+export const MODE_SQL = `
+  if(toString(properties.mode) IN ('classic', 'hard'), toString(properties.mode), 'classic')
 `;
 
 // Sort tier rows into the canonical order so the bars always read
@@ -180,6 +207,82 @@ export function BarCell({
       <span className="w-8 text-right tabular-nums text-[color:var(--color-ink-soft)]">{value}</span>
     </div>
   );
+}
+
+// Render a tier histogram split by mode — Classic and Hard get
+// separate rows so the player-skill distribution can be compared at
+// a glance. Used for the 5×5-aware /stats/puzzles tier sections.
+// `byMode` is rows keyed by mode; counts are absolute (the bar widths
+// scale to the per-mode total).
+export function TierBarByMode({
+  byMode,
+}: {
+  byMode: { classic: TierRow[]; hard: TierRow[] };
+}) {
+  const totals = {
+    classic: byMode.classic.reduce((s, r) => s + r.solves, 0),
+    hard: byMode.hard.reduce((s, r) => s + r.solves, 0),
+  };
+  return (
+    <div className="space-y-3">
+      {(["classic", "hard"] as const).map((m) => {
+        const rows = byMode[m];
+        const total = totals[m];
+        const label = m === "classic" ? "Classic" : "Hard";
+        return (
+          <div key={m}>
+            <div className="flex items-baseline justify-between mb-1.5">
+              <span className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
+                {label}
+              </span>
+              <span className="text-[10px] tabular-nums text-[color:var(--color-muted)]">
+                {total} solve{total === 1 ? "" : "s"}
+              </span>
+            </div>
+            {total === 0 ? (
+              <div className="h-6 rounded-md border border-dashed border-[color:var(--color-rule)] flex items-center px-2">
+                <span className="text-[10px] text-[color:var(--color-muted)] italic">
+                  No data yet
+                </span>
+              </div>
+            ) : (
+              <div className="flex w-full h-6 rounded-md overflow-hidden border border-[color:var(--color-rule)]">
+                {rows.map((r) => {
+                  const pct = total ? (r.solves / total) * 100 : 0;
+                  if (pct === 0) return null;
+                  return (
+                    <div
+                      key={r.tier}
+                      title={`${r.tier}: ${r.solves} (${pct.toFixed(0)}%)`}
+                      style={{
+                        width: `${pct}%`,
+                        background:
+                          TIER_BAR_COLORS[r.tier as keyof typeof TIER_BAR_COLORS],
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Group flat TierByModeRow[] into the shape TierBarByMode expects, with
+// every tier slot present (zero-filled) so legend ordering stays stable.
+export function groupTiersByMode(rows: TierByModeRow[]): {
+  classic: TierRow[];
+  hard: TierRow[];
+} {
+  const out = { classic: [] as TierRow[], hard: [] as TierRow[] };
+  for (const m of ["classic", "hard"] as const) {
+    const filtered = rows.filter((r) => r.mode === m);
+    out[m] = sortTiers(filtered.map((r) => ({ tier: r.tier, solves: r.solves })));
+  }
+  return out;
 }
 
 export function TierBar({ rows, total }: { rows: TierRow[]; total: number }) {

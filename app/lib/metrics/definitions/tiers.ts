@@ -1,18 +1,32 @@
 // Tier distribution. Drives the colour-banded bar that shows how
 // today's (and last-30-day's) solves split across the five tiers.
-// Tier thresholds duplicate `app/lib/tier.ts`; change them here in
-// lockstep.
+// Mirrors `TIER_SQL` in `app/stats/_components.tsx` — keep in lockstep.
+//
+// Ratio-based bands: events fired after the analytics extension carry
+// both `moves` and `minSwaps`, so we compute the ratio directly.
+// Pre-extension events fall through to the old absolute thresholds
+// since that's what graded them in-app at the time.
 
 import type { MetricDef } from "../types";
 import type { TimeWindowKey } from "../time-windows";
 
 const TIER_SQL = `
   multiIf(
-    toInt(toString(properties.moves)) <= 10, 'Legendary',
-    toInt(toString(properties.moves)) <= 20, 'Genius',
-    toInt(toString(properties.moves)) <= 35, 'Wordsmith',
-    toInt(toString(properties.moves)) <= 60, 'Persistent',
-    'Tenacious'
+    toIntOrZero(toString(properties.minSwaps)) > 0,
+      multiIf(
+        toFloatOrZero(toString(properties.moves)) / toFloatOrZero(toString(properties.minSwaps)) <= 1.5, 'Legendary',
+        toFloatOrZero(toString(properties.moves)) / toFloatOrZero(toString(properties.minSwaps)) <= 2.5, 'Genius',
+        toFloatOrZero(toString(properties.moves)) / toFloatOrZero(toString(properties.minSwaps)) <= 4.5, 'Wordsmith',
+        toFloatOrZero(toString(properties.moves)) / toFloatOrZero(toString(properties.minSwaps)) <= 7.0, 'Persistent',
+        'Tenacious'
+      ),
+    multiIf(
+      toIntOrZero(toString(properties.moves)) <= 10, 'Legendary',
+      toIntOrZero(toString(properties.moves)) <= 20, 'Genius',
+      toIntOrZero(toString(properties.moves)) <= 35, 'Wordsmith',
+      toIntOrZero(toString(properties.moves)) <= 60, 'Persistent',
+      'Tenacious'
+    )
   )
 `;
 
