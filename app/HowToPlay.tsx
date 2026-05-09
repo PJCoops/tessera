@@ -573,6 +573,7 @@ function CreditsContent() {
         </h3>
         <ul className="mt-2 space-y-1 text-[color:var(--color-ink-soft)]">
           <li>Christine Banfield</li>
+          <li>Simon Bradley</li>
           <li>Don Brown</li>
           <li>Alison Burd</li>
           <li>Stanley Cooper</li>
