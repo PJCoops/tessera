@@ -15,7 +15,9 @@
 // stripping, multiple source words can collapse onto the same key
 // (e.g. "ano"+"año"); de-duplication keeps the first.
 //
-// Run: node app/lib/build-words-es.mjs
+// Run:
+//   node app/lib/build-words-es.mjs            (length 4, default)
+//   LENGTH=5 node app/lib/build-words-es.mjs   (length 5)
 
 import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -28,8 +30,16 @@ const FREQ_SOURCE =
 const DICT_SOURCE =
   "https://raw.githubusercontent.com/words/an-array-of-spanish-words/HEAD/index.json";
 
+const LENGTH = Number(process.env.LENGTH ?? "4");
+if (LENGTH !== 4 && LENGTH !== 5) {
+  console.error(`Unsupported LENGTH=${LENGTH}; pass LENGTH=4 or LENGTH=5`);
+  process.exit(1);
+}
+
 const SOLUTION_TARGET = 2000;
-const WORDS_TARGET = 5000; // upper bound; will be capped by dictionary size
+const WORDS_TARGET = 5000;
+const SOLUTION_OUT = LENGTH === 4 ? "solution-words-es.json" : `solution-words-es-${LENGTH}.json`;
+const WORDS_OUT = LENGTH === 4 ? "words-es.json" : `words-es-${LENGTH}.json`;
 
 function normalise(word) {
   const stripped = word
@@ -74,6 +84,21 @@ const BLOCK = new Set([
   // Highly regional or archaic terms that don't read well as a daily
   // puzzle answer.
   "rola", "naos", "ichu", "icho",
+  // 5-letter proper nouns (names + places that ride high in Spanish
+  // Wikipedia frequency).
+  "ariel", "boris", "felix", "henri", "jaime", "jesus", "jorge",
+  "judas", "julio", "lucas", "mario", "marta", "mateo", "ramon",
+  "rocio", "paris", "venus",
+]);
+
+// Spanish words that end in -s but aren't plurals (Greek/Latin
+// loanwords, days of the week, fixed-form singulars).
+const NOT_REALLY_PLURALS = new Set([
+  // 4-letter
+  "tres", "iris", "ases" /* feels plural-ish; keep aside */,
+  // 5-letter
+  "atlas", "lunes", "fenix", "tesis", "crisis", "dosis", "iris",
+  "venus" /* but blocked elsewhere as proper noun */,
 ]);
 
 async function loadCachedOrFetch(cachePath, url) {
@@ -92,27 +117,46 @@ async function loadCachedOrFetch(cachePath, url) {
   return text;
 }
 
-// 1. Load Spanish dictionary, filter to normalised 4-letter words. Track
-//    the original accented form alongside each normalised key so
-//    downstream tools (definitions cache, future Spanish dictionary
-//    lookups) can hit Wiktionary at the right URL — "acné" not "acne".
+// 1. Load Spanish dictionary. Build two views:
+//      a) SPANISH       — normalised words at the chosen LENGTH (the
+//                         pool we can pick solutions from).
+//      b) STEM_DICT     — every normalised word at any length (used
+//                         to detect plural stems: gato → gatos).
+//    Accent-stripped originals are tracked alongside the LENGTH-N view
+//    so downstream tools (Spanish definitions cache, Wiktionary
+//    lookups) can hit "acné" rather than "acne".
 const dictRaw = await loadCachedOrFetch(
   join(here, ".dict-cache-es.json"),
   DICT_SOURCE
 );
 const dictArr = JSON.parse(dictRaw);
 const SPANISH = new Set();
+const STEM_DICT = new Set();
 const ACCENTED = new Map(); // normalised key → first-seen accented original
 for (const w of dictArr) {
   const n = normalise(w);
-  if (n && n.length === 4) {
+  if (!n) continue;
+  STEM_DICT.add(n);
+  if (n.length === LENGTH) {
     SPANISH.add(n);
     if (!ACCENTED.has(n)) ACCENTED.set(n, w.toLowerCase());
   }
 }
 console.log(
-  `Spanish dictionary: ${dictArr.length} entries, ${SPANISH.size} normalised 4-letter words`
+  `Spanish dictionary: ${dictArr.length} entries, ${SPANISH.size} normalised ${LENGTH}-letter words`
 );
+
+function isLikelyPlural(word) {
+  if (NOT_REALLY_PLURALS.has(word)) return false;
+  if (!word.endsWith("s")) return false;
+  const stem1 = word.slice(0, -1);
+  if (stem1.length >= 3 && STEM_DICT.has(stem1)) return true;
+  if (word.endsWith("es")) {
+    const eStem = word.slice(0, -2);
+    if (eStem.length >= 3 && STEM_DICT.has(eStem)) return true;
+  }
+  return false;
+}
 
 // 2. Load frequency list (drives ordering).
 const freqRaw = await loadCachedOrFetch(
@@ -120,45 +164,53 @@ const freqRaw = await loadCachedOrFetch(
   FREQ_SOURCE
 );
 
-// 3. Walk the frequency list. Keep distinct normalised 4-letter words
-//    that ALSO appear in the Spanish dictionary and aren't blocklisted.
+// 3. Walk the frequency list. Keep distinct normalised LENGTH-letter
+//    words that appear in the Spanish dictionary, aren't blocklisted,
+//    and don't look like plurals.
 const ordered = [];
 const seen = new Set();
+let droppedBlocked = 0;
+let droppedPlurals = 0;
 for (const line of freqRaw.split(/\r?\n/)) {
   const raw = line.split(/\s+/, 1)[0];
   if (!raw) continue;
   const w = normalise(raw);
   if (!w) continue;
-  if (w.length !== 4) continue;
+  if (w.length !== LENGTH) continue;
   if (seen.has(w)) continue;
-  if (BLOCK.has(w)) continue;
+  if (BLOCK.has(w)) { droppedBlocked++; continue; }
   if (!SPANISH.has(w)) continue;
+  if (isLikelyPlural(w)) { droppedPlurals++; continue; }
   seen.add(w);
   ordered.push(w);
 }
-console.log(`Intersection: ${ordered.length} frequency-ranked Spanish words`);
+console.log(
+  `Intersection: ${ordered.length} frequency-ranked Spanish words ` +
+    `(dropped ${droppedBlocked} blocked, ${droppedPlurals} plurals)`
+);
 
 // 4. Top-N for solutions; broader pool for validation. If the
 //    intersection is smaller than the target, take everything.
 const solution = ordered.slice(0, SOLUTION_TARGET).sort();
 const words = ordered.slice(0, Math.min(WORDS_TARGET, ordered.length)).sort();
 
-writeFileSync(join(here, "solution-words-es.json"), JSON.stringify(solution));
-writeFileSync(join(here, "words-es.json"), JSON.stringify(words));
-console.log(`Wrote ${solution.length} solution words → solution-words-es.json`);
-console.log(`Wrote ${words.length} validation words → words-es.json`);
+writeFileSync(join(here, SOLUTION_OUT), JSON.stringify(solution));
+writeFileSync(join(here, WORDS_OUT), JSON.stringify(words));
+console.log(`Wrote ${solution.length} solution words → ${SOLUTION_OUT}`);
+console.log(`Wrote ${words.length} validation words → ${WORDS_OUT}`);
 
-// Sidecar map: normalised → accented form. Used only by the definitions
-// builder (and any future Spanish dictionary integration); not loaded at
-// runtime.
-const accentedMap = {};
-for (const w of words) {
-  if (ACCENTED.has(w)) accentedMap[w] = ACCENTED.get(w);
+// Sidecar accented-form map only makes sense for the 4-letter build,
+// since the definitions builder is keyed off solution-words-es.json.
+if (LENGTH === 4) {
+  const accentedMap = {};
+  for (const w of words) {
+    if (ACCENTED.has(w)) accentedMap[w] = ACCENTED.get(w);
+  }
+  writeFileSync(
+    join(here, "accented-map-es.json"),
+    JSON.stringify(accentedMap)
+  );
+  console.log(
+    `Wrote ${Object.keys(accentedMap).length} accented-form entries → accented-map-es.json`
+  );
 }
-writeFileSync(
-  join(here, "accented-map-es.json"),
-  JSON.stringify(accentedMap)
-);
-console.log(
-  `Wrote ${Object.keys(accentedMap).length} accented-form entries → accented-map-es.json`
-);

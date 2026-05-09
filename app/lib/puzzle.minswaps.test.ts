@@ -104,7 +104,10 @@ describe("computeMinSwaps — generated puzzles", () => {
       expect(minSwaps).toBe(computeMinSwaps(startTiles, goldRows));
       expect(minSwaps).toBeGreaterThanOrEqual(1);
       expect(minSwaps).toBeLessThanOrEqual(18);
-    }
+    },
+    // 5×5 gold-grid search can take a few seconds on the harder seeds
+    // after the curated word list got smaller. Default 5s is too tight.
+    20000
   );
 
   it("scramble of K random swaps is solvable in ≤ K swaps", () => {
