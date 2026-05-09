@@ -79,8 +79,8 @@ const BLOCK = new Set([
   "honda", "irons", "jesse", "jesus", "joans", "johns",
   "jones", "judas", "judah", "lewis", "linda", "louis", "mayas",
   "miles", "minas", "obama", "paris", "pesos",
-  "santa", "scots", "shahs", "swiss", "syria", "sykes", "texas",
-  "trump", "turks", "venus", "wigan",
+  "santa", "scots", "shahs", "sucre", "swiss", "syria", "sykes",
+  "texas", "trump", "turks", "venus", "wigan",
   // 5-letter loanwords / coopted non-English
   "adieu", "ciao", "entree", "haute", "henri", "jefe", "outre",
   "regis", "salam",
