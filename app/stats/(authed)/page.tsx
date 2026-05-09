@@ -15,7 +15,7 @@ import type { Metadata } from "next";
 import { hogql } from "../../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../../lib/rng";
 import { EXCLUDE } from "../_lib";
-import { Hero, Big, Section, fmt, sortTiers, TIER_SQL, type TierRow } from "../_components";
+import { Hero, Big, Section, fmt, sortTiers, TIER_SQL, MODE_SQL, type TierRow } from "../_components";
 import { DailyTrendChart } from "./DailyTrendChart";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
@@ -121,6 +121,12 @@ export default async function StatsOverviewPage() {
         GROUP BY day
         ORDER BY day ASC
       `),
+      // Today's per-puzzle stats. Scoped to Classic only because the
+      // social blurb below is the shareable broad-audience copy and
+      // pooling Hard solves into "fastest 8 moves" reads weirdly
+      // (Hard's 8-move solve is exceptional; Classic's 8-move solve
+      // is a more relatable headline number). A Hard-specific blurb
+      // can come later if it's worth shipping.
       hogql<TodayRow>(`
         SELECT toInt(toString(properties.num)) AS num,
           toInt(count()) AS solves,
@@ -129,16 +135,19 @@ export default async function StatsOverviewPage() {
           toInt(countIf(toString(properties.bonus) = 'true')) AS bonus,
           toInt(max(toInt(toString(properties.streak)))) AS top_streak
         FROM events
-        WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
+        WHERE event = 'puzzle_solved'
+          AND toDate(timestamp) = today()
+          AND ${MODE_SQL} = 'classic'${EXCLUDE}
         GROUP BY num
       `),
-      // Today's tier rows are still needed here so the social blurb
-      // can show "🏆 X% Legendary · Y% Genius · ..." without
-      // double-fetching when someone visits the Overview.
+      // Today's tier rows feed the social blurb's "🏆 X% Legendary
+      // · ..." line. Same mode-scoping rationale: blurb is Classic.
       hogql<TierRow>(`
         SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
         FROM events
-        WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
+        WHERE event = 'puzzle_solved'
+          AND toDate(timestamp) = today()
+          AND ${MODE_SQL} = 'classic'${EXCLUDE}
         GROUP BY tier
       `),
       hogql<SummaryRow>(`
