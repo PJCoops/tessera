@@ -580,6 +580,7 @@ function CreditsContent() {
           <li>Stefan Kay</li>
           <li>Brett Pandora</li>
           <li>Richard Pattie</li>
+          <li>Cleo Schneider</li>
           <li>Alex Watson</li>
         </ul>
       </section>
