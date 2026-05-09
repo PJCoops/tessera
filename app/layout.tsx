@@ -3,7 +3,7 @@ import Script from "next/script";
 import { headers } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
 import { PHProvider } from "./lib/posthog-provider";
-import { MetaPixelHead, MetaPixelNoScript } from "./lib/meta-pixel";
+import { MetaPixel, MetaPixelNoScript } from "./lib/meta-pixel";
 import { XPixel } from "./lib/x-pixel";
 import "./globals.css";
 
@@ -102,10 +102,10 @@ export default async function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
-        {!isStats && <MetaPixelHead />}
       </head>
       <body className="min-h-full flex flex-col">
         {!isStats && <MetaPixelNoScript />}
+        {!isStats && <MetaPixel />}
         {!isStats && <XPixel />}
         {isStats ? (
           <main className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
