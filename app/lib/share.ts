@@ -5,6 +5,9 @@ import { CLASSIC, type ModeConfig, type ModeId } from "./mode";
 export type ShareInput = {
   puzzleNumber: number;
   moves: number;
+  // The puzzle's exact minimum number of swaps. Required for tier
+  // computation under the ratio-based system.
+  minSwaps: number;
   streak: number;
   bonus?: boolean;
   revealed?: boolean;
@@ -120,6 +123,7 @@ export function buildSharePayload(input: ShareInput): {
   const {
     puzzleNumber,
     moves,
+    minSwaps,
     streak,
     bonus = false,
     revealed = false,
@@ -127,7 +131,7 @@ export function buildSharePayload(input: ShareInput): {
     dict,
     mode = CLASSIC,
   } = input;
-  const tier = getTier(moves, mode.tiers);
+  const tier = getTier(moves, minSwaps);
   const tierName = t(dict, `tiers.${tier.key}`);
   const tierEmoji = TIER_EMOJI[tier.key] ?? "";
   const swapWord = t(dict, moves === 1 ? "game.swapSingular" : "game.swapPlural");

@@ -3,6 +3,19 @@ import { parseShareSlug, buildShareSlug, type ShareSlug } from "./share";
 import { getTier } from "./tier";
 import { getDictionary, t, type Locale } from "./i18n";
 import { modeById, CLASSIC } from "./mode";
+import { generateDailyPuzzleFor } from "./puzzle";
+import { dateFromPuzzleNumber, seedFromDate } from "./rng";
+import { EPOCH } from "./epoch";
+
+// Recompute the minSwaps for a historical puzzle on demand. Slugs
+// don't carry minSwaps (we want them short) and OG metadata is only
+// rendered occasionally + cached by Next, so the regen cost is fine.
+function minSwapsForShare(slug: ShareSlug, locale: Locale): number {
+  const mode = slug.mode ? modeById(slug.mode) : CLASSIC;
+  const date = dateFromPuzzleNumber(slug.num, EPOCH);
+  const { minSwaps } = generateDailyPuzzleFor(locale, seedFromDate(date), mode.swaps, mode.N);
+  return minSwaps;
+}
 
 // Build OG/Twitter metadata for a share slug. Used by both the path-based
 // /s/[slug] route and the legacy ?s= query handlers on the home pages.
@@ -28,7 +41,7 @@ export function buildShareMetadata(
 
   if (locale === "es") {
     const moveWord = (n: number) => (n === 1 ? "movimiento" : "movimientos");
-    const tierName = moves !== null ? t(dict, `tiers.${getTier(moves, mode.tiers).key}`) : "";
+    const tierName = moves !== null ? t(dict, `tiers.${getTier(moves, minSwapsForShare(slug, locale)).key}`) : "";
     const title = revealed
       ? `Tessera #${num}${titleSuffix} · solución revelada`
       : moves !== null
@@ -59,7 +72,7 @@ export function buildShareMetadata(
   }
 
   const swapWord = (n: number) => (n === 1 ? "swap" : "swaps");
-  const tierName = moves !== null ? t(dict, `tiers.${getTier(moves, mode.tiers).key}`) : "";
+  const tierName = moves !== null ? t(dict, `tiers.${getTier(moves, minSwapsForShare(slug, locale)).key}`) : "";
   const title = revealed
     ? `Tessera #${num}${titleSuffix} · revealed`
     : moves !== null

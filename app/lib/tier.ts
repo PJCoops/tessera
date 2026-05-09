@@ -1,36 +1,33 @@
-// Tier keys by move count when a player solves Tessera. Edit ranges/keys
-// here to retune; `getTier` returns the highest tier whose `max` covers the
-// given move count (Infinity catches the bottom tier).
+// Tier keys by ratio of moves taken to the puzzle's exact min-swap
+// count. Calibrated against ~290 production solves on the clean cohort
+// (puzzles 10–12); see tasks/tier-rework-and-hint-tightening.md for
+// the data and the reasoning behind 1.5 / 2.5 / 4.5 / 7.0.
 //
-// `key` is locale-independent and is used to look up the display name in
-// each locale's dictionary (tiers.<key>) and the share emoji in share.ts.
-// Keep it stable — share URLs depend on it implicitly via the headline copy.
+// The same bands cover both 4×4 and 5×5 because the ratio normalises
+// out grid size — Legendary on Hard means the same thing it does on
+// Classic ("near-optimal play"). After ~30 days of 5×5 data we'll
+// re-pull the distribution and decide whether mode-specific bands
+// are warranted.
+//
+// `key` is locale-independent; locale display names live in each
+// locale dictionary under `tiers.<key>`. Keep keys stable — share
+// URLs implicitly depend on them via the headline copy.
 export type TierKey = "legendary" | "genius" | "wordsmith" | "persistent" | "tenacious";
-export type Tier = { key: TierKey; max: number };
+export type Tier = { key: TierKey; maxRatio: number };
 
-// 4×4 thresholds. 8 words across 16 tiles.
 export const TIERS: readonly Tier[] = [
-  { key: "legendary", max: 10 },
-  { key: "genius", max: 20 },
-  { key: "wordsmith", max: 35 },
-  { key: "persistent", max: 60 },
-  { key: "tenacious", max: Infinity },
+  { key: "legendary", maxRatio: 1.5 },
+  { key: "genius", maxRatio: 2.5 },
+  { key: "wordsmith", maxRatio: 4.5 },
+  { key: "persistent", maxRatio: 7.0 },
+  { key: "tenacious", maxRatio: Infinity },
 ];
 
-// 5×5 thresholds. 10 words across 25 tiles. Roughly 1.4× the 4×4 budget,
-// scaled with the larger search space; tune after playtesting.
-export const TIERS_HARD: readonly Tier[] = [
-  { key: "legendary", max: 14 },
-  { key: "genius", max: 28 },
-  { key: "wordsmith", max: 50 },
-  { key: "persistent", max: 85 },
-  { key: "tenacious", max: Infinity },
-];
-
-// Single source of truth for tier colors. Used by the history modal chart,
-// the stats page, and any other tier swatch. Keep in sync with the game
-// tile colors in TesseraGame.tsx (legendary should match the "correct"
-// tile, genius should match the "valid row" tile).
+// Single source of truth for tier colors. Used by the history modal
+// chart, the stats page, and any other tier swatch. Keep in sync
+// with the game tile colors in TesseraGame.tsx (legendary should
+// match the "correct" tile, genius should match the "valid row"
+// tile).
 export const TIER_COLORS: Record<TierKey, string> = {
   legendary: "#b85a1c",
   genius: "#7a9070",
@@ -39,7 +36,15 @@ export const TIER_COLORS: Record<TierKey, string> = {
   tenacious: "#7a6f8a",
 };
 
-export function getTier(moves: number, tiers: readonly Tier[] = TIERS): Tier {
-  for (const t of tiers) if (moves <= t.max) return t;
-  return tiers[tiers.length - 1];
+// Tier from a player's solve. `minSwaps` is the puzzle's exact
+// optimum (computed by puzzle.ts); `moves` is what the player
+// actually used. Edge case: minSwaps === 0 means the start position
+// was already solved (should never happen in production thanks to
+// startIsLegal) — bucket as Legendary so the UI doesn't divide by
+// zero.
+export function getTier(moves: number, minSwaps: number): Tier {
+  if (minSwaps <= 0) return TIERS[0];
+  const ratio = moves / minSwaps;
+  for (const t of TIERS) if (ratio <= t.maxRatio) return t;
+  return TIERS[TIERS.length - 1];
 }

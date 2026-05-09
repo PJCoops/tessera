@@ -2,15 +2,41 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { dateFromPuzzleNumber, puzzleNumber, todayUtc } from "./lib/rng";
+import { dateFromPuzzleNumber, puzzleNumber, seedFromDate, todayUtc } from "./lib/rng";
 import type { Streak } from "./lib/streak";
-import { TIER_COLORS, getTier, type Tier } from "./lib/tier";
+import { TIERS, TIER_COLORS, getTier } from "./lib/tier";
+import { generateDailyPuzzleFor } from "./lib/puzzle";
 import { useLocale } from "./lib/locale-context";
 import { CLASSIC, homePath, type ModeConfig } from "./lib/mode";
+import type { Locale } from "./lib/i18n";
 
 type Result = { moves: number; bonus: boolean; completedAt: number; revealed?: boolean };
 
 type Entry = { num: number; date: string; result: Result };
+
+// Cached minSwaps lookup keyed by `${locale}:${mode.id}:${num}`. Each
+// puzzle regeneration runs findGoldGrid + computeMinSwaps which is
+// cheap individually but adds up over a long history; cache so we
+// only pay once per (mode, num) per session.
+const minSwapsCache = new Map<string, number>();
+
+function minSwapsForPuzzle(num: number, mode: ModeConfig, locale: Locale, epoch: string): number {
+  const key = `${locale}:${mode.id}:${num}`;
+  const cached = minSwapsCache.get(key);
+  if (cached !== undefined) return cached;
+  try {
+    const date = dateFromPuzzleNumber(num, epoch);
+    const { minSwaps } = generateDailyPuzzleFor(locale, seedFromDate(date), mode.swaps, mode.N);
+    minSwapsCache.set(key, minSwaps);
+    return minSwaps;
+  } catch {
+    // Regeneration can fail for a puzzle whose words have been pruned
+    // since the player solved it. Fall back to a conservative tier
+    // (1) so the row still renders a Tenacious badge rather than
+    // crashing.
+    return 1;
+  }
+}
 
 function readAllResults(epoch: string, prefix: string): Entry[] {
   if (typeof window === "undefined") return [];
@@ -70,11 +96,12 @@ export function HistoryModal({
   const tierCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const e of solved) {
-      const k = getTier(e.result.moves, mode.tiers).key;
+      const ms = minSwapsForPuzzle(e.num, mode, locale, epoch);
+      const k = getTier(e.result.moves, ms).key;
       counts.set(k, (counts.get(k) ?? 0) + 1);
     }
     return counts;
-  }, [solved, mode.tiers]);
+  }, [solved, mode, locale, epoch]);
 
   // The "All puzzles" tab lists every past puzzle (#1 → today − 1) so
   // players can replay anything they missed. Each row links to ?day=...
@@ -150,7 +177,7 @@ export function HistoryModal({
 
                 <div className="mt-4">
                   <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] mb-2">{t("history.byTier")}</p>
-                  <TierDistribution tierCounts={tierCounts} tiers={mode.tiers} t={t} />
+                  <TierDistribution tierCounts={tierCounts} t={t} />
                 </div>
 
                 <div className="mt-6 flex-1 overflow-y-auto -mx-2">
@@ -161,7 +188,8 @@ export function HistoryModal({
                   ) : (
                     <ul className="divide-y divide-[color:var(--color-rule)]">
                       {entries.map((e) => {
-                        const tierKey = e.result.revealed ? null : getTier(e.result.moves, mode.tiers).key;
+                        const ms = minSwapsForPuzzle(e.num, mode, locale, epoch);
+                        const tierKey = e.result.revealed ? null : getTier(e.result.moves, ms).key;
                         return (
                           <li key={e.num} className="flex items-center justify-between px-2 py-2 text-sm gap-3">
                             <span className="text-[color:var(--color-muted)] tabular-nums whitespace-nowrap">
@@ -202,7 +230,8 @@ export function HistoryModal({
                     {pastNums.map((num) => {
                       const date = dateFromPuzzleNumber(num, epoch);
                       const result = resultByNum.get(num);
-                      const tierKey = result && !result.revealed ? getTier(result.moves, mode.tiers).key : null;
+                      const ms = result && !result.revealed ? minSwapsForPuzzle(num, mode, locale, epoch) : 1;
+                      const tierKey = result && !result.revealed ? getTier(result.moves, ms).key : null;
                       return (
                         <li key={num} className="text-sm">
                           <a
@@ -284,17 +313,15 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 function TierDistribution({
   tierCounts,
-  tiers,
   t,
 }: {
   tierCounts: Map<string, number>;
-  tiers: readonly Tier[];
   t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   const max = Math.max(1, ...Array.from(tierCounts.values()));
   return (
     <ul className="space-y-1">
-      {tiers.map((tier) => {
+      {TIERS.map((tier) => {
         const count = tierCounts.get(tier.key) ?? 0;
         const pct = count === 0 ? 0 : Math.max(8, (count / max) * 100);
         return (

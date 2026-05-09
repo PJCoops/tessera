@@ -1,4 +1,3 @@
-import { TIERS, TIERS_HARD, type Tier } from "./tier";
 import type { Locale } from "./i18n";
 
 export type ModeId = "classic" | "hard";
@@ -8,6 +7,10 @@ export type ModeId = "classic" | "hard";
 // constant is read in server components and passed as a prop into the
 // client `<TesseraGame>`, and Next.js refuses to serialise functions
 // across that boundary.
+//
+// Note: there's no per-mode `tiers` field. As of the ratio-based tier
+// rework, both modes share a single global TIERS in tier.ts; the ratio
+// (moves / minSwaps) normalises out grid size.
 export type ModeConfig = {
   id: ModeId;
   N: number;
@@ -15,7 +18,6 @@ export type ModeConfig = {
   resultPrefix: string;
   progressPrefix: string;
   streakKey: string;
-  tiers: readonly Tier[];
 };
 
 export const CLASSIC: ModeConfig = {
@@ -25,7 +27,6 @@ export const CLASSIC: ModeConfig = {
   resultPrefix: "tessera:result:",
   progressPrefix: "tessera:progress:",
   streakKey: "tessera:streak",
-  tiers: TIERS,
 };
 
 export const HARD: ModeConfig = {
@@ -37,7 +38,6 @@ export const HARD: ModeConfig = {
   resultPrefix: "tessera:hard:result:",
   progressPrefix: "tessera:hard:progress:",
   streakKey: "tessera:hard:streak",
-  tiers: TIERS_HARD,
 };
 
 export function modeById(id: ModeId): ModeConfig {

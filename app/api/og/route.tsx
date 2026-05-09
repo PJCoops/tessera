@@ -17,6 +17,9 @@ import path from "path";
 import { getTier } from "../../lib/tier";
 import { getDictionary, t } from "../../lib/i18n";
 import { CLASSIC, HARD } from "../../lib/mode";
+import { generateDailyPuzzleFor } from "../../lib/puzzle";
+import { dateFromPuzzleNumber, seedFromDate } from "../../lib/rng";
+import { EPOCH } from "../../lib/epoch";
 
 // OG cards are shared cross-locale and have no locale signal in the
 // share URL, so they always render in English. If we add locale to the
@@ -72,7 +75,19 @@ export async function GET(req: Request) {
   //   revealed          → cream (empty)
   const pattern = buildPattern({ revealed, bonus, N: mode.N });
 
-  const tierKey = m !== null ? getTier(m, mode.tiers).key : null;
+  // Recompute the puzzle's minSwaps so the tier band matches what the
+  // player saw when they solved. Cheap on a per-OG basis; Next caches
+  // the response.
+  let tierKey: string | null = null;
+  if (m !== null) {
+    try {
+      const date = dateFromPuzzleNumber(n, EPOCH);
+      const { minSwaps } = generateDailyPuzzleFor("en", seedFromDate(date), mode.swaps, mode.N);
+      tierKey = getTier(m, minSwaps).key;
+    } catch {
+      tierKey = null;
+    }
+  }
   const tierName = tierKey ? t(ogDict, `tiers.${tierKey}`) : null;
   const tierEmoji = tierKey ? TIER_EMOJI[tierKey] ?? "" : "";
 

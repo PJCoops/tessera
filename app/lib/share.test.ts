@@ -74,6 +74,7 @@ describe("buildSharePayload", () => {
     const out = buildSharePayload({
       puzzleNumber: 8,
       moves: 12,
+      minSwaps: 6,
       streak: 3,
       bonus: false,
       revealed: false,
@@ -90,6 +91,7 @@ describe("buildSharePayload", () => {
     const out = buildSharePayload({
       puzzleNumber: 8,
       moves: 12,
+      minSwaps: 6,
       streak: 0,
       bonus: false,
       revealed: false,
@@ -103,6 +105,7 @@ describe("buildSharePayload", () => {
     const out = buildSharePayload({
       puzzleNumber: 8,
       moves: 12,
+      minSwaps: 6,
       streak: 0,
       bonus: true,
       revealed: false,
@@ -117,6 +120,7 @@ describe("buildSharePayload", () => {
     const out = buildSharePayload({
       puzzleNumber: 8,
       moves: 12,
+      minSwaps: 6,
       streak: 0,
       bonus: false,
       revealed: true,
@@ -132,6 +136,7 @@ describe("buildSharePayload", () => {
     const out = buildSharePayload({
       puzzleNumber: 8,
       moves: 18,
+      minSwaps: 9,
       streak: 0,
       bonus: false,
       revealed: false,

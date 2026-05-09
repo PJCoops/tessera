@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { DEMO_GRID, generateDailyPuzzleFor, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
+import { DEMO_GRID, computeMinSwaps, generateDailyPuzzleFor, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
 import { seedFromDate, todayUtc } from "./lib/rng";
 import { EPOCH } from "./lib/epoch";
 import { resolvePuzzleFromParams } from "./lib/replay";
@@ -198,6 +198,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     date: string;
     startTiles: Tile[];
     goldRows: string[];
+    minSwaps: number;
     forceSolved: boolean;
     demo: boolean;
     replay: boolean;
@@ -240,19 +241,22 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
 
     let goldRows: string[];
     let startTiles: Tile[];
+    let minSwaps: number;
     // Demo mode is classic-only — DEMO_GRID is a 4×4 grid. On hard mode
     // the demo flag is treated as a no-op and we render the daily.
     const useDemo = demo && N === 4;
     if (useDemo) {
       goldRows = [...DEMO_GRID];
       startTiles = forceSolved ? tilesFromRows(goldRows) : scrambleGoldRows(goldRows, 42);
+      minSwaps = forceSolved ? 0 : computeMinSwaps(startTiles, goldRows);
     } else {
       const generated = generateDailyPuzzleFor(locale, seed, mode.swaps, N);
       goldRows = generated.goldRows;
       startTiles = forceSolved ? tilesFromRows(goldRows) : generated.startTiles;
+      minSwaps = forceSolved ? 0 : generated.minSwaps;
     }
 
-    setPuzzle({ num, date, startTiles, goldRows, forceSolved, demo: useDemo, replay });
+    setPuzzle({ num, date, startTiles, goldRows, minSwaps, forceSolved, demo: useDemo, replay });
 
     // Demo, force-solved, and replay modes are isolated from real player
     // state — no stored result, no progress restore, no streak interaction,
@@ -591,6 +595,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     ? buildSharePayload({
         puzzleNumber: puzzle.num,
         moves: shareSrc.moves,
+        minSwaps: puzzle.minSwaps,
         streak: liveStreak,
         bonus: shareSrc.bonus,
         revealed: shareSrc.revealed,
@@ -714,7 +719,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
               if (storedResult) {
                 return (
                   <motion.span key="stored" {...rollProps} className="block">
-                    <SolvedStatus moves={storedResult.moves} mode={mode} />
+                    <SolvedStatus moves={storedResult.moves} minSwaps={puzzle.minSwaps} />
                   </motion.span>
                 );
               }
@@ -728,7 +733,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
               if (validity.isSolved && solvedAt !== null) {
                 return (
                   <motion.span key="solvedat" {...rollProps} className="block">
-                    <SolvedStatus moves={solvedAt} mode={mode} />
+                    <SolvedStatus moves={solvedAt} minSwaps={puzzle.minSwaps} />
                   </motion.span>
                 );
               }
@@ -1023,9 +1028,9 @@ function tileClasses(rowValid: boolean, homeHint: boolean): string {
   return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]";
 }
 
-function SolvedStatus({ moves, mode }: { moves: number; mode: ModeConfig }) {
+function SolvedStatus({ moves, minSwaps }: { moves: number; minSwaps: number }) {
   const { t } = useLocale();
-  const tier = getTier(moves, mode.tiers);
+  const tier = getTier(moves, minSwaps);
   const moveWord = t(moves === 1 ? "game.moveSingular" : "game.movePlural");
   return (
     <span className="font-medium">
