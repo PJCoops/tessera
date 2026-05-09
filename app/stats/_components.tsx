@@ -209,6 +209,44 @@ export function BarCell({
   );
 }
 
+// Bar split between Classic and Hard segments. Classic renders first
+// at full color, Hard renders at 45% opacity of the same hue so the
+// mode split is visible at a glance without per-bar legends. Bar
+// widths scale to a shared `max` so rows are comparable across the
+// same column.
+export function StackedBarCell({
+  classic,
+  hard,
+  max,
+  color,
+}: {
+  classic: number;
+  hard: number;
+  max: number;
+  color: string;
+}) {
+  const total = classic + hard;
+  const classicPct = max ? (classic / max) * 100 : 0;
+  const hardPct = max ? (hard / max) * 100 : 0;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-3 bg-[color:var(--color-cream)] rounded-sm overflow-hidden flex">
+        <div
+          className="h-full"
+          style={{ width: `${classicPct}%`, background: color }}
+          title={`Classic: ${classic}`}
+        />
+        <div
+          className="h-full"
+          style={{ width: `${hardPct}%`, background: color, opacity: 0.45 }}
+          title={`Hard: ${hard}`}
+        />
+      </div>
+      <span className="w-8 text-right tabular-nums text-[color:var(--color-ink-soft)]">{total}</span>
+    </div>
+  );
+}
+
 // Render a tier histogram split by mode — Classic and Hard get
 // separate rows so the player-skill distribution can be compared at
 // a glance. Used for the 5×5-aware /stats/puzzles tier sections.
