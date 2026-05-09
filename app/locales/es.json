@@ -52,7 +52,7 @@
   },
   "howto": {
     "title": "Tessera Puzzle™",
-    "titleHard": "Tessera Puzzle™ · Difícil",
+    "titleHard": "Tessera Puzzle™ Difícil",
     "ariaClose": "Cerrar",
     "tabs": {
       "how": "Cómo jugar",
@@ -122,7 +122,7 @@
   "history": {
     "kicker": "Historial",
     "title": "Tu Tessera.",
-    "titleHard": "Tu Tessera · Difícil",
+    "titleHard": "Tu Tessera Difícil",
     "mode": {
       "classic": "Clásico",
       "hard": "Difícil"

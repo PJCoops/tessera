@@ -52,7 +52,7 @@
   },
   "howto": {
     "title": "Tessera Puzzle™",
-    "titleHard": "Tessera Puzzle™ · Hard",
+    "titleHard": "Tessera Puzzle™ Hard",
     "ariaClose": "Close",
     "tabs": {
       "how": "How to play",
@@ -122,7 +122,7 @@
   "history": {
     "kicker": "History",
     "title": "Your Tessera.",
-    "titleHard": "Your Tessera · Hard",
+    "titleHard": "Your Tessera Hard",
     "mode": {
       "classic": "Classic",
       "hard": "Hard"
