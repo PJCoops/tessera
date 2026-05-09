@@ -274,10 +274,10 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
       setPositions(startTiles);
     }
     if (!isolated && !stored && !progress) {
-      track("puzzle_started", { num, day: date, mode: mode.id });
+      track("puzzle_started", { num, day: date, mode: mode.id, N, minSwaps });
     }
     if (replay) {
-      track("puzzle_replay_opened", { num, day: date, mode: mode.id });
+      track("puzzle_replay_opened", { num, day: date, mode: mode.id, N, minSwaps });
     }
     // `pruneOldProgress(num)` would wipe today's saved progress while we're
     // replaying #5 — only run it on the live daily puzzle.
@@ -367,6 +367,9 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           num: puzzle.num,
           moves,
           bonus: validity.isBonus,
+          mode: mode.id,
+          N,
+          minSwaps: puzzle.minSwaps,
         });
       } else if (!puzzle.demo) {
         const r: Result = { moves, bonus: validity.isBonus, completedAt: Date.now() };
@@ -381,6 +384,8 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           bonus: validity.isBonus,
           streak: s.current,
           mode: mode.id,
+          N,
+          minSwaps: puzzle.minSwaps,
         });
       }
     }
@@ -512,7 +517,13 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
       writeResult(puzzle.num, r, mode.resultPrefix);
       clearProgress(puzzle.num, mode.progressPrefix);
       setStoredResult(r);
-      track("puzzle_revealed", { num: puzzle.num, moves, mode: mode.id });
+      track("puzzle_revealed", {
+        num: puzzle.num,
+        moves,
+        mode: mode.id,
+        N,
+        minSwaps: puzzle.minSwaps,
+      });
     }
     setSolvedAt(moves);
     setBonusAt(moves);
