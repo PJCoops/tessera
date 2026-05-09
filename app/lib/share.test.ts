@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import enDict from "../locales/en.json";
 import { buildSharePayload, buildShareSlug, parseShareSlug } from "./share";
+import { HARD } from "./mode";
 import type { Dictionary } from "./i18n";
 
 const dict = enDict as Dictionary;
@@ -12,9 +13,16 @@ describe("buildShareSlug + parseShareSlug round-trip", () => {
     { num: 8, moves: 0, bonus: false, revealed: false },
     { num: 1, moves: 99, bonus: true, revealed: false },
   ];
-  it.each(cases)("preserves %o", (input) => {
+  it.each(cases)("preserves %o (classic)", (input) => {
     const slug = buildShareSlug(input);
-    expect(parseShareSlug(slug)).toEqual(input);
+    // Classic slugs round-trip with mode undefined.
+    expect(parseShareSlug(slug)).toEqual({ ...input, mode: undefined });
+  });
+  it.each(cases)("preserves %o (hard)", (input) => {
+    const hardInput = { ...input, mode: "hard" as const };
+    const slug = buildShareSlug(hardInput);
+    expect(slug.startsWith("h")).toBe(true);
+    expect(parseShareSlug(slug)).toEqual(hardInput);
   });
 
   it("revealed slug parses back as revealed (moves null)", () => {
@@ -25,6 +33,19 @@ describe("buildShareSlug + parseShareSlug round-trip", () => {
       moves: null,
       bonus: false,
       revealed: true,
+      mode: undefined,
+    });
+  });
+
+  it("hard revealed slug round-trips with mode", () => {
+    const slug = buildShareSlug({ num: 8, moves: 12, bonus: false, revealed: true, mode: "hard" });
+    expect(slug).toBe("h8-r");
+    expect(parseShareSlug(slug)).toEqual({
+      num: 8,
+      moves: null,
+      bonus: false,
+      revealed: true,
+      mode: "hard",
     });
   });
 
@@ -34,6 +55,7 @@ describe("buildShareSlug + parseShareSlug round-trip", () => {
       moves: null,
       bonus: false,
       revealed: false,
+      mode: undefined,
     });
   });
 });
@@ -104,5 +126,22 @@ describe("buildSharePayload", () => {
     expect(out.text).not.toContain("🟩");
     expect(out.text).toContain("⬜");
     expect(out.url).toBe("https://tesserapuzzle.com/s/8-r");
+  });
+
+  it("emits a 5×5 emoji grid and /hard/s URL for hard mode", () => {
+    const out = buildSharePayload({
+      puzzleNumber: 8,
+      moves: 18,
+      streak: 0,
+      bonus: false,
+      revealed: false,
+      locale: "en",
+      dict,
+      mode: HARD,
+    });
+    // 5 rows of 5 green tiles each.
+    expect(out.text.match(/🟩/g)?.length).toBe(25);
+    expect(out.url).toBe("https://tesserapuzzle.com/hard/s/h8-18");
+    expect(out.text).toContain("Tessera Hard #8");
   });
 });

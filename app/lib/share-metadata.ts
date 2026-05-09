@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { parseShareSlug, buildShareSlug, type ShareSlug } from "./share";
 import { getTier } from "./tier";
 import { getDictionary, t, type Locale } from "./i18n";
+import { modeById, CLASSIC } from "./mode";
 
 // Build OG/Twitter metadata for a share slug. Used by both the path-based
 // /s/[slug] route and the legacy ?s= query handlers on the home pages.
@@ -11,24 +12,28 @@ export function buildShareMetadata(
 ): Metadata {
   const dict = getDictionary(locale);
   const { num, moves, bonus, revealed } = slug;
+  const mode = slug.mode ? modeById(slug.mode) : CLASSIC;
 
   const ogParams = new URLSearchParams({ n: String(num) });
   if (moves !== null) ogParams.set("m", String(moves));
   if (bonus) ogParams.set("b", "1");
   if (revealed) ogParams.set("r", "1");
+  if (mode.id === "hard") ogParams.set("mode", "hard");
   const ogUrl = `/api/og?${ogParams.toString()}`;
 
   const localePrefix = locale === "en" ? "" : `/${locale}`;
-  const canonical = `${localePrefix}/s/${buildShareSlug(slug)}`;
+  const sharePath = mode.id === "hard" ? "/hard/s" : "/s";
+  const canonical = `${localePrefix}${sharePath}/${buildShareSlug(slug)}`;
+  const titleSuffix = mode.id === "hard" ? " (Hard)" : "";
 
   if (locale === "es") {
     const moveWord = (n: number) => (n === 1 ? "movimiento" : "movimientos");
-    const tierName = moves !== null ? t(dict, `tiers.${getTier(moves).key}`) : "";
+    const tierName = moves !== null ? t(dict, `tiers.${getTier(moves, mode.tiers).key}`) : "";
     const title = revealed
-      ? `Tessera #${num} · solución revelada`
+      ? `Tessera #${num}${titleSuffix} · solución revelada`
       : moves !== null
-      ? `Tessera #${num} · resuelto en ${moves} ${moveWord(moves)}${bonus ? " · bonus" : ""}`
-      : `Tessera #${num}`;
+      ? `Tessera #${num}${titleSuffix} · resuelto en ${moves} ${moveWord(moves)}${bonus ? " · bonus" : ""}`
+      : `Tessera #${num}${titleSuffix}`;
     const cardDescription = revealed
       ? "Revelé la solución de hoy. Prueba la partida tú mismo."
       : moves !== null
@@ -54,12 +59,12 @@ export function buildShareMetadata(
   }
 
   const swapWord = (n: number) => (n === 1 ? "swap" : "swaps");
-  const tierName = moves !== null ? t(dict, `tiers.${getTier(moves).key}`) : "";
+  const tierName = moves !== null ? t(dict, `tiers.${getTier(moves, mode.tiers).key}`) : "";
   const title = revealed
-    ? `Tessera #${num} · revealed`
+    ? `Tessera #${num}${titleSuffix} · revealed`
     : moves !== null
-    ? `Tessera #${num} · solved in ${moves} ${swapWord(moves)}${bonus ? " · bonus" : ""}`
-    : `Tessera #${num}`;
+    ? `Tessera #${num}${titleSuffix} · solved in ${moves} ${swapWord(moves)}${bonus ? " · bonus" : ""}`
+    : `Tessera #${num}${titleSuffix}`;
   const cardDescription = revealed
     ? "I revealed today's solution. Try the puzzle yourself."
     : moves !== null

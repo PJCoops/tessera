@@ -1,14 +1,17 @@
 {
   "meta": {
     "title": "Tessera: Juego de palabras diario",
-    "description": "Un juego de palabras diario. Intercambia fichas en una cuadrícula de 4×4 hasta que cada fila forme una palabra, y también cada columna. La misma partida para todos, cada día."
+    "description": "Un juego de palabras diario. Intercambia fichas en una cuadrícula de 4×4 hasta que cada fila forme una palabra, y también cada columna. La misma partida para todos, cada día.",
+    "titleHard": "Tessera (Difícil): Juego diario 5×5",
+    "descriptionHard": "La Tessera difícil. Intercambia fichas en una cuadrícula de 5×5 hasta que cada fila, y cada columna, formen palabra. La misma partida para todos, cada día."
   },
   "game": {
     "kicker": "Tessera · #{num} · {date}",
+    "kickerHard": "Tessera Difícil · #{num} · {date}",
     "kickerDemo": "Tessera · partida",
     "movesStatus": "Movimientos {moves} · {valid}/{total} filas",
     "demoTipL1": "Toca dos fichas para intercambiarlas",
-    "demoTipL2": "y formar una cuadrícula de palabras de 4 letras",
+    "demoTipL2": "y formar una cuadrícula de palabras de {n} letras",
     "revealedStatus": "Revelado",
     "solvedShort": "Resuelto",
     "solvedIn": "Resuelto en {moves} {moveWord} · {tier}",
@@ -31,6 +34,8 @@
     },
     "ariaHowToPlay": "Cómo jugar",
     "ariaHistory": "Historial",
+    "switchToHard": "Probar Tessera (Difícil) →",
+    "switchToClassic": "← Volver a Tessera (4×4)",
     "revealConfirm": {
       "kicker": "Ver solución",
       "title": "¿Quieres rendirte por hoy?",
@@ -47,6 +52,7 @@
   },
   "howto": {
     "title": "Tessera Puzzle™.",
+    "titleHard": "Tessera Puzzle™ · Difícil.",
     "ariaClose": "Cerrar",
     "tabs": {
       "how": "Cómo jugar",
@@ -57,7 +63,7 @@
     "play": "Jugar",
     "step1": {
       "title": "El objetivo.",
-      "body": "Ocho palabras ocultas: cuatro en horizontal y cuatro en vertical. Encuéntralas todas para resolver la partida de hoy."
+      "body": "{wordCount} palabras ocultas: {n} en horizontal y {n} en vertical. Encuéntralas todas para resolver la partida de hoy."
     },
     "step2": {
       "title": "Cómo se juega.",
@@ -65,7 +71,7 @@
     },
     "step3": {
       "title": "Cómo leer el tablero.",
-      "body": "Una ficha con borde discontinuo ya está en la fila correcta. Una fila verde significa que esa palabra está bien. Cuando las cuatro filas estén bien, las columnas también formarán palabras y toda la cuadrícula se volverá color óxido."
+      "body": "Una ficha con borde discontinuo ya está en la fila correcta. Una fila verde significa que esa palabra está bien. Cuando las {n} filas estén bien, las columnas también formarán palabras y toda la cuadrícula se volverá color óxido."
     },
     "words": {
       "from": "de",
@@ -157,7 +163,9 @@
   },
   "share": {
     "headlineRevealed": "Tessera #{num} · revelado",
+    "headlineRevealedHard": "Tessera Difícil #{num} · revelado",
     "headlineSolved": "Tessera #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
+    "headlineSolvedHard": "Tessera Difícil #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
     "streakMeta": "🔥 racha de {streak} días",
     "bonusMeta": "✨ bonus"
   },

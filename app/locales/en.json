@@ -1,14 +1,17 @@
 {
   "meta": {
     "title": "Tessera: Daily Word Puzzle",
-    "description": "A daily word puzzle. Swap tiles on a 4×4 grid until every row spells a word, and every column too. Same puzzle for everyone, every day."
+    "description": "A daily word puzzle. Swap tiles on a 4×4 grid until every row spells a word, and every column too. Same puzzle for everyone, every day.",
+    "titleHard": "Tessera (Hard): Daily 5×5 Word Puzzle",
+    "descriptionHard": "The harder daily Tessera. Swap tiles on a 5×5 grid until every row, and every column, spells a word. Same puzzle for everyone, every day."
   },
   "game": {
     "kicker": "Tessera · #{num} · {date}",
+    "kickerHard": "Tessera Hard · #{num} · {date}",
     "kickerDemo": "Tessera · puzzle",
     "movesStatus": "Moves {moves} · {valid}/{total} rows",
     "demoTipL1": "Tap two tiles to swap them",
-    "demoTipL2": "to make a grid of 4 letter words",
+    "demoTipL2": "to make a grid of {n} letter words",
     "revealedStatus": "Revealed",
     "solvedShort": "Solved",
     "solvedIn": "Solved in {moves} {moveWord} · {tier}",
@@ -31,6 +34,8 @@
     },
     "ariaHowToPlay": "How to play",
     "ariaHistory": "History",
+    "switchToHard": "Try Tessera (Hard) →",
+    "switchToClassic": "← Back to Tessera (4×4)",
     "revealConfirm": {
       "kicker": "Reveal solution",
       "title": "Give up for today?",
@@ -47,6 +52,7 @@
   },
   "howto": {
     "title": "Tessera Puzzle™.",
+    "titleHard": "Tessera Puzzle™ · Hard.",
     "ariaClose": "Close",
     "tabs": {
       "how": "How to play",
@@ -57,7 +63,7 @@
     "play": "Play",
     "step1": {
       "title": "The goal.",
-      "body": "Eight hidden words: four across and four down. Find them all to solve today’s puzzle."
+      "body": "{wordCount} hidden words: {n} across and {n} down. Find them all to solve today’s puzzle."
     },
     "step2": {
       "title": "How you play.",
@@ -65,7 +71,7 @@
     },
     "step3": {
       "title": "Reading the board.",
-      "body": "A dashed tile is already on the right row. A green row means that word is correct. When all four rows are right, the columns spell words too, and the whole grid turns rust."
+      "body": "A dashed tile is already on the right row. A green row means that word is correct. When all {n} rows are right, the columns spell words too, and the whole grid turns rust."
     },
     "words": {
       "from": "from",
@@ -157,7 +163,9 @@
   },
   "share": {
     "headlineRevealed": "Tessera #{num} · revealed",
+    "headlineRevealedHard": "Tessera Hard #{num} · revealed",
     "headlineSolved": "Tessera #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
+    "headlineSolvedHard": "Tessera Hard #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
     "streakMeta": "🔥 {streak}-day streak",
     "bonusMeta": "✨ bonus"
   },

@@ -16,6 +16,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { getTier } from "../../lib/tier";
 import { getDictionary, t } from "../../lib/i18n";
+import { CLASSIC, HARD } from "../../lib/mode";
 
 // OG cards are shared cross-locale and have no locale signal in the
 // share URL, so they always render in English. If we add locale to the
@@ -48,6 +49,7 @@ export async function GET(req: Request) {
   const m = mRaw !== null ? parseInt(mRaw, 10) : null;
   const bonus = searchParams.get("b") === "1";
   const revealed = searchParams.get("r") === "1";
+  const mode = searchParams.get("mode") === "hard" ? HARD : CLASSIC;
 
   // Reject malformed input early so unfurlers get a clear failure rather
   // than a partially-filled card.
@@ -60,16 +62,17 @@ export async function GET(req: Request) {
     readFile(path.join(process.cwd(), "app/_fonts/Fraunces-Bold.ttf")),
   ]);
 
-  const tileSize = 70;
+  // 5×5 needs slightly smaller tiles to keep the OG card balanced.
+  const tileSize = mode.N === 5 ? 58 : 70;
   const tileGap = 8;
 
   // Pick the grid pattern based on outcome:
   //   solved (no bonus) → all sage
   //   solved (bonus)    → sage with rust corners (mirrors share-text grid)
   //   revealed          → cream (empty)
-  const pattern = buildPattern({ revealed, bonus });
+  const pattern = buildPattern({ revealed, bonus, N: mode.N });
 
-  const tierKey = m !== null ? getTier(m).key : null;
+  const tierKey = m !== null ? getTier(m, mode.tiers).key : null;
   const tierName = tierKey ? t(ogDict, `tiers.${tierKey}`) : null;
   const tierEmoji = tierKey ? TIER_EMOJI[tierKey] ?? "" : "";
 
@@ -100,7 +103,7 @@ export async function GET(req: Request) {
             opacity: 0.7,
           }}
         >
-          <span>Tessera Puzzle™</span>
+          <span>{mode.id === "hard" ? "Tessera Puzzle™ · Hard" : "Tessera Puzzle™"}</span>
           <span>#{n} · daily word puzzle</span>
         </div>
 
@@ -275,19 +278,22 @@ export async function GET(req: Request) {
 function buildPattern({
   revealed,
   bonus,
+  N,
 }: {
   revealed: boolean;
   bonus: boolean;
+  N: number;
 }): number[][] {
   if (revealed) {
-    return Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => 0));
+    return Array.from({ length: N }, () => Array.from({ length: N }, () => 0));
   }
   if (!bonus) {
-    return Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => 1));
+    return Array.from({ length: N }, () => Array.from({ length: N }, () => 1));
   }
-  return Array.from({ length: 4 }, (_, r) =>
-    Array.from({ length: 4 }, (_, c) => {
-      const corner = (r === 0 || r === 3) && (c === 0 || c === 3);
+  const last = N - 1;
+  return Array.from({ length: N }, (_, r) =>
+    Array.from({ length: N }, (_, c) => {
+      const corner = (r === 0 || r === last) && (c === 0 || c === last);
       return corner ? 2 : 1;
     })
   );

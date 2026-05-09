@@ -9,22 +9,36 @@ import { resolvePuzzleFromParams } from "./lib/replay";
 import { readStreak, recordWin, visibleCurrent, type Streak } from "./lib/streak";
 import { buildSharePayload } from "./lib/share";
 import { getTier } from "./lib/tier";
+import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
 import { HowToPlay, hasSeenHowTo, markHowToSeen } from "./HowToPlay";
 import { HistoryModal } from "./HistoryModal";
 import { EmailSignup } from "./EmailSignup";
 import { track } from "./lib/analytics";
 import { useLocale } from "./lib/locale-context";
 
-const N = 4;
-const TILE = 68;
+// Tile sizing is responsive: pick the largest size that fits the
+// available container width, then clamp. The same formula serves both
+// 4×4 and 5×5 — 4×4 just lands on a larger tile within the same width.
 const GAP = 6;
+const MAX_TILE = 72;
+const MIN_TILE = 48;
+const MAX_GRID_WIDTH = 480;
+function tileSizeFor(N: number, availableWidth: number): number {
+  // Fall back to MAX_TILE if the container hasn't been measured yet
+  // (SSR, or headless preview where innerWidth is 0). The grid will
+  // re-measure on mount via ResizeObserver and adjust if needed.
+  if (!availableWidth || availableWidth <= 0) return MAX_TILE;
+  const available = Math.min(MAX_GRID_WIDTH, availableWidth);
+  const raw = Math.floor((available - GAP * (N - 1)) / N);
+  return Math.max(MIN_TILE, Math.min(MAX_TILE, raw));
+}
 
 type Result = { moves: number; bonus: boolean; completedAt: number; revealed?: boolean };
 
-function rowLetters(positions: Tile[], r: number): string[] {
+function rowLetters(positions: Tile[], r: number, N: number): string[] {
   return Array.from({ length: N }, (_, c) => positions[r * N + c].letter);
 }
-function colLetters(positions: Tile[], c: number): string[] {
+function colLetters(positions: Tile[], c: number, N: number): string[] {
   return Array.from({ length: N }, (_, r) => positions[r * N + c].letter);
 }
 function swapAt(p: Tile[], a: number, b: number): Tile[] {
@@ -33,21 +47,21 @@ function swapAt(p: Tile[], a: number, b: number): Tile[] {
   return next;
 }
 
-const RESULT_PREFIX = "tessera:result:";
-const PROGRESS_PREFIX = "tessera:progress:";
 const HIDE_HINTS_KEY = "tessera:hide-hints";
 const MUTED_KEY = "tessera:muted";
 const THEME_KEY = "tessera:theme";
 const DEMO_PLAYED_KEY = "tessera:demo-played";
 
-// True if this device has any prior puzzle result. Used to skip the
-// idle-swap animation for returning players — they know the mechanic.
-function hasAnyResult(): boolean {
+// True if this device has any prior puzzle result for this mode. Used to
+// skip the idle-swap animation for returning players — they know the
+// mechanic. Scoped per-mode so a 4×4 veteran still sees the demo on first
+// /hard load.
+function hasAnyResult(resultPrefix: string): boolean {
   if (typeof window === "undefined") return false;
   try {
     for (let i = 0; i < window.localStorage.length; i++) {
       const key = window.localStorage.key(i);
-      if (key && key.startsWith(RESULT_PREFIX)) return true;
+      if (key && key.startsWith(resultPrefix)) return true;
     }
     return false;
   } catch {
@@ -80,49 +94,49 @@ function applyTheme(t: ThemePref) {
 
 type Progress = { positions: Tile[]; moves: number };
 
-function readResult(num: number): Result | null {
+function readResult(num: number, prefix: string): Result | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(RESULT_PREFIX + num);
+    const raw = window.localStorage.getItem(prefix + num);
     return raw ? (JSON.parse(raw) as Result) : null;
   } catch {
     return null;
   }
 }
-function writeResult(num: number, r: Result) {
+function writeResult(num: number, r: Result, prefix: string) {
   try {
-    window.localStorage.setItem(RESULT_PREFIX + num, JSON.stringify(r));
+    window.localStorage.setItem(prefix + num, JSON.stringify(r));
   } catch {}
 }
-function readProgress(num: number): Progress | null {
+function readProgress(num: number, prefix: string): Progress | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(PROGRESS_PREFIX + num);
+    const raw = window.localStorage.getItem(prefix + num);
     return raw ? (JSON.parse(raw) as Progress) : null;
   } catch {
     return null;
   }
 }
-function writeProgress(num: number, p: Progress) {
+function writeProgress(num: number, p: Progress, prefix: string) {
   try {
-    window.localStorage.setItem(PROGRESS_PREFIX + num, JSON.stringify(p));
+    window.localStorage.setItem(prefix + num, JSON.stringify(p));
   } catch {}
 }
-function clearProgress(num: number) {
+function clearProgress(num: number, prefix: string) {
   try {
-    window.localStorage.removeItem(PROGRESS_PREFIX + num);
+    window.localStorage.removeItem(prefix + num);
   } catch {}
 }
 // Drop progress entries for any puzzle other than today's. Players abandon
 // puzzles often — without this, those keys accumulate forever.
-function pruneOldProgress(currentNum: number) {
+function pruneOldProgress(currentNum: number, prefix: string) {
   if (typeof window === "undefined") return;
   try {
     const toRemove: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
       const key = window.localStorage.key(i);
-      if (!key || !key.startsWith(PROGRESS_PREFIX)) continue;
-      const num = Number(key.slice(PROGRESS_PREFIX.length));
+      if (!key || !key.startsWith(prefix)) continue;
+      const num = Number(key.slice(prefix.length));
       if (Number.isFinite(num) && num !== currentNum) toRemove.push(key);
     }
     for (const k of toRemove) window.localStorage.removeItem(k);
@@ -142,9 +156,43 @@ function formatHms(ms: number): string {
   return `${h}:${m}:${s}`;
 }
 
-export function TesseraGame() {
+export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   const { locale, dict, t } = useLocale();
+  const N = mode.N;
   const [mounted, setMounted] = useState(false);
+  // Initial TILE matches the SSR-safe value (MAX_TILE) on both server
+  // and first client paint, then updates to the measured size after
+  // mount. Picking the actual viewport size on first client render
+  // would cause a hydration mismatch with the SSR markup.
+  const [tileSize, setTileSize] = useState<number>(MAX_TILE);
+  const sizingRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const measure = () => {
+      // Inner content width of the parent container (excludes its own
+      // px-4 padding). Falls back to documentElement width for headless
+      // previews where ResizeObserver may report 0 before layout.
+      const el = sizingRef.current;
+      const cs = el ? window.getComputedStyle(el) : null;
+      const padX = cs ? parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) : 0;
+      const w =
+        (el?.getBoundingClientRect().width ?? 0) - padX ||
+        document.documentElement.clientWidth ||
+        0;
+      setTileSize(tileSizeFor(N, w));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (sizingRef.current) ro.observe(sizingRef.current);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [N]);
+
+  const TILE = tileSize;
   const [puzzle, setPuzzle] = useState<{
     num: number;
     date: string;
@@ -192,26 +240,29 @@ export function TesseraGame() {
 
     let goldRows: string[];
     let startTiles: Tile[];
-    if (demo) {
+    // Demo mode is classic-only — DEMO_GRID is a 4×4 grid. On hard mode
+    // the demo flag is treated as a no-op and we render the daily.
+    const useDemo = demo && N === 4;
+    if (useDemo) {
       goldRows = [...DEMO_GRID];
       startTiles = forceSolved ? tilesFromRows(goldRows) : scrambleGoldRows(goldRows, 42);
     } else {
-      const generated = generateDailyPuzzleFor(locale, seed);
+      const generated = generateDailyPuzzleFor(locale, seed, mode.swaps, N);
       goldRows = generated.goldRows;
       startTiles = forceSolved ? tilesFromRows(goldRows) : generated.startTiles;
     }
 
-    setPuzzle({ num, date, startTiles, goldRows, forceSolved, demo, replay });
+    setPuzzle({ num, date, startTiles, goldRows, forceSolved, demo: useDemo, replay });
 
     // Demo, force-solved, and replay modes are isolated from real player
     // state — no stored result, no progress restore, no streak interaction,
     // and no progress writes on tap. Replay also skips analytics events
     // tied to the live daily flow (`puzzle_started`/`puzzle_solved` etc.).
-    const isolated = demo || forceSolved || replay;
-    const stored = isolated ? null : readResult(num);
+    const isolated = useDemo || forceSolved || replay;
+    const stored = isolated ? null : readResult(num, mode.resultPrefix);
     setStoredResult(stored);
-    setStreak(readStreak());
-    const progress = !isolated && !stored ? readProgress(num) : null;
+    setStreak(readStreak(mode.streakKey));
+    const progress = !isolated && !stored ? readProgress(num, mode.progressPrefix) : null;
     if (progress) {
       setPositions(progress.positions);
       setMoves(progress.moves);
@@ -219,14 +270,14 @@ export function TesseraGame() {
       setPositions(startTiles);
     }
     if (!isolated && !stored && !progress) {
-      track("puzzle_started", { num, day: date });
+      track("puzzle_started", { num, day: date, mode: mode.id });
     }
     if (replay) {
-      track("puzzle_replay_opened", { num, day: date });
+      track("puzzle_replay_opened", { num, day: date, mode: mode.id });
     }
     // `pruneOldProgress(num)` would wipe today's saved progress while we're
     // replaying #5 — only run it on the live daily puzzle.
-    if (!demo && !replay) pruneOldProgress(num);
+    if (!useDemo && !replay) pruneOldProgress(num, mode.progressPrefix);
     if (!hasSeenHowTo()) setHowToOpen(true);
     try {
       const hh = window.localStorage.getItem(HIDE_HINTS_KEY);
@@ -278,11 +329,11 @@ export function TesseraGame() {
     const goldRowsUpper = puzzle.goldRows.map((r) => r.toUpperCase());
     const rowValid = Array.from(
       { length: N },
-      (_, r) => rowLetters(positions, r).join("") === goldRowsUpper[r]
+      (_, r) => rowLetters(positions, r, N).join("") === goldRowsUpper[r]
     );
     const colValid = Array.from({ length: N }, (_, c) => {
       const goldCol = goldRowsUpper.map((row) => row[c]).join("");
-      return colLetters(positions, c).join("") === goldCol;
+      return colLetters(positions, c, N).join("") === goldCol;
     });
     return {
       rowValid,
@@ -315,16 +366,17 @@ export function TesseraGame() {
         });
       } else if (!puzzle.demo) {
         const r: Result = { moves, bonus: validity.isBonus, completedAt: Date.now() };
-        writeResult(puzzle.num, r);
-        clearProgress(puzzle.num);
+        writeResult(puzzle.num, r, mode.resultPrefix);
+        clearProgress(puzzle.num, mode.progressPrefix);
         setStoredResult(r);
-        const s = recordWin(puzzle.num);
+        const s = recordWin(puzzle.num, mode.streakKey);
         setStreak(s);
         track("puzzle_solved", {
           num: puzzle.num,
           moves,
           bonus: validity.isBonus,
           streak: s.current,
+          mode: mode.id,
         });
       }
     }
@@ -384,13 +436,15 @@ export function TesseraGame() {
     if (demoPlaying) return;
     if (moves > 0 || selectedIdx !== null) return;
     if (validity.isSolved || storedResult) return;
-    if (hasPlayedDemo() || hasAnyResult()) return;
+    if (hasPlayedDemo() || hasAnyResult(mode.resultPrefix)) return;
+    // Idle-swap demo is built around a 4×4 candidate set. Skip on hard.
+    if (mode.N !== 4) return;
     const id = setTimeout(() => {
       markDemoPlayed();
       setDemoPlaying(true);
     }, 7000);
     return () => clearTimeout(id);
-  }, [mounted, puzzle, howToOpen, demoPlaying, moves, selectedIdx, validity.isSolved, storedResult]);
+  }, [mounted, puzzle, howToOpen, demoPlaying, moves, selectedIdx, validity.isSolved, storedResult, mode.N, mode.resultPrefix]);
 
   // When demoPlaying flips true, run the sequence: tap A (ripple + ring),
   // tap B (ripple), real swap, hold, real revert. Positions are snapshotted
@@ -451,10 +505,10 @@ export function TesseraGame() {
       .map((letter, id) => ({ id, letter }));
     if (!puzzle.demo && !puzzle.forceSolved && !puzzle.replay) {
       const r: Result = { moves, bonus: false, completedAt: Date.now(), revealed: true };
-      writeResult(puzzle.num, r);
-      clearProgress(puzzle.num);
+      writeResult(puzzle.num, r, mode.resultPrefix);
+      clearProgress(puzzle.num, mode.progressPrefix);
       setStoredResult(r);
-      track("puzzle_revealed", { num: puzzle.num, moves });
+      track("puzzle_revealed", { num: puzzle.num, moves, mode: mode.id });
     }
     setSolvedAt(moves);
     setBonusAt(moves);
@@ -473,7 +527,7 @@ export function TesseraGame() {
       setPositions((p) => {
         const next = swapAt(p, selectedIdx, idx);
         if (puzzle && !puzzle.demo && !puzzle.forceSolved && !puzzle.replay) {
-          writeProgress(puzzle.num, { positions: next, moves: moves + 1 });
+          writeProgress(puzzle.num, { positions: next, moves: moves + 1 }, mode.progressPrefix);
         }
         return next;
       });
@@ -508,13 +562,11 @@ export function TesseraGame() {
     for (const ch of puzzle.goldRows[r].toUpperCase()) {
       remaining.set(ch, (remaining.get(ch) ?? 0) + 1);
     }
-    const order = [0, 1, 2, 3]
-      .map((c) => r * N + c)
-      .sort((a, b) => {
-        const aHome = Math.floor(positions[a].id / N) === r ? 0 : 1;
-        const bHome = Math.floor(positions[b].id / N) === r ? 0 : 1;
-        return aHome - bHome;
-      });
+    const order = Array.from({ length: N }, (_, c) => r * N + c).sort((a, b) => {
+      const aHome = Math.floor(positions[a].id / N) === r ? 0 : 1;
+      const bHome = Math.floor(positions[b].id / N) === r ? 0 : 1;
+      return aHome - bHome;
+    });
     for (const idx of order) {
       const ch = positions[idx].letter;
       const left = remaining.get(ch) ?? 0;
@@ -544,6 +596,7 @@ export function TesseraGame() {
         revealed: shareSrc.revealed,
         locale,
         dict,
+        mode,
       })
     : null;
 
@@ -580,7 +633,7 @@ export function TesseraGame() {
   const finished = validity.isSolved || isRevealed;
 
   return (
-    <div className="flex flex-col items-center select-none">
+    <div ref={sizingRef} className="flex flex-col items-center select-none w-full max-w-[var(--tessera-grid-max,520px)] mx-auto px-4">
       {puzzle.demo && demoCursor && (
         <div
           className="pointer-events-none fixed rounded-full"
@@ -610,8 +663,15 @@ export function TesseraGame() {
         onMutedChange={updateMuted}
         theme={theme}
         onThemeChange={updateTheme}
+        mode={mode}
       />
-      <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} streak={streak} epoch={EPOCH} />
+      <HistoryModal
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        streak={streak}
+        epoch={EPOCH}
+        mode={mode}
+      />
       <RevealConfirm open={confirmReveal} onClose={() => setConfirmReveal(false)} onConfirm={handleReveal} />
       <div className="mb-6 text-center">
         {puzzle.replay ? (
@@ -625,7 +685,12 @@ export function TesseraGame() {
           </>
         ) : (
           <p className="text-[var(--text-kicker)] uppercase tracking-[var(--tracking-kicker)] text-[color:var(--color-muted)]">
-            {puzzle.demo ? t("game.kickerDemo") : t("game.kicker", { num: puzzle.num, date: puzzle.date })}
+            {puzzle.demo
+              ? t("game.kickerDemo")
+              : t(mode.id === "hard" ? "game.kickerHard" : "game.kicker", {
+                  num: puzzle.num,
+                  date: puzzle.date,
+                })}
           </p>
         )}
         <div className="text-base mt-2 h-10 overflow-hidden flex items-center justify-center px-4 max-w-md mx-auto">
@@ -649,7 +714,7 @@ export function TesseraGame() {
               if (storedResult) {
                 return (
                   <motion.span key="stored" {...rollProps} className="block">
-                    <SolvedStatus moves={storedResult.moves} />
+                    <SolvedStatus moves={storedResult.moves} mode={mode} />
                   </motion.span>
                 );
               }
@@ -663,7 +728,7 @@ export function TesseraGame() {
               if (validity.isSolved && solvedAt !== null) {
                 return (
                   <motion.span key="solvedat" {...rollProps} className="block">
-                    <SolvedStatus moves={solvedAt} />
+                    <SolvedStatus moves={solvedAt} mode={mode} />
                   </motion.span>
                 );
               }
@@ -672,7 +737,7 @@ export function TesseraGame() {
                   <motion.span key="tip" {...rollProps} className="block text-sm leading-snug text-[color:var(--color-muted)] text-center">
                     {t("game.demoTipL1")}
                     <br />
-                    {t("game.demoTipL2")}
+                    {t("game.demoTipL2", { n: N })}
                   </motion.span>
                 );
               }
@@ -749,7 +814,7 @@ export function TesseraGame() {
             );
           })}
         {demoTap && (
-          <TapRipple key={demoTap.key} idx={demoTap.idx} tileSize={TILE} gap={GAP} />
+          <TapRipple key={demoTap.key} idx={demoTap.idx} tileSize={TILE} gap={GAP} N={N} />
         )}
       </div>
 
@@ -806,7 +871,7 @@ export function TesseraGame() {
         )}
         {puzzle.replay && (
           <a
-            href={locale === "en" ? "/" : `/${locale}`}
+            href={homePath(mode, locale)}
             className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition-colors"
           >
             {t("game.replay.backToToday")}
@@ -843,6 +908,13 @@ export function TesseraGame() {
             </span>
           )}
         </div>
+
+        <a
+          href={homePath(mode.id === "hard" ? CLASSIC : HARD, locale)}
+          className="mt-2 text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition-colors"
+        >
+          {t(mode.id === "hard" ? "game.switchToClassic" : "game.switchToHard")}
+        </a>
       </div>
     </div>
   );
@@ -851,7 +923,7 @@ export function TesseraGame() {
 // Touch-style ripple at a tile's centre. Expands from a dot to fill the
 // tile area while fading out — the same metaphor as Material's tap ripple,
 // readable on both touch and mouse.
-function TapRipple({ idx, tileSize, gap }: { idx: number; tileSize: number; gap: number }) {
+function TapRipple({ idx, tileSize, gap, N }: { idx: number; tileSize: number; gap: number; N: number }) {
   const r = Math.floor(idx / N);
   const c = idx % N;
   const x = c * (tileSize + gap);
@@ -898,6 +970,9 @@ function pickDemoSwap(
     [5, 11],  // mid-grid diagonal
   ];
   const upper = goldRows.map((r) => r.toUpperCase());
+  // pickDemoSwap is gated to N=4 by its caller — encode that locally so
+  // this helper is self-contained.
+  const N = 4;
   const validRows = (p: Tile[]) =>
     [0, 1, 2, 3].filter(
       (r) => Array.from({ length: N }, (_, c) => p[r * N + c].letter).join("") === upper[r]
@@ -948,9 +1023,9 @@ function tileClasses(rowValid: boolean, homeHint: boolean): string {
   return "bg-[color:var(--color-cream)] text-[color:var(--color-ink)] border border-[color:var(--color-rule)]";
 }
 
-function SolvedStatus({ moves }: { moves: number }) {
+function SolvedStatus({ moves, mode }: { moves: number; mode: ModeConfig }) {
   const { t } = useLocale();
-  const tier = getTier(moves);
+  const tier = getTier(moves, mode.tiers);
   const moveWord = t(moves === 1 ? "game.moveSingular" : "game.movePlural");
   return (
     <span className="font-medium">

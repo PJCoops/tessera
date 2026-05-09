@@ -4,22 +4,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { dateFromPuzzleNumber, puzzleNumber, todayUtc } from "./lib/rng";
 import type { Streak } from "./lib/streak";
-import { TIERS, TIER_COLORS, getTier } from "./lib/tier";
+import { TIER_COLORS, getTier, type Tier } from "./lib/tier";
 import { useLocale } from "./lib/locale-context";
+import { CLASSIC, homePath, type ModeConfig } from "./lib/mode";
 
 type Result = { moves: number; bonus: boolean; completedAt: number; revealed?: boolean };
 
 type Entry = { num: number; date: string; result: Result };
 
-const RESULT_PREFIX = "tessera:result:";
-
-function readAllResults(epoch: string): Entry[] {
+function readAllResults(epoch: string, prefix: string): Entry[] {
   if (typeof window === "undefined") return [];
   const out: Entry[] = [];
   for (let i = 0; i < window.localStorage.length; i++) {
     const key = window.localStorage.key(i);
-    if (!key || !key.startsWith(RESULT_PREFIX)) continue;
-    const num = Number(key.slice(RESULT_PREFIX.length));
+    if (!key || !key.startsWith(prefix)) continue;
+    const num = Number(key.slice(prefix.length));
     if (!Number.isFinite(num)) continue;
     try {
       const raw = window.localStorage.getItem(key);
@@ -39,11 +38,13 @@ export function HistoryModal({
   onClose,
   streak,
   epoch,
+  mode = CLASSIC,
 }: {
   open: boolean;
   onClose: () => void;
   streak: Streak;
   epoch: string;
+  mode?: ModeConfig;
 }) {
   const { locale, t } = useLocale();
   const [tab, setTab] = useState<Tab>("solves");
@@ -57,7 +58,10 @@ export function HistoryModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const entries = useMemo(() => (open ? readAllResults(epoch) : []), [open, epoch]);
+  const entries = useMemo(
+    () => (open ? readAllResults(epoch, mode.resultPrefix) : []),
+    [open, epoch, mode.resultPrefix]
+  );
   const solved = entries.filter((e) => !e.result.revealed);
   const solvedCount = solved.length;
   const avgMoves = solvedCount > 0
@@ -66,11 +70,11 @@ export function HistoryModal({
   const tierCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const e of solved) {
-      const k = getTier(e.result.moves).key;
+      const k = getTier(e.result.moves, mode.tiers).key;
       counts.set(k, (counts.get(k) ?? 0) + 1);
     }
     return counts;
-  }, [solved]);
+  }, [solved, mode.tiers]);
 
   // The "All puzzles" tab lists every past puzzle (#1 → today − 1) so
   // players can replay anything they missed. Each row links to ?day=...
@@ -90,7 +94,7 @@ export function HistoryModal({
     for (let n = todayNum - 1; n >= 1; n--) out.push(n);
     return out;
   }, [todayNum]);
-  const localePrefix = locale === "en" ? "" : `/${locale}`;
+  const replayBase = homePath(mode, locale);
 
   return (
     <AnimatePresence>
@@ -146,7 +150,7 @@ export function HistoryModal({
 
                 <div className="mt-4">
                   <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] mb-2">{t("history.byTier")}</p>
-                  <TierDistribution tierCounts={tierCounts} t={t} />
+                  <TierDistribution tierCounts={tierCounts} tiers={mode.tiers} t={t} />
                 </div>
 
                 <div className="mt-6 flex-1 overflow-y-auto -mx-2">
@@ -157,7 +161,7 @@ export function HistoryModal({
                   ) : (
                     <ul className="divide-y divide-[color:var(--color-rule)]">
                       {entries.map((e) => {
-                        const tierKey = e.result.revealed ? null : getTier(e.result.moves).key;
+                        const tierKey = e.result.revealed ? null : getTier(e.result.moves, mode.tiers).key;
                         return (
                           <li key={e.num} className="flex items-center justify-between px-2 py-2 text-sm gap-3">
                             <span className="text-[color:var(--color-muted)] tabular-nums whitespace-nowrap">
@@ -198,11 +202,11 @@ export function HistoryModal({
                     {pastNums.map((num) => {
                       const date = dateFromPuzzleNumber(num, epoch);
                       const result = resultByNum.get(num);
-                      const tierKey = result && !result.revealed ? getTier(result.moves).key : null;
+                      const tierKey = result && !result.revealed ? getTier(result.moves, mode.tiers).key : null;
                       return (
                         <li key={num} className="text-sm">
                           <a
-                            href={`${localePrefix}/?day=${date}`}
+                            href={`${replayBase}?day=${date}`}
                             aria-label={t("history.allPuzzles.ariaPlay", { num })}
                             className="flex items-center justify-between px-2 py-2 gap-3 hover:bg-[color:var(--color-cream)] transition-colors"
                           >
@@ -280,15 +284,17 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 function TierDistribution({
   tierCounts,
+  tiers,
   t,
 }: {
   tierCounts: Map<string, number>;
+  tiers: readonly Tier[];
   t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   const max = Math.max(1, ...Array.from(tierCounts.values()));
   return (
     <ul className="space-y-1">
-      {TIERS.map((tier) => {
+      {tiers.map((tier) => {
         const count = tierCounts.get(tier.key) ?? 0;
         const pct = count === 0 ? 0 : Math.max(8, (count / max) * 100);
         return (

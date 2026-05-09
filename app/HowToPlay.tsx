@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { LOCALES, LOCALE_COOKIE, type Locale, pathnameWithLocale } from "./lib/i18n";
 import { useLocale } from "./lib/locale-context";
 import { PushReminderToggle } from "./components/PushReminderToggle";
+import { CLASSIC, type ModeConfig } from "./lib/mode";
 import definitionsEs from "./locales/definitions-es.json";
 
 // Static Spanish definitions, baked at build time from es.wiktionary.org.
@@ -51,6 +52,7 @@ export function HowToPlay({
   onMutedChange,
   theme,
   onThemeChange,
+  mode = CLASSIC,
 }: {
   open: boolean;
   onClose: () => void;
@@ -63,6 +65,7 @@ export function HowToPlay({
   onMutedChange: (v: boolean) => void;
   theme: ThemePref;
   onThemeChange: (v: ThemePref) => void;
+  mode?: ModeConfig;
 }) {
   const { t } = useLocale();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -109,7 +112,9 @@ export function HowToPlay({
               ×
             </button>
 
-            <h2 className="text-2xl font-light tracking-tight">{t("howto.title")}</h2>
+            <h2 className="text-2xl font-light tracking-tight">
+              {t(mode.id === "hard" ? "howto.titleHard" : "howto.title")}
+            </h2>
 
             <div className="mt-4 flex gap-1 border-b border-[color:var(--color-rule)]">
               <TabButton active={tab === "how"} onClick={() => setTab("how")}>
@@ -129,7 +134,7 @@ export function HowToPlay({
             </div>
 
             <div className="mt-6">
-              {tab === "how" && <HowToContent />}
+              {tab === "how" && <HowToContent mode={mode} />}
               {tab === "words" && <WordsContent goldRows={goldRows} />}
               {tab === "settings" && (
                 <SettingsContent
@@ -182,15 +187,20 @@ function TabButton({
   );
 }
 
-function HowToContent() {
+function HowToContent({ mode }: { mode: ModeConfig }) {
   const { t } = useLocale();
+  // 4×4 has 8 hidden words (4 across + 4 down); 5×5 has 10. Pass both to
+  // the locale string so copy reads naturally in either mode.
+  const wordCount = mode.N * 2;
   return (
     <ol className="space-y-5 text-sm">
       <li className="flex gap-4 items-start">
         <Step n={1} />
         <div>
           <p className="font-medium">{t("howto.step1.title")}</p>
-          <p className="text-[color:var(--color-muted)] mt-1">{t("howto.step1.body")}</p>
+          <p className="text-[color:var(--color-muted)] mt-1">
+            {t("howto.step1.body", { wordCount, n: mode.N })}
+          </p>
         </div>
       </li>
       <li className="flex gap-4 items-start">
@@ -204,7 +214,9 @@ function HowToContent() {
         <Step n={3} />
         <div>
           <p className="font-medium">{t("howto.step3.title")}</p>
-          <p className="text-[color:var(--color-muted)] mt-1">{t("howto.step3.body")}</p>
+          <p className="text-[color:var(--color-muted)] mt-1">
+            {t("howto.step3.body", { n: mode.N })}
+          </p>
         </div>
       </li>
     </ol>

@@ -1,7 +1,11 @@
-import wordList from "./words.json";
-import solutionList from "./solution-words.json";
-import wordListEs from "./words-es.json";
-import solutionListEs from "./solution-words-es.json";
+import wordList4 from "./words.json";
+import solutionList4 from "./solution-words.json";
+import wordListEs4 from "./words-es.json";
+import solutionListEs4 from "./solution-words-es.json";
+import wordList5 from "./words-5.json";
+import solutionList5 from "./solution-words-5.json";
+import wordListEs5 from "./words-es-5.json";
+import solutionListEs5 from "./solution-words-es-5.json";
 import demoGridJson from "./demo-grid.json";
 import { mulberry32, shuffled } from "./rng";
 import type { Locale } from "./i18n";
@@ -36,28 +40,28 @@ export function scramble(start: Tile[], rng: () => number, swaps: number): Tile[
 // A scramble is legal as a starting position iff every row has at least
 // one tile from its home row (so the player has a foothold in each row),
 // AND no row or column is already fully equal to its gold solution. The
-// latter matters because random 12-swap scrambles occasionally land on a
-// fully-correct row or column — handing the player a freebie that can
-// also flash green/gold on first paint, which feels like a bug.
-function startIsLegal(p: Tile[], goldRows: string[]): boolean {
-  for (let r = 0; r < 4; r++) {
+// latter matters because random scrambles occasionally land on a fully
+// correct row or column — handing the player a freebie that can also
+// flash green/gold on first paint, which feels like a bug.
+function startIsLegal(p: Tile[], goldRows: string[], N: number): boolean {
+  for (let r = 0; r < N; r++) {
     let any = false;
-    for (let c = 0; c < 4; c++) {
-      if (Math.floor(p[r * 4 + c].id / 4) === r) { any = true; break; }
+    for (let c = 0; c < N; c++) {
+      if (Math.floor(p[r * N + c].id / N) === r) { any = true; break; }
     }
     if (!any) return false;
   }
   const goldUpper = goldRows.map((r) => r.toUpperCase());
-  for (let r = 0; r < 4; r++) {
+  for (let r = 0; r < N; r++) {
     let row = "";
-    for (let c = 0; c < 4; c++) row += p[r * 4 + c].letter;
+    for (let c = 0; c < N; c++) row += p[r * N + c].letter;
     if (row === goldUpper[r]) return false;
   }
-  for (let c = 0; c < 4; c++) {
+  for (let c = 0; c < N; c++) {
     let col = "";
     let goldCol = "";
-    for (let r = 0; r < 4; r++) {
-      col += p[r * 4 + c].letter;
+    for (let r = 0; r < N; r++) {
+      col += p[r * N + c].letter;
       goldCol += goldUpper[r][c];
     }
     if (col === goldCol) return false;
@@ -71,10 +75,11 @@ export type DailyPuzzle = {
   swaps: number;
 };
 
-// A puzzle engine bound to one wordlist (one language). The same algorithm
-// drives all locales — only the source words differ. Built once per locale
-// at module load and cached.
+// A puzzle engine bound to one wordlist (one language and one grid size).
+// The same algorithm drives all locales and sizes — only the source words
+// and N differ. Built once per (locale, N) pair and cached.
 type Engine = {
+  N: number;
   DICT: ReadonlySet<string>;
   SOLUTION: ReadonlySet<string>;
   findGoldGrid: (
@@ -83,35 +88,40 @@ type Engine = {
   ) => string[] | null;
 };
 
-function createEngine(rawWords: string[], rawSolutions: string[]): Engine {
+function createEngine(rawWords: string[], rawSolutions: string[], N: number): Engine {
+  const lengthRe = new RegExp(`^[a-z]{${N}}$`);
   // Full validation set — every word that counts as "real" for any future
   // typed-word mode. Currently only the SOLUTION subset feeds the grid
-  // generator, but DICT stays exposed for parity with the English engine.
+  // generator, but DICT stays exposed for parity.
   const DICT: ReadonlySet<string> = new Set(
-    rawWords.map((w) => w.toLowerCase()).filter((w) => /^[a-z]{4}$/.test(w))
+    rawWords.map((w) => w.toLowerCase()).filter((w) => lengthRe.test(w))
   );
   // Curated subset of common, recognisable words. Gold solutions (rows AND
   // columns) are drawn from this list so puzzles avoid Scrabble fillers.
   const SOLUTION: ReadonlySet<string> = new Set(
-    rawSolutions.map((w) => w.toLowerCase()).filter((w) => /^[a-z]{4}$/.test(w))
+    rawSolutions.map((w) => w.toLowerCase()).filter((w) => lengthRe.test(w))
   );
   const ALL: readonly string[] = Array.from(SOLUTION);
-  const PREFIX: ReadonlySet<string> = (() => {
-    const s = new Set<string>();
+  // PREFIX[k] = set of length-k strings that are a prefix of some SOLUTION
+  // word. Used to prune: when filling rows top-to-bottom, a column whose
+  // first k letters aren't a prefix of any solution can never complete.
+  const PREFIX: ReadonlySet<string>[] = (() => {
+    const out: Set<string>[] = [];
+    for (let k = 1; k < N; k++) out.push(new Set<string>());
     for (const w of ALL) {
-      s.add(w[0]);
-      s.add(w.slice(0, 2));
-      s.add(w.slice(0, 3));
+      for (let k = 1; k < N; k++) out[k - 1].add(w.slice(0, k));
     }
-    return s;
+    return out;
   })();
 
   function colsArePrefixes(rows: string[]): boolean {
     const k = rows.length;
-    for (let c = 0; c < 4; c++) {
+    if (k === 0 || k >= N) return true;
+    const set = PREFIX[k - 1];
+    for (let c = 0; c < N; c++) {
       let p = "";
       for (let r = 0; r < k; r++) p += rows[r][c];
-      if (!PREFIX.has(p)) return false;
+      if (!set.has(p)) return false;
     }
     return true;
   }
@@ -124,86 +134,137 @@ function createEngine(rawWords: string[], rawSolutions: string[]): Engine {
     const order = shuffled(ALL, rng);
     let nodes = 0;
 
+    // Generic backtracking. At depth d, we have rows[0..d-1] fixed and try
+    // candidate words for row d. Pruning: every partial column prefix must
+    // appear in PREFIX[d]. The final row also has to satisfy the per-column
+    // "completes a solution word" constraint, which we precompute when
+    // d === N - 1 to avoid scanning ALL twice.
+    function* candidatesForDepth(rows: string[]): Generator<string> {
+      // For depth N-1 we tighten the candidate pool to words whose c-th
+      // letter completes a real word in column c (given the prefix above).
+      // For shallower depths we use the prefix pruning only.
+      if (rows.length === N - 1) {
+        const validChars: Set<string>[] = [];
+        for (let c = 0; c < N; c++) {
+          let stem = "";
+          for (let r = 0; r < N - 1; r++) stem += rows[r][c];
+          const set = new Set<string>();
+          for (let cc = 97; cc <= 122; cc++) {
+            const ch = String.fromCharCode(cc);
+            if (SOLUTION.has(stem + ch)) set.add(ch);
+          }
+          if (set.size === 0) return;
+          validChars.push(set);
+        }
+        const cands = ALL.filter((w) => {
+          for (let c = 0; c < N; c++) if (!validChars[c].has(w[c])) return false;
+          return true;
+        });
+        for (const w of shuffled(cands, rng)) yield w;
+      } else {
+        const cands = ALL.filter((w) => colsArePrefixes([...rows, w]));
+        for (const w of shuffled(cands, rng)) yield w;
+      }
+    }
+
+    function search(rows: string[]): string[] | null {
+      if (rows.length === N) return rows;
+      for (const cand of candidatesForDepth(rows)) {
+        if (++nodes > nodeBudget) return null;
+        const result = search([...rows, cand]);
+        if (result) return result;
+      }
+      return null;
+    }
+
     for (let i = 0; i < Math.min(row0Tries, order.length); i++) {
       const r0 = order[i];
-      const r1Cands = shuffled(ALL.filter((w) => colsArePrefixes([r0, w])), rng);
-      for (const r1 of r1Cands) {
-        if (++nodes > nodeBudget) return null;
-        const r2Cands = shuffled(ALL.filter((w) => colsArePrefixes([r0, r1, w])), rng);
-        for (const r2 of r2Cands) {
-          if (++nodes > nodeBudget) return null;
-          const validChars: Set<string>[] = [];
-          let dead = false;
-          for (let c = 0; c < 4; c++) {
-            const stem = r0[c] + r1[c] + r2[c];
-            const set = new Set<string>();
-            for (let cc = 97; cc <= 122; cc++) {
-              const ch = String.fromCharCode(cc);
-              if (SOLUTION.has(stem + ch)) set.add(ch);
-            }
-            if (set.size === 0) { dead = true; break; }
-            validChars.push(set);
-          }
-          if (dead) continue;
-          const r3Cands = ALL.filter(
-            (w) =>
-              validChars[0].has(w[0]) &&
-              validChars[1].has(w[1]) &&
-              validChars[2].has(w[2]) &&
-              validChars[3].has(w[3])
-          );
-          if (r3Cands.length > 0) {
-            return [r0, r1, r2, shuffled(r3Cands, rng)[0]];
-          }
-        }
-      }
+      const result = search([r0]);
+      if (result) return result;
+      if (nodes > nodeBudget) return null;
     }
     return null;
   }
 
-  return { DICT, SOLUTION, findGoldGrid };
+  return { N, DICT, SOLUTION, findGoldGrid };
 }
 
-const engines: Record<Locale, Engine> = {
-  en: createEngine(wordList as string[], solutionList as string[]),
-  es: createEngine(wordListEs as string[], solutionListEs as string[]),
+const SUPPORTED_SIZES = [4, 5] as const;
+type SupportedSize = (typeof SUPPORTED_SIZES)[number];
+
+const sources: Record<Locale, Record<SupportedSize, { words: string[]; solutions: string[] }>> = {
+  en: {
+    4: { words: wordList4 as string[], solutions: solutionList4 as string[] },
+    5: { words: wordList5 as string[], solutions: solutionList5 as string[] },
+  },
+  es: {
+    4: { words: wordListEs4 as string[], solutions: solutionListEs4 as string[] },
+    5: { words: wordListEs5 as string[], solutions: solutionListEs5 as string[] },
+  },
 };
 
-// Backwards-compat exports — the existing English puzzle code paths and
+const engineCache: Partial<Record<Locale, Partial<Record<SupportedSize, Engine>>>> = {};
+
+function getEngine(locale: Locale, N: number): Engine {
+  if (!isSupportedSize(N)) {
+    throw new Error(`Unsupported grid size ${N}`);
+  }
+  const byLocale = (engineCache[locale] ??= {});
+  let engine = byLocale[N];
+  if (!engine) {
+    const src = sources[locale][N];
+    engine = createEngine(src.words, src.solutions, N);
+    byLocale[N] = engine;
+  }
+  return engine;
+}
+
+function isSupportedSize(n: number): n is SupportedSize {
+  return (SUPPORTED_SIZES as readonly number[]).includes(n);
+}
+
+// Backwards-compat exports — the existing English 4×4 code paths and
 // `?solve` debug URL still reference these.
-export const DICT = engines.en.DICT;
-export const SOLUTION = engines.en.SOLUTION;
-export const findGoldGrid = engines.en.findGoldGrid;
+export const DICT = getEngine("en", 4).DICT;
+export const SOLUTION = getEngine("en", 4).SOLUTION;
+export function findGoldGrid(
+  rng: () => number,
+  opts?: { row0Tries?: number; nodeBudget?: number }
+): string[] | null {
+  return getEngine("en", 4).findGoldGrid(rng, opts);
+}
 
 export function generateDailyPuzzleFor(
   locale: Locale,
   seed: number,
-  swaps = 12
+  swaps = 12,
+  N = 4
 ): DailyPuzzle {
   const rng = mulberry32(seed);
-  const goldRows = engines[locale].findGoldGrid(rng);
-  if (!goldRows) throw new Error(`No gold grid for ${locale} seed ${seed}`);
+  const goldRows = getEngine(locale, N).findGoldGrid(rng);
+  if (!goldRows) throw new Error(`No gold grid for ${locale} N=${N} seed ${seed}`);
   const solved = tilesFromRows(goldRows);
   let startTiles = scramble(solved, rng, swaps);
-  for (let attempt = 0; attempt < 50 && !startIsLegal(startTiles, goldRows); attempt++) {
+  for (let attempt = 0; attempt < 50 && !startIsLegal(startTiles, goldRows, N); attempt++) {
     startTiles = scramble(solved, rng, swaps);
   }
   return { goldRows, startTiles, swaps };
 }
 
-// English shortcut, preserved for callers that don't care about locale
-// (demo mode, ?solve debug, OG image renderer).
+// English 4×4 shortcut, preserved for callers that don't care about
+// locale or size (demo mode, ?solve debug, OG image renderer).
 export function generateDailyPuzzle(seed: number, swaps = 12): DailyPuzzle {
-  return generateDailyPuzzleFor("en", seed, swaps);
+  return generateDailyPuzzleFor("en", seed, swaps, 4);
 }
 
 // Scramble a fixed gold grid with a deterministic seed. Used for ?demo so
 // the screen-recorded starting layout is consistent across runs.
 export function scrambleGoldRows(goldRows: readonly string[], seed: number, swaps = 12): Tile[] {
   const rng = mulberry32(seed);
+  const N = goldRows.length;
   const solved = tilesFromRows(goldRows as string[]);
   let startTiles = scramble(solved, rng, swaps);
-  for (let attempt = 0; attempt < 50 && !startIsLegal(startTiles, goldRows as string[]); attempt++) {
+  for (let attempt = 0; attempt < 50 && !startIsLegal(startTiles, goldRows as string[], N); attempt++) {
     startTiles = scramble(solved, rng, swaps);
   }
   return startTiles;
