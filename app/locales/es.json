@@ -155,9 +155,9 @@
     "tenacious": "Tenaz"
   },
   "streakToast": {
-    "single": "Racha de {n} día — ¡{tier}!",
-    "plural": "Racha de {n} días — ¡{tier}!",
-    "noTier": "Racha de {n} días"
+    "single": "Racha de {n} día 🔥 ¡{tier}!",
+    "plural": "Racha de {n} días 🔥 ¡{tier}!",
+    "noTier": "Racha de {n} días 🔥"
   },
   "email": {
     "title": "Recordatorio diario",

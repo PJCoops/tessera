@@ -155,9 +155,9 @@
     "tenacious": "Tenacious"
   },
   "streakToast": {
-    "single": "{n} day streak — {tier}!",
-    "plural": "{n} day streak — {tier}!",
-    "noTier": "{n} day streak!"
+    "single": "{n} day streak 🔥 {tier}!",
+    "plural": "{n} day streak 🔥 {tier}!",
+    "noTier": "{n} day streak 🔥"
   },
   "email": {
     "title": "Daily reminder",
