@@ -57,7 +57,11 @@ export default async function CohortsStatsPage() {
           <pre className="mt-2 whitespace-pre-wrap text-xs">{error}</pre>
         </div>
       ) : (
-        <Section title="Cohort retention · weekly cohorts" freshness="live">
+        <Section
+          title="Cohort retention · weekly cohorts"
+          freshness="live"
+          tooltip="The honest stickiness chart. Each row is the players who started their first puzzle in a given week, then the % of that cohort who came back to play on day 1, 3, 7, 14, and 30. Industry benchmarks for daily puzzles: D1 ≥40% is great, D7 ≥25% is strong, D30 ≥15% is sticky. NYT Mini sits around D30 ~30% (rough public estimate). distinct_id is per-device so cross-device players inflate cohort_size and undercount the rates, so these are floors, not ceilings."
+        >
           <p className="mb-4 text-xs text-[color:var(--color-muted)] max-w-prose">
             Each row is the share of a week's first-time players who came back
             on day N. Heat = sage when retention is higher. Weekly cohorts of

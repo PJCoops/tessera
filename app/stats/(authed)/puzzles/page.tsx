@@ -112,11 +112,19 @@ export default async function PuzzlesStatsPage() {
         </div>
       ) : (
         <>
-          <Section title={`Today's tiers · ${todayTotal} solves`} freshness="live">
+          <Section
+            title={`Today's tiers · ${todayTotal} solves`}
+            freshness="live"
+            tooltip="Distribution of today's solves across the five performance tiers. Tier is awarded by moves ÷ minSwaps (where minSwaps is the optimal number of moves to solve). Legendary ≤1.5×, Genius ≤2.5×, Wordsmith ≤4.5×, Persistent ≤7×, Tenacious beyond. Skewed-Legendary day = puzzle was easy; skewed-Tenacious = hard."
+          >
             {todayTotal === 0 ? <Empty /> : <TierBarByMode byMode={todayByMode} />}
           </Section>
 
-          <Section title="Hardest & easiest · last 30d" freshness="live">
+          <Section
+            title="Hardest & easiest · last 30d"
+            freshness="live"
+            tooltip="The single puzzle from the last 30 days with the highest and lowest average move count, per mode. 4×4 (Classic) and 5×5 (Hard) share `num` but are different puzzles, so they're split. Useful for spotting puzzles that need difficulty tuning."
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <ExtremeHighlight label="Hardest puzzle" rows={hardest} />
               <ExtremeHighlight label="Easiest puzzle" rows={easiest} />
@@ -127,7 +135,11 @@ export default async function PuzzlesStatsPage() {
             </p>
           </Section>
 
-          <Section title={`Tier distribution · last 30d · ${allTotal} solves`} freshness="live">
+          <Section
+            title={`Tier distribution · last 30d · ${allTotal} solves`}
+            freshness="live"
+            tooltip="Smoothed version of the daily tier bar, every solve in the last 30 days. The shape of this distribution is the player-skill curve. A healthy mid-skill curve (Wordsmith / Persistent dominant) means difficulty is well-tuned. Heavy Tenacious tail = many players bashing through; heavy Legendary peak = the puzzle is too easy or only experts are sticking around."
+          >
             {allTotal === 0 ? <Empty /> : <TierBarByMode byMode={allByMode} />}
             <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-[color:var(--color-muted)]">
               {TIER_ORDER.map((t) => (
@@ -136,7 +148,11 @@ export default async function PuzzlesStatsPage() {
             </div>
           </Section>
 
-          <Section title="Per-puzzle difficulty · last 30d" freshness="live">
+          <Section
+            title="Per-puzzle difficulty · last 30d"
+            freshness="live"
+            tooltip="Per-puzzle solve count, average move count, and median move count. Median is the more honest difficulty number (one bashing player can drag the average up). Drop-offs in solve count vs nearby puzzles can flag a puzzle that frustrated players into quitting."
+          >
             <div className="space-y-1">
               <div className="grid grid-cols-[60px_60px_1fr_1fr_1fr] gap-3 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
                 <span>#</span>

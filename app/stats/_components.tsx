@@ -102,19 +102,49 @@ export function Section({
   title,
   children,
   freshness,
+  tooltip,
 }: {
   title: string;
   children: React.ReactNode;
   freshness?: Freshness;
+  tooltip?: string;
 }) {
   return (
     <section className="mb-10">
       <div className="flex items-baseline gap-2 mb-3">
-        <h2 className="text-sm font-medium">{title}</h2>
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          {title}
+          {tooltip && <InfoTooltip text={tooltip} />}
+        </h2>
         {freshness && <FreshnessChip kind={freshness} />}
       </div>
       {children}
     </section>
+  );
+}
+
+// Hoverable info marker with an instant CSS-only popup. Wraps the `?`
+// glyph in a `group` so hover/focus reveals a sibling tooltip card
+// without any client-side JS. Native browser title tooltips are slow
+// (~1.5s on hover) and invisible on touch, which made the original
+// implementation feel broken in the licensing meeting.
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="relative inline-flex group align-middle">
+      <span
+        tabIndex={0}
+        aria-label={text}
+        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-[color:var(--color-rule)] text-[9px] leading-none text-[color:var(--color-muted)] cursor-help select-none focus:outline-none focus:ring-1 focus:ring-[color:var(--color-rule)]"
+      >
+        ?
+      </span>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-0 top-full mt-1.5 z-20 w-72 max-w-[18rem] p-2.5 rounded-md border border-[color:var(--color-rule)] bg-[color:var(--color-cream)] text-[11px] leading-snug text-[color:var(--color-ink)] normal-case tracking-normal font-normal shadow-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity"
+      >
+        {text}
+      </span>
+    </span>
   );
 }
 
@@ -123,6 +153,7 @@ export function Hero({
   value,
   suffix,
   today,
+  tooltip,
 }: {
   label: string;
   value: string;
@@ -130,11 +161,15 @@ export function Hero({
   // Optional "today" sub-stat in the top-right so the big number
   // stays the all-time figure but a glance still shows live activity.
   today?: string;
+  tooltip?: string;
 }) {
   return (
     <div className="border border-[color:var(--color-rule)] rounded-lg p-6 bg-[color:var(--color-cream)]">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">{label}</p>
+        <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] flex items-center gap-1.5">
+          {label}
+          {tooltip && <InfoTooltip text={tooltip} />}
+        </p>
         {today && (
           <p className="text-[10px] tabular-nums text-[color:var(--color-muted)]">
             <span className="text-[color:var(--color-ink)] font-medium">{today}</span> today
@@ -155,14 +190,19 @@ export function Big({
   label,
   value,
   suffix,
+  tooltip,
 }: {
   label: string;
   value: number | string;
   suffix?: string;
+  tooltip?: string;
 }) {
   return (
     <div className="border border-[color:var(--color-rule)] rounded-md p-4">
-      <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">{label}</p>
+      <p className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)] flex items-center gap-1.5">
+        {label}
+        {tooltip && <InfoTooltip text={tooltip} />}
+      </p>
       <p className="text-3xl font-light tabular-nums mt-1 leading-tight">{value}</p>
       {suffix && (
         <p className="text-[11px] text-[color:var(--color-muted)] mt-1">{suffix}</p>

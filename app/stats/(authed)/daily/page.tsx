@@ -4,7 +4,7 @@
 
 import { hogql } from "../../../lib/posthog-api";
 import { EXCLUDE } from "../../_lib";
-import { BarCell, StackedBarCell, LegendDot, Section, Empty, MODE_SQL } from "../../_components";
+import { BarCell, StackedBarCell, LegendDot, Section, Empty, MODE_SQL, fmt } from "../../_components";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,11 @@ type DailyByModeRow = {
   revealed: number;
 };
 type MovesRow = { moves: number | null; solves: number };
+// Hour-of-day (UTC) histogram of puzzle_started events, last 30 days.
+// PostHog stores timestamps in UTC; we surface that in the tooltip
+// rather than try to localise per-user — a single global pattern is
+// what licensing readers care about (commute window, lunchtime spike).
+type HourRow = { hour: number; starts: number };
 
 // Pivot the per-(day, mode) rows into per-day rows with a classic/hard
 // breakdown for each metric, so the rendering loop is one row per day.
@@ -49,9 +54,10 @@ function pivotDaily(rows: DailyByModeRow[]): DailyPivot[] {
 export default async function DailyStatsPage() {
   let dailyRaw: DailyByModeRow[] = [];
   let moves: MovesRow[] = [];
+  let hours: HourRow[] = [];
   let error: string | null = null;
   try {
-    [dailyRaw, moves] = await Promise.all([
+    [dailyRaw, moves, hours] = await Promise.all([
       hogql<DailyByModeRow>(`
         SELECT toString(toDate(timestamp)) AS day,
           ${MODE_SQL} AS mode,
@@ -73,6 +79,19 @@ export default async function DailyStatsPage() {
         HAVING moves IS NOT NULL
         ORDER BY moves
       `),
+      // Hour-of-day starts. UTC because that's PostHog's storage tz
+      // and what the licensing audience expects (a publisher will
+      // mentally shift to GMT for a UK-centric pitch). 00 is included
+      // so the histogram has all 24 buckets even on quiet hours.
+      hogql<HourRow>(`
+        SELECT
+          toInt(toHour(timestamp)) AS hour,
+          toInt(count()) AS starts
+        FROM events
+        WHERE event = 'puzzle_started' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
+        GROUP BY hour
+        ORDER BY hour
+      `),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -89,6 +108,14 @@ export default async function DailyStatsPage() {
   );
   const movesMax = Math.max(1, ...moves.map((m) => m.solves));
 
+  // Zero-fill the 24-hour histogram so quiet hours render as empty
+  // bars, not gaps. Sorted ascending 00 to 23.
+  const hoursFilled = Array.from({ length: 24 }, (_, h) => {
+    const row = hours.find((r) => r.hour === h);
+    return { hour: h, starts: row?.starts ?? 0 };
+  });
+  const hoursMax = Math.max(1, ...hoursFilled.map((h) => h.starts));
+
   return (
     <div>
       <h1 className="text-2xl font-light tracking-tight mb-6">Daily</h1>
@@ -100,7 +127,11 @@ export default async function DailyStatsPage() {
         </div>
       ) : (
         <>
-          <Section title="Last 14 days" freshness="live">
+          <Section
+            title="Last 14 days"
+            freshness="live"
+            tooltip="Per-day count of started, solved, and revealed events. Each bar is split classic / hard (4×4 vs 5×5) so the mode mix is visible. Solved ÷ Started on a given day is the local solve rate; Revealed ÷ Started is the give-up rate. A healthy puzzle has Solved >> Revealed."
+          >
             <div className="space-y-2">
               <div className="grid grid-cols-[80px_1fr_1fr_1fr] gap-3 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
                 <span>Day</span>
@@ -112,14 +143,14 @@ export default async function DailyStatsPage() {
               {daily.map((d) => (
                 <div key={d.day} className="grid grid-cols-[80px_1fr_1fr_1fr] gap-3 items-center text-xs">
                   <span className="tabular-nums text-[color:var(--color-muted)]">{d.day.slice(5)}</span>
-                  <StackedBarCell classic={d.started.classic} hard={d.started.hard} max={dailyMax} color="#0a0a0a" />
+                  <StackedBarCell classic={d.started.classic} hard={d.started.hard} max={dailyMax} color="var(--color-ink)" />
                   <StackedBarCell classic={d.solved.classic} hard={d.solved.hard} max={dailyMax} color="#7a9070" />
                   <StackedBarCell classic={d.revealed.classic} hard={d.revealed.hard} max={dailyMax} color="#b88a3a" />
                 </div>
               ))}
             </div>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[color:var(--color-muted)]">
-              <LegendDot color="#0a0a0a" label="Started" />
+              <LegendDot color="var(--color-ink)" label="Started" />
               <LegendDot color="#7a9070" label="Solved" />
               <LegendDot color="#b88a3a" label="Revealed" />
               <span className="inline-flex items-center gap-1.5">
@@ -132,7 +163,32 @@ export default async function DailyStatsPage() {
             </div>
           </Section>
 
-          <Section title="Moves to solve · last 30d" freshness="live">
+          <Section
+            title="Time of day · last 30d"
+            freshness="live"
+            tooltip="Hour-of-day distribution of puzzle_started events over the rolling 30-day window. Times are UTC (PostHog's storage tz); for UK that's GMT in winter, BST minus 1 in summer. Watch the morning-commute spike (07 to 09 UTC) and evening peak (19 to 22 UTC)."
+          >
+            <div className="space-y-1.5">
+              {hoursFilled.map((h) => (
+                <div
+                  key={h.hour}
+                  className="grid grid-cols-[60px_1fr_60px] gap-3 items-center text-xs"
+                >
+                  <span className="tabular-nums text-[color:var(--color-muted)]">
+                    {String(h.hour).padStart(2, "0")}:00
+                  </span>
+                  <BarCell value={h.starts} max={hoursMax} color="var(--color-ink)" />
+                  <span className="tabular-nums text-right">{fmt(h.starts)}</span>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Section
+            title="Moves to solve · last 30d"
+            freshness="live"
+            tooltip="Histogram of move counts across every solve in the last 30 days. The shape of this curve is the difficulty fingerprint. A bell-shaped curve centred around 12 to 20 moves = well-tuned. A long flat tail past 60 = too many players bashing rather than solving cleanly."
+          >
             <div className="space-y-1.5">
               {moves.length === 0 && <Empty />}
               {moves.map((m) => (

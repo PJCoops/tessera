@@ -67,6 +67,24 @@ type BiggestDayRow = { day: string; solves: number };
 type ReturningRow = { returning: number; total: number; top_player_solves: number };
 type TodayUniquesRow = { visitors: number; players: number; solvers: number };
 type DataSinceRow = { first_event: string | null };
+// Per-day count of players who started a puzzle today AND also started
+// one yesterday — the numerator for day-over-day retention. Combined
+// with dailyTrend.players (yesterday's denominator) on the client.
+type ReturnedRow = { day: string; returned: number };
+// DAU/MAU stickiness — the headline daily-habit metric. avg_dau is the
+// mean of the last 30 days' unique-player counts; mau is the unique
+// players over the same 30-day window. Stickiness = avg_dau / mau.
+type StickinessRow = { avg_dau: number | null; mau: number };
+// Headline "% of solvers with a personal-best streak of 7+ days".
+// Computed as a single number on the server so the Overview card
+// doesn't pull the full histogram (that lives on /stats/players).
+type SevenPlusStreakRow = { seven_plus: number; total_solvers: number };
+// Share rate: count of share_clicked events ÷ count of puzzle_solved
+// events over the same 30-day window. Both pulled in one row so the
+// ratio stays consistent. share_clicked landed on 2026-05-10, so the
+// 30-day backfill is empty for older windows; the dashboard renders
+// "—" in that case rather than a misleading 0%.
+type ShareRateRow = { shares: number; solves: number };
 
 export default async function StatsOverviewPage() {
   let daily: DailyRow[] = [];
@@ -79,6 +97,10 @@ export default async function StatsOverviewPage() {
   let returning: ReturningRow[] = [];
   let todayUniques: TodayUniquesRow[] = [];
   let dataSince: DataSinceRow[] = [];
+  let returned: ReturnedRow[] = [];
+  let stickiness: StickinessRow[] = [];
+  let sevenPlusStreak: SevenPlusStreakRow[] = [];
+  let shareRate: ShareRateRow[] = [];
   let error: string | null = null;
   try {
     [
@@ -92,6 +114,10 @@ export default async function StatsOverviewPage() {
       returning,
       todayUniques,
       dataSince,
+      returned,
+      stickiness,
+      sevenPlusStreak,
+      shareRate,
     ] = await Promise.all([
       hogql<DailyRow>(`
         SELECT toString(toDate(timestamp)) AS day,
@@ -208,6 +234,81 @@ export default async function StatsOverviewPage() {
         FROM events
         WHERE 1=1${EXCLUDE}
       `),
+      // Per-day "returned from yesterday" counts. Inner join the daily
+      // (day, distinct_id) pairs to themselves, offset by one day.
+      // Each row in the joined table is "this player played both days",
+      // and per_day already de-dupes within a day, so count() = unique
+      // returners. Divided client-side by the previous day's player
+      // count from dailyTrend to get the retention %.
+      hogql<ReturnedRow>(`
+        WITH per_day AS (
+          SELECT toDate(timestamp) AS day, distinct_id
+          FROM events
+          WHERE event = 'puzzle_started'${EXCLUDE}
+            AND timestamp >= now() - INTERVAL 16 DAY
+          GROUP BY day, distinct_id
+        )
+        SELECT
+          toString(t.day) AS day,
+          toInt(count()) AS returned
+        FROM per_day AS t
+        INNER JOIN per_day AS y
+          ON y.distinct_id = t.distinct_id AND y.day = t.day - 1
+        GROUP BY t.day
+        ORDER BY t.day DESC
+        LIMIT 14
+      `),
+      // Stickiness = avg(DAU) / MAU over the last 30 days, the industry-
+      // standard daily-habit metric. DAU is unique players who started
+      // a puzzle on a given day; MAU is unique players who started one
+      // anywhere in the 30-day window. Wordle famously hit ~50%; >20%
+      // is "real daily habit" territory. Computed in two passes inside
+      // a CTE so DAU and MAU come from the same row of data.
+      hogql<StickinessRow>(`
+        WITH per_day AS (
+          SELECT toDate(timestamp) AS day, distinct_id
+          FROM events
+          WHERE event = 'puzzle_started'${EXCLUDE}
+            AND timestamp >= now() - INTERVAL 30 DAY
+          GROUP BY day, distinct_id
+        ),
+        daus AS (
+          SELECT day, toInt(count()) AS dau
+          FROM per_day GROUP BY day
+        )
+        SELECT
+          round(avg(daus.dau), 1) AS avg_dau,
+          toInt((SELECT uniq(distinct_id) FROM per_day)) AS mau
+        FROM daus
+      `),
+      // Headline streak metric: of all-time solvers, how many have hit
+      // a personal-best streak of 7+ days. Mirrors the histogram on
+      // /stats/players but returns just the two numbers we render.
+      hogql<SevenPlusStreakRow>(`
+        SELECT
+          toInt(countIf(max_streak >= 7)) AS seven_plus,
+          toInt(count()) AS total_solvers
+        FROM (
+          SELECT distinct_id,
+            toInt(max(toIntOrZero(toString(properties.streak)))) AS max_streak
+          FROM events
+          WHERE event = 'puzzle_solved'${EXCLUDE}
+          GROUP BY distinct_id
+        )
+      `),
+      // Share rate: share_clicked events ÷ puzzle_solved events over
+      // the same window. share_clicked started firing on 2026-05-10;
+      // numerator will be 0 until events accumulate. The dashboard
+      // shows "—" rather than 0% when shares is 0 to avoid presenting
+      // a missing-data state as a real metric.
+      hogql<ShareRateRow>(`
+        SELECT
+          toInt(countIf(event = 'share_clicked')) AS shares,
+          toInt(countIf(event = 'puzzle_solved')) AS solves
+        FROM events
+        WHERE event IN ('share_clicked', 'puzzle_solved')
+          AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
+      `),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -234,6 +335,51 @@ export default async function StatsOverviewPage() {
     ? ((at.unique_solvers ?? 0) / at.unique_players) * 100
     : 0;
   const totalTilesFlippedAllTime = (at?.total_moves ?? 0) * 2;
+
+  // Day-over-day retention. For each day d we have:
+  //   returned[d] = players who started a puzzle on d AND on d-1
+  //   players[d-1] from dailyTrend = total players on d-1
+  // Retention[d] = returned[d] / players[d-1]. We average the last 7
+  // computable days for the headline and surface yesterday's value as
+  // suffix context. Today is excluded because "yesterday's players who
+  // came back today" only stabilises after UTC rollover for most users.
+  const playersByDay = new Map(dailyTrend.map((r) => [r.day, r.players]));
+  const returnedByDay = new Map(returned.map((r) => [r.day, r.returned]));
+  const retentionDaily: { day: string; pct: number }[] = [];
+  // Walk backwards from yesterday for up to 7 days, skipping any day
+  // where the previous day had zero players (would divide by zero).
+  const todayIso = todayUtc();
+  for (let i = 1; i <= 8 && retentionDaily.length < 7; i++) {
+    const d = new Date(`${todayIso}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - i);
+    const day = d.toISOString().slice(0, 10);
+    const prev = new Date(d);
+    prev.setUTCDate(prev.getUTCDate() - 1);
+    const prevDay = prev.toISOString().slice(0, 10);
+    const ret = returnedByDay.get(day) ?? 0;
+    const prevPlayers = playersByDay.get(prevDay) ?? 0;
+    if (prevPlayers > 0) {
+      retentionDaily.push({ day, pct: (ret / prevPlayers) * 100 });
+    }
+  }
+  const retention7d = retentionDaily.length
+    ? retentionDaily.reduce((s, r) => s + r.pct, 0) / retentionDaily.length
+    : null;
+  const retentionYesterday = retentionDaily[0]?.pct ?? null;
+
+  // Stickiness = avg DAU / MAU. Industry definition: >20% means a
+  // real daily habit; >50% is exceptional (Wordle-tier). Falsy mau
+  // means no players in the window — show "—" rather than NaN.
+  const stick = stickiness[0];
+  const stickinessPct =
+    stick?.avg_dau != null && stick.mau > 0 ? (stick.avg_dau / stick.mau) * 100 : null;
+
+  const sps = sevenPlusStreak[0];
+  const sevenPlusPct =
+    sps && sps.total_solvers > 0 ? (sps.seven_plus / sps.total_solvers) * 100 : null;
+
+  const sr = shareRate[0];
+  const sharePct = sr && sr.shares > 0 && sr.solves > 0 ? (sr.shares / sr.solves) * 100 : null;
 
   const todayDate = todayUtc();
   const todayNum = puzzleNumber(todayDate, EPOCH);
@@ -283,6 +429,7 @@ export default async function StatsOverviewPage() {
               value={fmt(at?.unique_visitors ?? 0)}
               suffix="loaded the page"
               today={fmt(td?.visitors ?? 0)}
+              tooltip="Distinct browsers (PostHog distinct_id) that loaded the page or started a puzzle. Same person on phone + laptop counts twice; ad-block-evading union of $pageview and puzzle_started."
             />
             <Hero
               label="Engaged players"
@@ -293,6 +440,7 @@ export default async function StatsOverviewPage() {
                   : "started a puzzle"
               }
               today={fmt(td?.players ?? 0)}
+              tooltip="Distinct browsers that started at least one puzzle. Subset of Visitors. The percentage shows what share of visitors got past the start screen."
             />
             <Hero
               label="Solvers"
@@ -303,6 +451,7 @@ export default async function StatsOverviewPage() {
                   : "solved at least one"
               }
               today={fmt(td?.solvers ?? 0)}
+              tooltip="Distinct browsers that solved at least one puzzle. Subset of Engaged players. The percentage is the player-to-solver conversion."
             />
           </section>
 
@@ -323,12 +472,21 @@ export default async function StatsOverviewPage() {
           </section>
 
           <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
-            <Big label="Grids started today" value={today?.started ?? 0} />
-            <Big label="Grids cracked today" value={todaySolvedAuthoritative} />
+            <Big
+              label="Grids started today"
+              value={today?.started ?? 0}
+              tooltip="Total puzzle_started events today across all puzzles and modes. Counts replays and refreshes, not unique players. For unique players today see the Engaged players Hero."
+            />
+            <Big
+              label="Grids cracked today"
+              value={todaySolvedAuthoritative}
+              tooltip="Total puzzle_solved events today across all puzzles. Includes re-solves of older puzzles via the history menu, so this can exceed the number of unique solvers today."
+            />
             <Big
               label="Fastest solve today"
               value={todayMeta?.fastest != null ? String(todayMeta.fastest) : "—"}
               suffix={todayMeta?.fastest != null ? "moves" : undefined}
+              tooltip="Lowest move count among solves of today's puzzle (Classic mode only). Hard mode is excluded so the social blurb's headline stays comparable day to day."
             />
             <Big
               label="Solve rate today"
@@ -342,6 +500,7 @@ export default async function StatsOverviewPage() {
                   ? `${td.solvers} of ${td.players} players`
                   : undefined
               }
+              tooltip="Today's unique solvers ÷ today's unique players who started a puzzle. Both are distinct-browser counts."
             />
           </section>
 
@@ -350,20 +509,64 @@ export default async function StatsOverviewPage() {
               label="Biggest day ever"
               value={big?.solves ? fmt(big.solves) : "—"}
               suffix={big?.day ? `solves · ${big.day}` : undefined}
+              tooltip="The single calendar day (UTC) with the most puzzle_solved events recorded."
             />
             <Big
               label="Top streak ever"
               value={at?.top_streak ? `${at.top_streak} 🔥` : "—"}
+              tooltip="Longest consecutive-day solve streak any single player has reached. The streak counter increments client-side and is sent with each puzzle_solved event."
             />
             <Big
               label="Most-played player"
               value={ret?.top_player_solves ? `${ret.top_player_solves}×` : "—"}
               suffix="solves"
+              tooltip="Total puzzle_solved events for the most prolific browser. Includes replays."
             />
             <Big
               label="Returning players"
               value={`${returningPct.toFixed(0)}%`}
               suffix={ret?.total ? `${fmt(ret.returning)}/${fmt(ret.total)}` : undefined}
+              tooltip="Of all-time solvers, the share that solved more than once. Denominator is solvers (not visitors), so this is really 'repeat-solver rate'. A player counts as returning once they fire a 2nd puzzle_solved event."
+            />
+            <Big
+              label="Stickiness (DAU/MAU)"
+              value={stickinessPct != null ? `${stickinessPct.toFixed(0)}%` : "—"}
+              suffix={
+                stick && stick.avg_dau != null && stick.mau > 0
+                  ? `${stick.avg_dau} avg DAU / ${fmt(stick.mau)} MAU`
+                  : undefined
+              }
+              tooltip="DAU/MAU ratio. The standard daily-habit metric used across consumer apps. Average daily players over the last 30 days, divided by total unique players over the same window. Benchmarks: >20% = real daily habit; >30% = strong; >50% = exceptional (Wordle-tier)."
+            />
+            <Big
+              label="Share rate"
+              value={sharePct != null ? `${sharePct.toFixed(0)}%` : "—"}
+              suffix={
+                sr && sr.solves > 0
+                  ? `${fmt(sr.shares)} shares / ${fmt(sr.solves)} solves · 30d`
+                  : undefined
+              }
+              tooltip="Share-clicked events as a share of solves over the last 30 days. Tracks the Wordle-style 'I want to brag' loop, the closest thing to a free-acquisition channel for a daily puzzle. Tracking started 2026-05-10, so this will read low until ~7 days of data accumulate. A healthy daily puzzle sits in the 5 to 15% range."
+            />
+            <Big
+              label="7+ day streakers"
+              value={sevenPlusPct != null ? `${sevenPlusPct.toFixed(0)}%` : "—"}
+              suffix={
+                sps && sps.total_solvers > 0
+                  ? `${fmt(sps.seven_plus)} of ${fmt(sps.total_solvers)} solvers`
+                  : undefined
+              }
+              tooltip="Share of all-time solvers whose personal-best streak is 7 days or more. The visceral 'this is a daily habit' number. Hard to fake: a player only reaches 7 by showing up every day for a week. Full distribution on /stats/players."
+            />
+            <Big
+              label="Daily retention"
+              value={retention7d != null ? `${retention7d.toFixed(0)}%` : "—"}
+              suffix={
+                retentionYesterday != null
+                  ? `7-day avg · yesterday ${retentionYesterday.toFixed(0)}%`
+                  : undefined
+              }
+              tooltip="Day-over-day retention: of yesterday's unique players, the share who started a puzzle again today. The headline averages the last 7 such days; the suffix shows yesterday's value alone. distinct_id is per-device, so cross-device players appear as different people and undercount retention. For weekly cohorts (D1/D7/D30) see /stats/cohorts."
             />
             <Big
               label="All-time solve rate"
@@ -373,11 +576,13 @@ export default async function StatsOverviewPage() {
                   ? `${fmt(at.total_solved)}/${fmt(at.total_started)}`
                   : undefined
               }
+              tooltip="Total puzzle_solved events ÷ total puzzle_started events, all time. Event-level (not unique-player), so replays inflate both numerator and denominator."
             />
             <Big
               label="Tiles flipped"
               value={fmt(totalTilesFlippedAllTime)}
               suffix={`${fmt(at?.total_moves ?? 0)} swaps · all time`}
+              tooltip="Total tiles moved across every solve. Each swap moves 2 tiles, so this is the swap count × 2. Vanity number for the social blurb."
             />
           </section>
         </>
