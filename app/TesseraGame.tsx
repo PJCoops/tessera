@@ -932,17 +932,17 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
               <path d="M6 3.2v3l1.8 1.1" />
             </svg>
           </button>
-          {liveStreak > 0 && !puzzle.replay && (
-            <span className="inline-flex items-center gap-1 h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs tabular-nums">
-              🔥 {liveStreak}
-            </span>
-          )}
           <a
             href={homePath(mode.id === "hard" ? CLASSIC : HARD, locale)}
             className="inline-flex items-center h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
           >
             {t(mode.id === "hard" ? "game.switchToClassic" : "game.switchToHard")}
           </a>
+          {liveStreak > 0 && !puzzle.replay && (
+            <span className="inline-flex items-center gap-1 h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs tabular-nums">
+              🔥 {liveStreak}
+            </span>
+          )}
         </div>
       </div>
     </div>
