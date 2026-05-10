@@ -184,6 +184,11 @@
     "dailyTitle": "La Tessera de hoy está lista",
     "dailyBody": "Partida #{num}. Date un momento."
   },
+  "start": {
+    "tagline": "Intercambia fichas hasta que cada fila forme la palabra correcta.",
+    "play": "Jugar",
+    "howToPlay": "Cómo jugar"
+  },
   "pwa": {
     "installIOS": {
       "title": "Añade Tessera a tu pantalla de inicio",

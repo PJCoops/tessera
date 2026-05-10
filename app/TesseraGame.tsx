@@ -11,7 +11,8 @@ import { buildSharePayload } from "./lib/share";
 import { getTier } from "./lib/tier";
 import { dominantTier } from "./lib/dominant-tier";
 import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
-import { HowToPlay, hasSeenHowTo, markHowToSeen } from "./HowToPlay";
+import { HowToPlay } from "./HowToPlay";
+import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
 import { HistoryModal } from "./HistoryModal";
 import { EmailSignup } from "./EmailSignup";
 import { track } from "./lib/analytics";
@@ -227,6 +228,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   const [streak, setStreak] = useState<Streak>({ current: 0, max: 0, lastWon: 0 });
   const [copied, setCopied] = useState(false);
   const [howToOpen, setHowToOpen] = useState(false);
+  const [showStart, setShowStart] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [helpTab, setHelpTab] = useState<"how" | "words">("how");
   const [confirmReveal, setConfirmReveal] = useState(false);
@@ -304,7 +306,10 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     // `pruneOldProgress(num)` would wipe today's saved progress while we're
     // replaying #5 — only run it on the live daily puzzle.
     if (!useDemo && !replay) pruneOldProgress(num, mode.progressPrefix);
-    if (!hasSeenHowTo()) setHowToOpen(true);
+    if (!hasSeenStart() && !isolated) {
+      setShowStart(true);
+      track("start_screen_shown", { num, day: date, mode: mode.id });
+    }
     try {
       const hh = window.localStorage.getItem(HIDE_HINTS_KEY);
       if (hh !== null) {
@@ -598,6 +603,38 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     );
   }
 
+  if (showStart) {
+    return (
+      <>
+        <StartScreen
+          onPlay={() => {
+            track("start_play_clicked", { num: puzzle.num, day: puzzle.date, mode: mode.id });
+            markStartSeen();
+            setShowStart(false);
+          }}
+          onHowToPlay={() => {
+            track("start_howto_clicked", { num: puzzle.num, day: puzzle.date, mode: mode.id });
+            setHelpTab("how");
+            setHowToOpen(true);
+          }}
+        />
+        <HowToPlay
+          open={howToOpen}
+          onClose={() => setHowToOpen(false)}
+          goldRows={puzzle.goldRows}
+          initialTab={helpTab}
+          hideHints={hideHints}
+          onHideHintsChange={updateHideHints}
+          muted={muted}
+          onMutedChange={updateMuted}
+          theme={theme}
+          onThemeChange={updateTheme}
+          mode={mode}
+        />
+      </>
+    );
+  }
+
   const positionByTileId = new Map<number, number>();
   positions.forEach((t, idx) => positionByTileId.set(t.id, idx));
   const selectedTileId = selectedIdx !== null ? positions[selectedIdx].id : null;
@@ -677,10 +714,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     } catch {}
   };
 
-  const closeHowTo = () => {
-    markHowToSeen();
-    setHowToOpen(false);
-  };
+  const closeHowTo = () => setHowToOpen(false);
 
   const openHelp = (tab: "how" | "words") => {
     setHelpTab(tab);

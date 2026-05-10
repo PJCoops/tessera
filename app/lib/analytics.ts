@@ -20,7 +20,11 @@ export type AnalyticsEvent =
   | "push_subscribed" // user accepted the browser permission + sub stored
   | "push_unsubscribed" // user toggled off, or browser reported the sub dead
   | "push_received" // service worker handled a push event
-  | "push_clicked"; // user tapped the resulting notification
+  | "push_clicked" // user tapped the resulting notification
+  // Title/start screen funnel.
+  | "start_screen_shown"
+  | "start_play_clicked"
+  | "start_howto_clicked";
 
 // Mirror to Meta only the events worth optimizing ad delivery against.
 // PageView is auto-fired by the Pixel snippet itself. ViewContent is a

@@ -184,6 +184,11 @@
     "dailyTitle": "Today's Tessera is ready",
     "dailyBody": "Puzzle #{num}. Take a moment."
   },
+  "start": {
+    "tagline": "Swap tiles until every row spells the correct word.",
+    "play": "Play",
+    "howToPlay": "How to play"
+  },
   "pwa": {
     "installIOS": {
       "title": "Add Tessera to your home screen",

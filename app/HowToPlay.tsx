@@ -22,24 +22,8 @@ const STATIC_DEFS: Record<string, Record<string, string>> = {
 // all return nothing — keeps the live lookup as the primary path.
 const STATIC_DEFS_EN: Record<string, string> = definitionsEn as Record<string, string>;
 
-const SEEN_KEY = "tessera:seen-howto";
 const DEF_CACHE_PREFIX = "tessera:def:";
 const DEF_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
-
-export function hasSeenHowTo(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    return window.localStorage.getItem(SEEN_KEY) === "1";
-  } catch {
-    return true;
-  }
-}
-
-export function markHowToSeen() {
-  try {
-    window.localStorage.setItem(SEEN_KEY, "1");
-  } catch {}
-}
 
 type Tab = "how" | "words" | "settings" | "credits";
 type InitialTab = "how" | "words";
