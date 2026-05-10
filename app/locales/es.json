@@ -24,13 +24,13 @@
     "showHints": "Mostrar pistas",
     "hideHints": "Ocultar pistas",
     "howToPlay": "Cómo jugar",
-    "reveal": "Revelar",
+    "reveal": "Solución",
     "seeWords": "¿Qué significan?",
     "nextPuzzle": "Próxima partida en {countdown}",
     "legend": {
       "correctRow": "fila correcta",
       "correctWord": "palabra correcta",
-      "puzzleComplete": "partida completa"
+      "puzzleComplete": "completa"
     },
     "ariaHowToPlay": "Cómo jugar",
     "ariaHistory": "Historial",
@@ -53,10 +53,10 @@
   "howto": {
     "title": "Tessera Puzzle™",
     "titleHard": "Tessera Puzzle™ Difícil",
+    "titleWords": "Palabras de hoy",
     "ariaClose": "Cerrar",
     "tabs": {
       "how": "Cómo jugar",
-      "words": "Palabras de hoy",
       "settings": "Ajustes",
       "credits": "Créditos"
     },

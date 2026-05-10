@@ -80,10 +80,10 @@ const themeInitScript = `(function(){try{var t=localStorage.getItem('tessera:the
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Hide marketing badges (Product Hunt, Playlin, r/TesseraPuzzle footer)
-  // on the stats subdomain — they're for the puzzle audience, not the
-  // dashboard. Detect via host header rather than pathname so it works
-  // both before and after the proxy.ts rewrite.
+  // Hide marketing badges (Playlin, subreddit pill) on the stats
+  // subdomain — they're for the puzzle audience, not the dashboard.
+  // Detect via host header rather than pathname so it works both
+  // before and after the proxy.ts rewrite.
   //
   // The same flag also gates PostHog, Meta Pixel and the X Pixel: dashboard loads
   // are admin traffic, not players, so we don't want them firing
@@ -116,50 +116,19 @@ export default async function RootLayout({
           <main className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
             {children}
           </main>
-          <footer className="py-6 text-center text-xs text-[color:var(--color-muted)]">
-            <a
-              href="https://www.reddit.com/r/TesseraPuzzle/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline-offset-4 hover:underline hover:text-[color:var(--color-ink)] transition-colors"
-            >
-              r/TesseraPuzzle
-            </a>
-          </footer>
           <Analytics />
-          {/* External directory badges. Fixed to viewport corners so they
-             stay visible without intruding on the puzzle. Hidden on small
+          {/* Fixed-corner pills. Bottom-left: subreddit link.
+             Bottom-right: external Playlin badge. Hidden on small
              screens where they'd overlap the grid. */}
           <>
               <a
-                href="https://www.producthunt.com/products/tessera-5?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-tessera-5"
+                href="https://www.reddit.com/r/TesseraPuzzle/"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Featured on Product Hunt"
-                className="ph-badge ph-badge-light hidden md:block fixed bottom-4 left-4 z-40 opacity-70 hover:opacity-100 transition-opacity"
+                aria-label="r/TesseraPuzzle on Reddit"
+                className="hidden md:inline-flex items-center gap-1.5 fixed bottom-4 left-4 z-40 px-3 py-1.5 rounded-full border border-[color:var(--color-rule)] bg-[color:var(--color-paper)] text-[11px] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] hover:bg-[color:var(--color-cream)] transition-colors opacity-80 hover:opacity-100"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt="Tessera Puzzle - A 4x4 word puzzle where rows and columns have to spell words | Product Hunt"
-                  width={180}
-                  height={39}
-                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1134416&theme=neutral&t=1777651610297"
-                />
-              </a>
-              <a
-                href="https://www.producthunt.com/products/tessera-5?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-tessera-5"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Featured on Product Hunt"
-                className="ph-badge ph-badge-dark hidden md:block fixed bottom-4 left-4 z-40 opacity-70 hover:opacity-100 transition-opacity"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt="Tessera Puzzle - A 4x4 word puzzle where rows and columns have to spell words | Product Hunt"
-                  width={180}
-                  height={39}
-                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1134416&theme=dark&t=1777805167587"
-                />
+                r/TesseraPuzzle
               </a>
               <a
                 href="https://playlin.io/game/tessera-daily-word-puzzle/"

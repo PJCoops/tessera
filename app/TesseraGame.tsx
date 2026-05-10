@@ -265,7 +265,8 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     const isolated = useDemo || forceSolved || replay;
     const stored = isolated ? null : readResult(num, mode.resultPrefix);
     setStoredResult(stored);
-    setStreak(readStreak(mode.streakKey));
+    const streakNow = readStreak(mode.streakKey);
+    setStreak(streakNow);
     const progress = !isolated && !stored ? readProgress(num, mode.progressPrefix) : null;
     if (progress) {
       setPositions(progress.positions);
@@ -285,7 +286,15 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     if (!hasSeenHowTo()) setHowToOpen(true);
     try {
       const hh = window.localStorage.getItem(HIDE_HINTS_KEY);
-      if (hh !== null) setHideHints(hh === "1");
+      if (hh !== null) {
+        setHideHints(hh === "1");
+      } else if (visibleCurrent(streakNow, num) >= 2) {
+        // Players on a live 2+ streak don't need the dotted-tile hint —
+        // hide it by default. They can flip it back on via the Show
+        // hints button (which then writes an explicit pref so this
+        // auto-hide doesn't fight a manual choice).
+        setHideHints(true);
+      }
       const m = window.localStorage.getItem(MUTED_KEY);
       if (m !== null) setMuted(m === "1");
       const t = window.localStorage.getItem(THEME_KEY);
@@ -677,7 +686,6 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         open={howToOpen}
         onClose={closeHowTo}
         goldRows={puzzle.goldRows}
-        showWordsTab={finished}
         initialTab={helpTab}
         hideHints={hideHints}
         onHideHintsChange={updateHideHints}

@@ -51,7 +51,6 @@ export function HowToPlay({
   open,
   onClose,
   goldRows,
-  showWordsTab,
   initialTab = "how",
   hideHints,
   onHideHintsChange,
@@ -64,7 +63,6 @@ export function HowToPlay({
   open: boolean;
   onClose: () => void;
   goldRows: string[];
-  showWordsTab: boolean;
   initialTab?: InitialTab;
   hideHints: boolean;
   onHideHintsChange: (v: boolean) => void;
@@ -120,25 +118,27 @@ export function HowToPlay({
             </button>
 
             <h2 className="text-2xl font-light tracking-tight">
-              {t(mode.id === "hard" ? "howto.titleHard" : "howto.title")}
+              {tab === "words"
+                ? t("howto.titleWords")
+                : t(mode.id === "hard" ? "howto.titleHard" : "howto.title")}
             </h2>
 
-            <div className="mt-4 flex gap-1 border-b border-[color:var(--color-rule)]">
-              <TabButton active={tab === "how"} onClick={() => setTab("how")}>
-                {t("howto.tabs.how")}
-              </TabButton>
-              {showWordsTab && (
-                <TabButton active={tab === "words"} onClick={() => setTab("words")}>
-                  {t("howto.tabs.words")}
+            {/* Words is a focused view — opened via the "What do they
+                mean?" button under the puzzle, with no tab strip. The
+                rest of the modal keeps the tab navigation. */}
+            {tab !== "words" && (
+              <div className="mt-4 flex gap-1 border-b border-[color:var(--color-rule)]">
+                <TabButton active={tab === "how"} onClick={() => setTab("how")}>
+                  {t("howto.tabs.how")}
                 </TabButton>
-              )}
-              <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>
-                {t("howto.tabs.settings")}
-              </TabButton>
-              <TabButton active={tab === "credits"} onClick={() => setTab("credits")}>
-                {t("howto.tabs.credits")}
-              </TabButton>
-            </div>
+                <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>
+                  {t("howto.tabs.settings")}
+                </TabButton>
+                <TabButton active={tab === "credits"} onClick={() => setTab("credits")}>
+                  {t("howto.tabs.credits")}
+                </TabButton>
+              </div>
+            )}
 
             <div className="mt-6">
               {tab === "how" && <HowToContent mode={mode} />}

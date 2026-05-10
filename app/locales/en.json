@@ -24,13 +24,13 @@
     "showHints": "Show hints",
     "hideHints": "Hide hints",
     "howToPlay": "How to play",
-    "reveal": "Reveal",
+    "reveal": "Solution",
     "seeWords": "What do they mean?",
     "nextPuzzle": "Next puzzle in {countdown}",
     "legend": {
       "correctRow": "correct row",
       "correctWord": "correct word",
-      "puzzleComplete": "puzzle complete"
+      "puzzleComplete": "complete"
     },
     "ariaHowToPlay": "How to play",
     "ariaHistory": "History",
@@ -53,10 +53,10 @@
   "howto": {
     "title": "Tessera Puzzle™",
     "titleHard": "Tessera Puzzle™ Hard",
+    "titleWords": "Today’s words",
     "ariaClose": "Close",
     "tabs": {
       "how": "How to play",
-      "words": "Today’s words",
       "settings": "Settings",
       "credits": "Credits"
     },
