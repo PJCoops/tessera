@@ -167,6 +167,13 @@ export function buildSharePayload(input: ShareInput): {
   if (meta.length) lines.push(meta.join(" · "));
   lines.push("");
   lines.push(buildGrid({ revealed, bonus, N: mode.N }));
+  // Solved shares carry a short call-to-action so the recipient
+  // understands the link is an invitation to play. Revealed shares
+  // skip it — challenging someone after giving up reads wrong.
+  if (!revealed) {
+    lines.push("");
+    lines.push(t(dict, "share.challenge"));
+  }
   const text = lines.join("\n");
   return { text, url, full: `${text}\n\n${url}` };
 }

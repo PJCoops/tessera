@@ -177,7 +177,8 @@
     "headlineSolved": "Tessera #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
     "headlineSolvedHard": "Tessera Difícil #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
     "streakMeta": "🔥 racha de {streak} días",
-    "bonusMeta": "✨ bonus"
+    "bonusMeta": "✨ bonus",
+    "challenge": "¿Puedes superarme? →"
   },
   "push": {
     "dailyTitle": "La Tessera de hoy está lista",
