@@ -126,7 +126,7 @@ export default async function RootLayout({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="r/TesseraPuzzle on Reddit"
-                className="fixed bottom-4 left-1/2 -translate-x-1/2 md:left-4 md:translate-x-0 z-40 inline-flex items-center px-4 py-1.5 rounded-full bg-[#1A1A1A] text-white text-[11px] tracking-wide opacity-70 hover:opacity-100 transition-opacity"
+                className="fixed bottom-4 left-1/2 -translate-x-1/2 md:left-4 md:translate-x-0 z-20 inline-flex items-center px-4 py-1.5 rounded-full bg-[#1A1A1A] text-white text-[11px] tracking-wide opacity-70 hover:opacity-100 transition-opacity"
               >
                 r/TesseraPuzzle
               </a>

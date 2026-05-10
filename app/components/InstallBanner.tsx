@@ -68,7 +68,7 @@ export function InstallBanner() {
   return (
     <div
       role="status"
-      className="fixed inset-x-2 bottom-2 z-30 mx-auto max-w-sm rounded-lg border border-[color:var(--color-rule)] bg-[color:var(--color-paper)] p-3 text-sm shadow-lg pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+      className="fixed inset-x-2 bottom-2 z-50 mx-auto max-w-sm rounded-lg border border-[color:var(--color-rule)] bg-[color:var(--color-paper)] p-3 text-sm shadow-lg pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
