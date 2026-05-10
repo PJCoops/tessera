@@ -74,7 +74,7 @@
       "title": "Reading the board.",
       "dashed": "a tile is already on the right row.",
       "green": "the row spells a correct word.",
-      "complete": "all {n} rows are right and the columns spell words too — solved."
+      "complete": "all {n} rows are right and the columns spell words too. Tessera solved."
     },
     "words": {
       "from": "from",

@@ -74,7 +74,7 @@
       "title": "Cómo leer el tablero.",
       "dashed": "la ficha ya está en la fila correcta.",
       "green": "la fila forma una palabra correcta.",
-      "complete": "las {n} filas están bien y las columnas también forman palabras — resuelto."
+      "complete": "las {n} filas están bien y las columnas también forman palabras. Tessera resuelta."
     },
     "words": {
       "from": "de",
