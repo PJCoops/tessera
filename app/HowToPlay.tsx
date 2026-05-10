@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { LOCALES, LOCALE_COOKIE, type Locale, pathnameWithLocale } from "./lib/i18n";
 import { useLocale } from "./lib/locale-context";
 import { PushReminderToggle } from "./components/PushReminderToggle";
+import { Legend } from "./components/Legend";
 import { CLASSIC, type ModeConfig } from "./lib/mode";
 import definitionsEs from "./locales/definitions-es.json";
 import definitionsEn from "./locales/definitions-en.json";
@@ -203,11 +204,28 @@ function HowToContent({ mode }: { mode: ModeConfig }) {
       </li>
       <li className="flex gap-4 items-start">
         <Step n={3} />
-        <div>
+        <div className="flex-1">
           <p className="font-medium">{t("howto.step3.title")}</p>
-          <p className="text-[color:var(--color-muted)] mt-1">
-            {t("howto.step3.body", { n: mode.N })}
-          </p>
+          <ul className="mt-2 space-y-2 text-[color:var(--color-muted)]">
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0">
+                <Legend variant="hint">{null}</Legend>
+              </span>
+              <span>{t("howto.step3.dashed")}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0">
+                <Legend variant="row">{null}</Legend>
+              </span>
+              <span>{t("howto.step3.green")}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0">
+                <Legend variant="bonus">{null}</Legend>
+              </span>
+              <span>{t("howto.step3.complete", { n: mode.N })}</span>
+            </li>
+          </ul>
         </div>
       </li>
     </ol>

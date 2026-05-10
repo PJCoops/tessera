@@ -72,7 +72,9 @@
     },
     "step3": {
       "title": "Reading the board.",
-      "body": "A dashed tile is already on the right row. A green row means that word is correct. When all {n} rows are right, the columns spell words too, and the whole grid turns rust."
+      "dashed": "a tile is already on the right row.",
+      "green": "the row spells a correct word.",
+      "complete": "all {n} rows are right and the columns spell words too — solved."
     },
     "words": {
       "from": "from",

@@ -13,6 +13,7 @@ import { dominantTier } from "./lib/dominant-tier";
 import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
 import { HowToPlay } from "./HowToPlay";
 import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
+import { Legend } from "./components/Legend";
 import { HistoryModal } from "./HistoryModal";
 import { EmailSignup } from "./EmailSignup";
 import { track } from "./lib/analytics";
@@ -1116,33 +1117,6 @@ function pickDemoSwap(
     if (after <= before) return [a, b];
   }
   return [0, 15];
-}
-
-function Legend({ children, variant }: { children: React.ReactNode; variant: "row" | "bonus" | "hint" }) {
-  // Mini tiles, styled to match the real grid 1:1 so the legend swatch is
-  // visually identical to what you're looking for on the board.
-  const isHint = variant === "hint";
-  const bg = isHint ? "var(--color-cream)" : variant === "bonus" ? "#b85a1c" : "#7a9070";
-  // Sage/rust swatches have fixed backgrounds — pin their text contrast too so
-  // they read the same in light and dark themes. Hint tile follows the theme.
-  const color = isHint ? "var(--color-ink)" : "#fafaf7";
-  const letter = isHint ? "A" : variant === "row" ? "B" : "C";
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span
-        className="inline-flex items-center justify-center w-5 h-5 rounded-[3px] text-[11px] font-medium leading-none"
-        style={{
-          background: bg,
-          color,
-          outline: isHint ? "2px dashed var(--color-ink)" : undefined,
-          outlineOffset: isHint ? "-3px" : undefined,
-        }}
-      >
-        {letter}
-      </span>
-      {children}
-    </span>
-  );
 }
 
 function tileClasses(rowValid: boolean, homeHint: boolean): string {

@@ -72,7 +72,9 @@
     },
     "step3": {
       "title": "Cómo leer el tablero.",
-      "body": "Una ficha con borde discontinuo ya está en la fila correcta. Una fila verde significa que esa palabra está bien. Cuando las {n} filas estén bien, las columnas también formarán palabras y toda la cuadrícula se volverá color óxido."
+      "dashed": "la ficha ya está en la fila correcta.",
+      "green": "la fila forma una palabra correcta.",
+      "complete": "las {n} filas están bien y las columnas también forman palabras — resuelto."
     },
     "words": {
       "from": "de",
