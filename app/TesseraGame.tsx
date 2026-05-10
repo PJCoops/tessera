@@ -696,10 +696,18 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
 
   const onShare = async () => {
     if (!sharePayload) return;
+    const hasNativeShare =
+      typeof navigator !== "undefined" && typeof navigator.share === "function";
+    track("share_clicked", {
+      mode: mode.id,
+      revealed: shareSrc?.revealed ?? false,
+      bonus: shareSrc?.bonus ?? false,
+      native_share: hasNativeShare,
+    });
     // Pass text+url separately so Facebook (which ignores `text`) can still
     // unfurl via the per-solve OG card, while WhatsApp/X/iMessage continue
     // to render the headline + grid plus the link.
-    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    if (hasNativeShare) {
       try {
         await navigator.share({ text: sharePayload.text, url: sharePayload.url });
         return;
