@@ -882,7 +882,9 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
                 onClick={onShare}
                 className="px-5 py-2 text-sm border border-[color:var(--color-rule)] rounded-md hover:bg-[color:var(--color-cream)] transition-colors"
               >
-                {copied ? t("game.copied") : t("game.share")}
+                {copied
+                  ? t("game.copied")
+                  : t(shareSrc?.revealed ? "game.shareRevealed" : "game.share")}
               </button>
             )}
             {finished && (
