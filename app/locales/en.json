@@ -28,9 +28,9 @@
     "seeWords": "What do they mean?",
     "nextPuzzle": "Next puzzle in {countdown}",
     "legend": {
-      "correctRow": "correct row",
-      "correctWord": "correct word",
-      "puzzleComplete": "solved"
+      "correctRow": "Correct row",
+      "correctWord": "Correct word",
+      "puzzleComplete": "Solved"
     },
     "ariaHowToPlay": "How to play",
     "ariaHistory": "History",

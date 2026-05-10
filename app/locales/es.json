@@ -28,9 +28,9 @@
     "seeWords": "¿Qué significan?",
     "nextPuzzle": "Próxima partida en {countdown}",
     "legend": {
-      "correctRow": "fila correcta",
-      "correctWord": "palabra correcta",
-      "puzzleComplete": "resuelto"
+      "correctRow": "Fila correcta",
+      "correctWord": "Palabra correcta",
+      "puzzleComplete": "Resuelto"
     },
     "ariaHowToPlay": "Cómo jugar",
     "ariaHistory": "Historial",
