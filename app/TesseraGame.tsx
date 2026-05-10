@@ -933,7 +933,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
             </svg>
           </button>
           {liveStreak > 0 && !puzzle.replay && (
-            <span className="text-xs tabular-nums">
+            <span className="inline-flex items-center gap-1 h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs tabular-nums">
               🔥 {liveStreak}
             </span>
           )}
