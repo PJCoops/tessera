@@ -9,6 +9,7 @@ import { resolvePuzzleFromParams } from "./lib/replay";
 import { readStreak, recordWin, visibleCurrent, type Streak } from "./lib/streak";
 import { buildSharePayload } from "./lib/share";
 import { getTier } from "./lib/tier";
+import { dominantTier } from "./lib/dominant-tier";
 import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
 import { HowToPlay, hasSeenHowTo, markHowToSeen } from "./HowToPlay";
 import { HistoryModal } from "./HistoryModal";
@@ -225,6 +226,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   // Position of the synthetic cursor follower used in ?demo mode for cleaner
   // screen recordings. Null until the mouse first moves.
   const [demoCursor, setDemoCursor] = useState<{ x: number; y: number; down: boolean } | null>(null);
+  const [streakToast, setStreakToast] = useState<string | null>(null);
   const [hideHints, setHideHints] = useState(false);
   const [muted, setMuted] = useState(true);
   const [theme, setTheme] = useState<ThemePref>("system");
@@ -939,12 +941,41 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
             {t(mode.id === "hard" ? "game.switchToClassic" : "game.switchToHard")}
           </a>
           {liveStreak > 0 && !puzzle.replay && (
-            <span className="inline-flex items-center gap-1 h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs tabular-nums">
+            <button
+              type="button"
+              onClick={() => {
+                const tierKey = dominantTier(mode, locale, EPOCH);
+                const tierName = tierKey ? t(`tiers.${tierKey}`) : "";
+                const key = liveStreak === 1 ? "streakToast.single" : "streakToast.plural";
+                const msg = tierKey
+                  ? t(key, { n: liveStreak, tier: tierName })
+                  : t("streakToast.noTier", { n: liveStreak });
+                setStreakToast(msg);
+                window.setTimeout(() => setStreakToast((c) => (c === msg ? null : c)), 2600);
+              }}
+              className="inline-flex items-center gap-1 h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs tabular-nums hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
+            >
               🔥 {liveStreak}
-            </span>
+            </button>
           )}
         </div>
       </div>
+      <AnimatePresence>
+        {streakToast && (
+          <motion.div
+            key="streak-toast"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            role="status"
+            aria-live="polite"
+            className="fixed left-1/2 -translate-x-1/2 bottom-16 z-50 pointer-events-none rounded-full bg-[color:var(--color-ink)] text-[color:var(--color-paper)] px-4 py-2 text-xs shadow-lg"
+          >
+            {streakToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
