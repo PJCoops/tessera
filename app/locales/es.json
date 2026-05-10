@@ -30,7 +30,7 @@
     "legend": {
       "correctRow": "fila correcta",
       "correctWord": "palabra correcta",
-      "puzzleComplete": "completa"
+      "puzzleComplete": "resuelto"
     },
     "ariaHowToPlay": "Cómo jugar",
     "ariaHistory": "Historial",
