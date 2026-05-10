@@ -72,9 +72,9 @@
     },
     "step3": {
       "title": "Reading the board.",
-      "dashed": "a tile is already on the right row.",
-      "green": "the row spells a correct word.",
-      "complete": "all {n} rows are right and the columns spell words too. Tessera solved."
+      "dashed": "A tile is already on the right row.",
+      "green": "The row spells a correct word.",
+      "complete": "All {n} rows are right and the columns spell words too. Tessera solved."
     },
     "words": {
       "from": "from",
