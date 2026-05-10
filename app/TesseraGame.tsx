@@ -69,6 +69,19 @@ function hasAnyResult(resultPrefix: string): boolean {
     return false;
   }
 }
+function countResults(resultPrefix: string): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    let n = 0;
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith(resultPrefix)) n += 1;
+    }
+    return n;
+  } catch {
+    return 0;
+  }
+}
 function hasPlayedDemo(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -227,6 +240,12 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   // screen recordings. Null until the mouse first moves.
   const [demoCursor, setDemoCursor] = useState<{ x: number; y: number; down: boolean } | null>(null);
   const [streakToast, setStreakToast] = useState<string | null>(null);
+  // Legend strip is hidden for experienced players. Threshold is "two
+  // or more solves in this mode" — after the second solve the player
+  // has the language internalised and the strip is just visual noise.
+  // Replays don't count: the read happens once on mount against the
+  // mode's result prefix.
+  const [showLegend, setShowLegend] = useState(true);
   const [hideHints, setHideHints] = useState(false);
   const [muted, setMuted] = useState(true);
   const [theme, setTheme] = useState<ThemePref>("system");
@@ -296,6 +315,11 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         // hints button (which then writes an explicit pref so this
         // auto-hide doesn't fight a manual choice).
         setHideHints(true);
+      }
+      // Legend strip: once the player has logged two or more solves
+      // for this mode, hide it. New players still get the swatch key.
+      if (countResults(mode.resultPrefix) >= 2) {
+        setShowLegend(false);
       }
       const m = window.localStorage.getItem(MUTED_KEY);
       if (m !== null) setMuted(m === "1");
@@ -910,11 +934,13 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           </a>
         )}
 
-        <div className="mt-2 flex items-center gap-4 text-xs text-[color:var(--color-muted)]">
-          {!hideHints && <Legend variant="hint">{t("game.legend.correctRow")}</Legend>}
-          <Legend variant="row">{t("game.legend.correctWord")}</Legend>
-          <Legend variant="bonus">{t("game.legend.puzzleComplete")}</Legend>
-        </div>
+        {showLegend && (
+          <div className="mt-2 flex items-center gap-4 text-xs text-[color:var(--color-muted)]">
+            {!hideHints && <Legend variant="hint">{t("game.legend.correctRow")}</Legend>}
+            <Legend variant="row">{t("game.legend.correctWord")}</Legend>
+            <Legend variant="bonus">{t("game.legend.puzzleComplete")}</Legend>
+          </div>
+        )}
 
         <div className="mt-2 flex items-center gap-3 text-[color:var(--color-muted)]">
           <button
