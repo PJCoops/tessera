@@ -937,14 +937,13 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
               🔥 {liveStreak}
             </span>
           )}
+          <a
+            href={homePath(mode.id === "hard" ? CLASSIC : HARD, locale)}
+            className="inline-flex items-center h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
+          >
+            {t(mode.id === "hard" ? "game.switchToClassic" : "game.switchToHard")}
+          </a>
         </div>
-
-        <a
-          href={homePath(mode.id === "hard" ? CLASSIC : HARD, locale)}
-          className="mt-2 text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition-colors"
-        >
-          {t(mode.id === "hard" ? "game.switchToClassic" : "game.switchToHard")}
-        </a>
       </div>
     </div>
   );
