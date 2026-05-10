@@ -64,7 +64,10 @@ const BLOCK = new Set([
   "chao", "cine", "deja", "deux", "jeux", "mano", "quai", "shri",
   "sith", "vive",
   // 4-letter archaic / obscure
-  "alef", "alfa", "amah", "anil",
+  "alef", "alfa", "amah", "anil", "buna", "duro", "giga", "jura",
+  "miri", "nema", "nona", "paik",
+  // 4-letter additional proper nouns (names, places, ethnic groups)
+  "turk",
   // 4-letter slang / regional plurals
   "utes",
   // 4-letter US spellings (Tessera is en-GB; we use UK forms only).
@@ -79,8 +82,11 @@ const BLOCK = new Set([
   "honda", "irons", "jesse", "jesus", "joans", "johns",
   "jones", "judas", "judah", "lewis", "linda", "louis", "mayas",
   "miles", "minas", "obama", "paris", "pesos",
-  "santa", "scots", "shahs", "sucre", "swiss", "syria", "sykes",
-  "texas", "trump", "turks", "venus", "wigan",
+  "britt", "colby", "hansa", "iliad", "kerry", "madre", "mayan",
+  "moira", "nicol", "pedro", "prost", "rouen", "santa", "scots",
+  "shahs", "shawn", "sokol", "soyuz", "sucre", "swiss", "syria",
+  "sykes", "tatar", "texas", "torah", "trois", "trump", "turks",
+  "venus", "vichy", "wigan",
   // 5-letter loanwords / coopted non-English
   "adieu", "ciao", "entree", "haute", "henri", "jefe", "outre",
   "regis", "salam",
