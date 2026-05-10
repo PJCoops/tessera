@@ -40,7 +40,7 @@ const META_EVENT_MAP: Partial<Record<AnalyticsEvent, { name: string; standard: b
 // X conversion event IDs (set up in ads.x.com → Conversions). Mirror only the
 // events worth optimizing campaigns against.
 const X_EVENT_MAP: Partial<Record<AnalyticsEvent, string>> = {
-  puzzle_solved: "tw-onksr-rcb1q",
+  puzzle_solved: "tw-rccen-rccer",
 };
 
 function makeEventId(): string {
