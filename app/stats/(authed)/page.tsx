@@ -85,7 +85,7 @@ type SevenPlusStreakRow = { seven_plus: number; total_solvers: number };
 // ratio stays consistent. share_clicked landed on 2026-05-10, so the
 // 30-day backfill is empty for older windows; the dashboard renders
 // "—" in that case rather than a misleading 0%.
-type ShareRateRow = { shares: number; solves: number };
+type ShareRateRow = { shares: number; solves: number; since: string | null };
 
 export default async function StatsOverviewPage() {
   let daily: DailyRow[] = [];
@@ -107,6 +107,11 @@ export default async function StatsOverviewPage() {
   let sevenPlusStreak: SevenPlusStreakRow[] = [];
   let shareRate: ShareRateRow[] = [];
   let error: string | null = null;
+  // Today's puzzle number is the source of truth for every "today"
+  // query below. Without this filter, late solvers of yesterday's
+  // puzzle (UTC rollover stragglers) leak into today's rows and the
+  // social blurb ends up describing the wrong puzzle.
+  const todayPuzzleNum = puzzleNumber(todayUtc(), EPOCH);
   try {
     [
       daily,
@@ -170,6 +175,7 @@ export default async function StatsOverviewPage() {
         FROM events
         WHERE event = 'puzzle_solved'
           AND toDate(timestamp) = today()
+          AND toInt(toString(properties.num)) = ${todayPuzzleNum}
           AND ${MODE_SQL} = 'classic'${EXCLUDE}
         GROUP BY num
       `),
@@ -181,6 +187,7 @@ export default async function StatsOverviewPage() {
         FROM events
         WHERE event = 'puzzle_solved'
           AND toDate(timestamp) = today()
+          AND toInt(toString(properties.num)) = ${todayPuzzleNum}
           AND ${MODE_SQL} = 'classic'${EXCLUDE}
         GROUP BY tier
       `),
@@ -194,6 +201,7 @@ export default async function StatsOverviewPage() {
         FROM events
         WHERE event = 'puzzle_solved'
           AND toDate(timestamp) = today()
+          AND toInt(toString(properties.num)) = ${todayPuzzleNum}
           AND ${MODE_SQL} = 'hard'${EXCLUDE}
         GROUP BY num
       `),
@@ -202,6 +210,7 @@ export default async function StatsOverviewPage() {
         FROM events
         WHERE event = 'puzzle_solved'
           AND toDate(timestamp) = today()
+          AND toInt(toString(properties.num)) = ${todayPuzzleNum}
           AND ${MODE_SQL} = 'hard'${EXCLUDE}
         GROUP BY tier
       `),
@@ -216,6 +225,7 @@ export default async function StatsOverviewPage() {
         FROM events
         WHERE event = 'puzzle_solved'
           AND toDate(timestamp) = today()
+          AND toInt(toString(properties.num)) = ${todayPuzzleNum}
           AND ${MODE_SQL} = 'classic'${EXCLUDE}
       `),
       hogql<{ solved: number }>(`
@@ -223,6 +233,7 @@ export default async function StatsOverviewPage() {
         FROM events
         WHERE event = 'puzzle_solved'
           AND toDate(timestamp) = today()
+          AND toInt(toString(properties.num)) = ${todayPuzzleNum}
           AND ${MODE_SQL} = 'hard'${EXCLUDE}
       `),
       hogql<SummaryRow>(`
@@ -345,18 +356,26 @@ export default async function StatsOverviewPage() {
           GROUP BY distinct_id
         )
       `),
-      // Share rate: share_clicked events ÷ puzzle_solved events over
-      // the same window. share_clicked started firing on 2026-05-10;
-      // numerator will be 0 until events accumulate. The dashboard
-      // shows "—" rather than 0% when shares is 0 to avoid presenting
-      // a missing-data state as a real metric.
+      // Share rate: share_clicked events ÷ puzzle_solved events. Both
+      // numerator and denominator are bounded to the date share_clicked
+      // first fired (2026-05-10 in practice, but read dynamically so it
+      // self-corrects), so the denominator can't include solves from
+      // days when sharing wasn't tracked yet. Comparing N days of shares
+      // against 30 days of solves would lowball the rate by ~5x in the
+      // first month. The dashboard shows "—" rather than 0% when shares
+      // is 0 to avoid presenting a missing-data state as a real metric.
       hogql<ShareRateRow>(`
+        WITH first_share AS (
+          SELECT min(timestamp) AS ts
+          FROM events
+          WHERE event = 'share_clicked'${EXCLUDE}
+        )
         SELECT
           toInt(countIf(event = 'share_clicked')) AS shares,
-          toInt(countIf(event = 'puzzle_solved')) AS solves
+          toInt(countIf(event = 'puzzle_solved' AND timestamp >= (SELECT ts FROM first_share))) AS solves,
+          toString(toDate((SELECT ts FROM first_share))) AS since
         FROM events
-        WHERE event IN ('share_clicked', 'puzzle_solved')
-          AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
+        WHERE event IN ('share_clicked', 'puzzle_solved')${EXCLUDE}
       `),
     ]);
   } catch (e) {
@@ -431,7 +450,6 @@ export default async function StatsOverviewPage() {
   const sharePct = sr && sr.shares > 0 && sr.solves > 0 ? (sr.shares / sr.solves) * 100 : null;
 
   const todayDate = todayUtc();
-  const todayNum = puzzleNumber(todayDate, EPOCH);
   const todayPretty = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
     day: "numeric",
@@ -457,7 +475,7 @@ export default async function StatsOverviewPage() {
     todayMeta,
     todayTiersOrdered,
     todayClassicSolved,
-    todayNum,
+    todayPuzzleNum,
     todayPretty,
     "classic"
   );
@@ -465,7 +483,7 @@ export default async function StatsOverviewPage() {
     todayHardMeta,
     todayHardTiersOrdered,
     todayHardSolved,
-    todayNum,
+    todayPuzzleNum,
     todayPretty,
     "hard"
   );
@@ -604,10 +622,12 @@ export default async function StatsOverviewPage() {
               value={sharePct != null ? `${sharePct.toFixed(0)}%` : "—"}
               suffix={
                 sr && sr.solves > 0
-                  ? `${fmt(sr.shares)} shares / ${fmt(sr.solves)} solves · 30d`
+                  ? `${fmt(sr.shares)} shares / ${fmt(sr.solves)} solves${
+                      sr.since ? ` · since ${sr.since}` : ""
+                    }`
                   : undefined
               }
-              tooltip="Share-clicked events as a share of solves over the last 30 days. Tracks the Wordle-style 'I want to brag' loop, the closest thing to a free-acquisition channel for a daily puzzle. Tracking started 2026-05-10, so this will read low until ~7 days of data accumulate. A healthy daily puzzle sits in the 5 to 15% range."
+              tooltip="Share-clicked events as a share of solves since share tracking began (2026-05-10). The denominator is bounded to the same window as the numerator so the rate isn't diluted by older solves with no shares to compare against. Tracks the Wordle-style 'I want to brag' loop, the closest thing to a free-acquisition channel for a daily puzzle. A healthy daily puzzle sits in the 5 to 15% range."
             />
             <Big
               label="7+ day streakers"
