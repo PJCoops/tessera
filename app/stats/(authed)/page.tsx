@@ -373,7 +373,7 @@ export default async function StatsOverviewPage() {
         SELECT
           toInt(countIf(event = 'share_clicked')) AS shares,
           toInt(countIf(event = 'puzzle_solved' AND timestamp >= (SELECT ts FROM first_share))) AS solves,
-          toString(toDate((SELECT ts FROM first_share))) AS since
+          formatDateTime((SELECT ts FROM first_share), '%Y-%m-%d') AS since
         FROM events
         WHERE event IN ('share_clicked', 'puzzle_solved')${EXCLUDE}
       `),
