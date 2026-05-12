@@ -94,6 +94,7 @@ export default async function StatsOverviewPage() {
   let todayTiers: TierRow[] = [];
   let todayHardRows: TodayRow[] = [];
   let todayHardTiers: TierRow[] = [];
+  let todayClassicSolvedRows: { solved: number }[] = [];
   let todayHardSolvedRows: { solved: number }[] = [];
   let summary: SummaryRow[] = [];
   let allTime: AllTimeRow[] = [];
@@ -114,6 +115,7 @@ export default async function StatsOverviewPage() {
       todayTiers,
       todayHardRows,
       todayHardTiers,
+      todayClassicSolvedRows,
       todayHardSolvedRows,
       summary,
       allTime,
@@ -203,8 +205,19 @@ export default async function StatsOverviewPage() {
           AND ${MODE_SQL} = 'hard'${EXCLUDE}
         GROUP BY tier
       `),
-      // Authoritative Hard-mode solve count for today — mirrors the
-      // Classic figure pulled from the daily query, but mode-scoped.
+      // Authoritative per-mode solve counts for today. The per-num
+      // TodayRow queries above split today's events into rows by
+      // properties.num, so taking [0] under-counts whenever stray
+      // events (other nums, missing props) sneak in. The social blurb
+      // uses these for both the headline solve count and the
+      // tier-percentage divisor so percentages can't exceed 100%.
+      hogql<{ solved: number }>(`
+        SELECT toInt(count()) AS solved
+        FROM events
+        WHERE event = 'puzzle_solved'
+          AND toDate(timestamp) = today()
+          AND ${MODE_SQL} = 'classic'${EXCLUDE}
+      `),
       hogql<{ solved: number }>(`
         SELECT toInt(count()) AS solved
         FROM events
@@ -437,12 +450,13 @@ export default async function StatsOverviewPage() {
 
   const todayHardMeta = todayHardRows[0];
   const todayHardTiersOrdered = sortTiers(todayHardTiers);
+  const todayClassicSolved = todayClassicSolvedRows[0]?.solved ?? 0;
   const todayHardSolved = todayHardSolvedRows[0]?.solved ?? 0;
 
   const socialClassic = buildSocialBlurb(
     todayMeta,
     todayTiersOrdered,
-    todayMeta?.solves ?? 0,
+    todayClassicSolved,
     todayNum,
     todayPretty,
     "classic"
@@ -653,7 +667,7 @@ function buildSocialBlurb(
   const header = `✨ Tessera #${puzzleNum}${modeTag} · ${prettyDate}`;
   const cta = "Think you can do better? tesserapuzzle.com";
 
-  if (!today || !today.solves) {
+  if (!today || total <= 0) {
     lines.push(header);
     lines.push("");
     lines.push(
@@ -668,8 +682,10 @@ function buildSocialBlurb(
   }
 
   // Phrasing scales with solve count so the blurb reads less
-  // formulaic on quiet days vs busy days.
-  const solves = today.solves;
+  // formulaic on quiet days vs busy days. `total` is the
+  // mode-scoped authoritative count for today; `today.solves`
+  // is per-num and can under-count if stray events leak in.
+  const solves = total;
   const grid = mode === "hard" ? "Hard grid" : "grid";
   const gridsPlural = mode === "hard" ? "Hard grids" : "grids";
   const headlineLine =
