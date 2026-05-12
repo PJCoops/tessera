@@ -18,7 +18,7 @@ import { getTier } from "../../lib/tier";
 import { getDictionary, t } from "../../lib/i18n";
 import { CLASSIC, HARD } from "../../lib/mode";
 import { generateDailyPuzzleFor } from "../../lib/puzzle";
-import { dateFromPuzzleNumber, seedFromDate } from "../../lib/rng";
+import { dateFromPuzzleNumber, puzzleNumber, seedFromDate } from "../../lib/rng";
 import { EPOCH } from "../../lib/epoch";
 
 // OG cards are shared cross-locale and have no locale signal in the
@@ -55,8 +55,12 @@ export async function GET(req: Request) {
   const mode = searchParams.get("mode") === "hard" ? HARD : CLASSIC;
 
   // Reject malformed input early so unfurlers get a clear failure rather
-  // than a partially-filled card.
-  if (!Number.isFinite(n) || n <= 0) {
+  // than a partially-filled card. Cap to a small lookahead past today so
+  // an attacker can't burn render+font-load cycles on arbitrary puzzle
+  // numbers (each unique (n, m, b, r, mode) is a fresh cache miss).
+  const todayUtc = new Date().toISOString().slice(0, 10);
+  const maxN = puzzleNumber(todayUtc, EPOCH) + 7;
+  if (!Number.isFinite(n) || n <= 0 || n > maxN) {
     return new Response("Bad request: n required", { status: 400 });
   }
 
