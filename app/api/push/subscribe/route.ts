@@ -16,6 +16,7 @@ import {
   type StoredPushSubscription,
 } from "../../../lib/push-subscribers";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "../../../lib/i18n";
+import { rateLimit } from "../../../lib/rate-limit";
 
 type Body = {
   subscription?: {
@@ -26,6 +27,14 @@ type Body = {
 };
 
 export async function POST(req: NextRequest) {
+  const rl = await rateLimit(req, "push-subscribe", 10, "1 m");
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, reason: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
+
   if (!kvConfigured()) {
     return NextResponse.json({ ok: false, reason: "kv_not_configured" }, { status: 503 });
   }

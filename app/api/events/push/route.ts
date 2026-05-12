@@ -14,6 +14,7 @@
 // gating; we can rate-limit later if it becomes a problem.
 
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "../../../lib/rate-limit";
 
 const ALLOWED_EVENTS = ["push_received", "push_clicked"] as const;
 type PushEventName = (typeof ALLOWED_EVENTS)[number];
@@ -26,6 +27,14 @@ type Body = {
 };
 
 export async function POST(req: NextRequest) {
+  const rl = await rateLimit(req, "events-push", 30, "1 m");
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, reason: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
+
   const phHost = (process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com").trim();
   const phKey = (process.env.NEXT_PUBLIC_POSTHOG_KEY ?? "").trim();
   if (!phKey) {

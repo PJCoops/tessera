@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addSubscriber } from "../../lib/subscribers";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "../../lib/i18n";
+import { rateLimit } from "../../lib/rate-limit";
 
 const LOOPS_ENDPOINT = "https://app.loops.so/api/v1/contacts/create";
 // Loops also exposes /update which upserts. Use it so a returning visitor
@@ -32,6 +33,14 @@ function isPlausibleEmail(value: string): boolean {
 type Body = { email?: string; source?: string; locale?: string };
 
 export async function POST(req: NextRequest) {
+  const rl = await rateLimit(req, "subscribe", 5, "1 m");
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, reason: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
+
   const apiKey = process.env.LOOPS_API_KEY;
   if (!apiKey) {
     return NextResponse.json(

@@ -7,6 +7,7 @@
 // Token never leaves the server. Failures are swallowed and logged; analytics
 // must never break gameplay.
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "../../lib/rate-limit";
 
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 const CAPI_TOKEN = process.env.META_CAPI_TOKEN;
@@ -25,6 +26,14 @@ type EventBody = {
 };
 
 export async function POST(req: NextRequest) {
+  const rl = await rateLimit(req, "meta-event", 30, "1 m");
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, reason: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
+
   if (!PIXEL_ID || !CAPI_TOKEN) {
     return NextResponse.json({ ok: false, reason: "not configured" });
   }
