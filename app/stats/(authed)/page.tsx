@@ -17,6 +17,7 @@ import { puzzleNumber, todayUtc } from "../../lib/rng";
 import { EXCLUDE } from "../_lib";
 import { Hero, Big, Section, fmt, sortTiers, TIER_SQL, MODE_SQL, type TierRow } from "../_components";
 import { DailyTrendChart } from "./DailyTrendChart";
+import { SocialBlurbTabs } from "./SocialBlurbTabs";
 
 const EPOCH = "2026-04-27"; // Tessera #1, mirrors TesseraGame.tsx
 
@@ -91,6 +92,9 @@ export default async function StatsOverviewPage() {
   let dailyTrend: DailyTrendRow[] = [];
   let todayRows: TodayRow[] = [];
   let todayTiers: TierRow[] = [];
+  let todayHardRows: TodayRow[] = [];
+  let todayHardTiers: TierRow[] = [];
+  let todayHardSolvedRows: { solved: number }[] = [];
   let summary: SummaryRow[] = [];
   let allTime: AllTimeRow[] = [];
   let biggestDay: BiggestDayRow[] = [];
@@ -108,6 +112,9 @@ export default async function StatsOverviewPage() {
       dailyTrend,
       todayRows,
       todayTiers,
+      todayHardRows,
+      todayHardTiers,
+      todayHardSolvedRows,
       summary,
       allTime,
       biggestDay,
@@ -147,12 +154,10 @@ export default async function StatsOverviewPage() {
         GROUP BY day
         ORDER BY day ASC
       `),
-      // Today's per-puzzle stats. Scoped to Classic only because the
-      // social blurb below is the shareable broad-audience copy and
-      // pooling Hard solves into "fastest 8 moves" reads weirdly
-      // (Hard's 8-move solve is exceptional; Classic's 8-move solve
-      // is a more relatable headline number). A Hard-specific blurb
-      // can come later if it's worth shipping.
+      // Today's per-puzzle stats, split by mode so each mode has its
+      // own social blurb (tab-switched on the page). Pooling Classic
+      // and Hard would muddy the "fastest 8 moves" headline — same
+      // move count means very different things across modes.
       hogql<TodayRow>(`
         SELECT toInt(toString(properties.num)) AS num,
           toInt(count()) AS solves,
@@ -167,7 +172,8 @@ export default async function StatsOverviewPage() {
         GROUP BY num
       `),
       // Today's tier rows feed the social blurb's "🏆 X% Legendary
-      // · ..." line. Same mode-scoping rationale: blurb is Classic.
+      // · ..." line. One query per mode so each blurb's percentages
+      // total 100% within its own mode.
       hogql<TierRow>(`
         SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
         FROM events
@@ -175,6 +181,36 @@ export default async function StatsOverviewPage() {
           AND toDate(timestamp) = today()
           AND ${MODE_SQL} = 'classic'${EXCLUDE}
         GROUP BY tier
+      `),
+      hogql<TodayRow>(`
+        SELECT toInt(toString(properties.num)) AS num,
+          toInt(count()) AS solves,
+          toInt(min(toInt(toString(properties.moves)))) AS fastest,
+          round(avg(toInt(toString(properties.moves))), 1) AS avg_moves,
+          toInt(countIf(toString(properties.bonus) = 'true')) AS bonus,
+          toInt(max(toInt(toString(properties.streak)))) AS top_streak
+        FROM events
+        WHERE event = 'puzzle_solved'
+          AND toDate(timestamp) = today()
+          AND ${MODE_SQL} = 'hard'${EXCLUDE}
+        GROUP BY num
+      `),
+      hogql<TierRow>(`
+        SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
+        FROM events
+        WHERE event = 'puzzle_solved'
+          AND toDate(timestamp) = today()
+          AND ${MODE_SQL} = 'hard'${EXCLUDE}
+        GROUP BY tier
+      `),
+      // Authoritative Hard-mode solve count for today — mirrors the
+      // Classic figure pulled from the daily query, but mode-scoped.
+      hogql<{ solved: number }>(`
+        SELECT toInt(count()) AS solved
+        FROM events
+        WHERE event = 'puzzle_solved'
+          AND toDate(timestamp) = today()
+          AND ${MODE_SQL} = 'hard'${EXCLUDE}
       `),
       hogql<SummaryRow>(`
         SELECT
@@ -399,12 +435,25 @@ export default async function StatsOverviewPage() {
     ? `Data since ${firstEventDate}${firstEventPuzzle ? ` · puzzle #${firstEventPuzzle}` : ""}`
     : null;
 
-  const social = buildSocialBlurb(
+  const todayHardMeta = todayHardRows[0];
+  const todayHardTiersOrdered = sortTiers(todayHardTiers);
+  const todayHardSolved = todayHardSolvedRows[0]?.solved ?? 0;
+
+  const socialClassic = buildSocialBlurb(
     todayMeta,
     todayTiersOrdered,
-    todaySolvedAuthoritative,
+    todayMeta?.solves ?? 0,
     todayNum,
-    todayPretty
+    todayPretty,
+    "classic"
+  );
+  const socialHard = buildSocialBlurb(
+    todayHardMeta,
+    todayHardTiersOrdered,
+    todayHardSolved,
+    todayNum,
+    todayPretty,
+    "hard"
   );
 
   return (
@@ -466,9 +515,7 @@ export default async function StatsOverviewPage() {
                 Click to select all · tweak before posting
               </p>
             </div>
-            <pre className="whitespace-pre-wrap break-words p-5 rounded-md bg-[color:var(--color-cream)] border border-[color:var(--color-rule)] text-sm leading-relaxed font-[inherit] select-all cursor-text">
-              {social}
-            </pre>
+            <SocialBlurbTabs classic={socialClassic} hard={socialHard} />
           </section>
 
           <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
@@ -598,45 +645,52 @@ function buildSocialBlurb(
   tiers: TierRow[],
   total: number,
   puzzleNum: number,
-  prettyDate: string
+  prettyDate: string,
+  mode: "classic" | "hard"
 ): string {
   const lines: string[] = [];
-  const header = `✨ Tessera #${puzzleNum} · ${prettyDate}`;
+  const modeTag = mode === "hard" ? " · Hard" : "";
+  const header = `✨ Tessera #${puzzleNum}${modeTag} · ${prettyDate}`;
+  const cta = "Think you can do better? tesserapuzzle.com";
 
   if (!today || !today.solves) {
     lines.push(header);
     lines.push("");
-    lines.push("Today's grid is fresh and waiting 🪄");
+    lines.push(
+      mode === "hard"
+        ? "Hard mode is wide open today 🪄"
+        : "Today's grid is fresh and waiting 🪄"
+    );
     lines.push("First crack at it gets bragging rights.");
     lines.push("");
-    lines.push("tesserapuzzle.com");
+    lines.push(cta);
     return lines.join("\n");
   }
 
   // Phrasing scales with solve count so the blurb reads less
   // formulaic on quiet days vs busy days.
   const solves = today.solves;
+  const grid = mode === "hard" ? "Hard grid" : "grid";
+  const gridsPlural = mode === "hard" ? "Hard grids" : "grids";
   const headlineLine =
     solves === 1
-      ? "1 brave soul cracked today's grid 🎯"
+      ? `1 brave soul cracked today's ${grid} 🎯`
       : solves <= 5
-      ? `${solves} early birds cracked today's grid 🎯`
+      ? `${solves} early birds cracked today's ${grid} 🎯`
       : solves <= 50
-      ? `${solves} of you cracked today's grid 🎯`
-      : `${solves.toLocaleString()} grids cracked today 🎯`;
+      ? `${solves} of you cracked today's ${grid} 🎯`
+      : `${solves.toLocaleString()} ${gridsPlural} cracked today 🎯`;
 
   lines.push(header);
   lines.push("");
   lines.push(headlineLine);
   if (today.fastest != null) {
-    const flair =
-      today.fastest <= 8 ? " (chef's kiss 👨‍🍳)" : today.fastest <= 12 ? " ⚡" : " ⚡";
-    lines.push(`Fastest solve: ${today.fastest} moves${flair}`);
-  }
-  if (today.bonus > 0) {
-    lines.push(
-      today.bonus === 1 ? "1 perfect bonus grid ✦" : `${today.bonus} perfect bonus grids ✦`
-    );
+    // Hard-mode threshold is tighter because Hard solves trend longer.
+    const fast = today.fastest;
+    const kiss =
+      mode === "hard" ? fast <= 12 : fast <= 8;
+    const flair = kiss ? " (chef's kiss 👨‍🍳)" : " ⚡";
+    lines.push(`Fastest solve: ${fast} moves${flair}`);
   }
 
   if (total > 0) {
@@ -656,7 +710,6 @@ function buildSocialBlurb(
   }
 
   lines.push("");
-  lines.push("New grid drops at UTC midnight.");
-  lines.push("tesserapuzzle.com");
+  lines.push(cta);
   return lines.join("\n");
 }
