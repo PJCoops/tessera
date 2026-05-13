@@ -34,10 +34,26 @@ function buildExcludeClause(): string {
 }
 export const EXCLUDE = buildExcludeClause();
 
+// Vercel's dashboard doesn't strip surrounding quotes from env values
+// the way dotenv does locally, so a value pasted as `"abc"` ends up as
+// the literal six-char string. Normalise so both environments behave
+// the same.
+function expectedToken(): string | undefined {
+  const raw = process.env.STATS_TOKEN?.trim();
+  if (!raw) return undefined;
+  if (
+    (raw.startsWith('"') && raw.endsWith('"')) ||
+    (raw.startsWith("'") && raw.endsWith("'"))
+  ) {
+    return raw.slice(1, -1);
+  }
+  return raw;
+}
+
 // Returns true when the request has a valid sign-in cookie. Used by
 // the (authed) layout to gate every authenticated route.
 export async function isAuthenticated(): Promise<boolean> {
-  const expected = process.env.STATS_TOKEN;
+  const expected = expectedToken();
   if (!expected) return false;
   const token = (await cookies()).get(COOKIE_NAME)?.value;
   return token === expected;
@@ -48,8 +64,8 @@ export async function isAuthenticated(): Promise<boolean> {
 // with `?e=1` so the form can show the error.
 export async function signIn(formData: FormData): Promise<void> {
   "use server";
-  const token = String(formData.get("t") ?? "");
-  const expected = process.env.STATS_TOKEN;
+  const token = String(formData.get("t") ?? "").trim();
+  const expected = expectedToken();
   if (!expected || token !== expected) {
     redirect("/stats/signin?e=1");
   }
