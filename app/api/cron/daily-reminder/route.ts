@@ -1,17 +1,11 @@
 // Daily reminder fan-out. Triggered by Vercel Cron at 09:00 UTC. Reads
-// every subscriber from the KV set for each locale and fires a Loops
-// event for each address. A Loop in the Loops dashboard reacts to that
-// event with the localised email body — keeps copy editable without
-// redeploying.
-//
-// Event naming:
-//   en → "daily_reminder"      (legacy name; matches the live Loop)
-//   es → "daily_reminder_es"
-//   any new locale → "daily_reminder_<code>"
-//
-// English keeps the un-suffixed name so we don't break the existing
-// dashboard wiring. New locales get a `_<code>` suffix and their own
-// Loop in the dashboard.
+// every subscriber from the KV set for each locale and fires a single
+// `daily_reminder` Loops event per address. The Loops workflow has one
+// trigger event and branches internally on the contact's `language`
+// property (set on the contact when they subscribe via /api/subscribe)
+// to pick the localised template. So the cron stays language-agnostic
+// at the event level — copy lives in Loops, language routing lives in
+// Loops, we just iterate subscribers.
 //
 // Auth: Vercel Cron sends an `Authorization: Bearer ${CRON_SECRET}`
 // header automatically when CRON_SECRET is set in env. We verify it
@@ -44,12 +38,13 @@ const LOG_TAG = "daily-reminder:";
 
 const LOOPS_EVENT_ENDPOINT = "https://app.loops.so/api/v1/events/send";
 
-// One Loops event per locale so each language gets its own template in
-// the Loops dashboard — no conditional template logic, just one Loop
-// per language. English keeps the un-suffixed name from the original
-// single-locale flow so we don't break the live trigger.
-function eventNameFor(locale: Locale): string {
-  return locale === "en" ? "daily_reminder" : `daily_reminder_${locale}`;
+// Single event name for all locales. The Loops workflow branches on
+// the contact's `language` property to pick the right template, so we
+// don't need per-locale event names. Kept as a function (rather than a
+// const) so the per-locale logging downstream still has a tidy call
+// site and so future per-locale event variants are easy to slot in.
+function eventNameFor(_locale: Locale): string {
+  return "daily_reminder";
 }
 
 // Per-request timeout when calling Loops. Long enough for a slow leg,
