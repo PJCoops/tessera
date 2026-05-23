@@ -16,7 +16,15 @@ if (typeof window !== "undefined") {
       api_host: "/ingest",
       ui_host: "https://eu.posthog.com",
       capture_pageview: true,
-      capture_pageleave: true,
+      // $pageleave doubles pageview volume without us using dwell-time
+      // anywhere in the stats dashboard.
+      capture_pageleave: false,
+      // $web_vitals fires multiple events per pageview and was the bulk
+      // of our PostHog bill. We have no perf-monitoring use case for it.
+      capture_performance: false,
+      // Belt-and-braces: we never enabled session recording, but this
+      // keeps it from being toggled on accidentally from the dashboard.
+      disable_session_recording: true,
       // Autocapture would log every tile tap and burn through the event
       // budget; we only want the explicit events declared in analytics.ts.
       autocapture: false,
