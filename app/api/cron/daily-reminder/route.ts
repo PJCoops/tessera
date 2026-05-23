@@ -36,9 +36,11 @@ import {
   removePushSubscriberFromAll,
   type StoredPushSubscription,
 } from "../../../lib/push-subscribers";
-import { LOCALES, getDictionary, t, type Locale } from "../../../lib/i18n";
+import { LOCALES, getDictionary, t, type Locale, isLocale } from "../../../lib/i18n";
 import { puzzleNumber, todayUtc } from "../../../lib/rng";
 import { EPOCH } from "../../../lib/epoch";
+
+const LOG_TAG = "daily-reminder:";
 
 const LOOPS_EVENT_ENDPOINT = "https://app.loops.so/api/v1/events/send";
 
@@ -76,6 +78,19 @@ export async function GET(req: NextRequest) {
   if (auth !== `Bearer ${secret}` && queryKey !== secret) {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
+
+  // Test mode. `?only=<email>` restricts the email fan-out to a single
+  // address (bypassing the subscriber list) so a preview deploy can
+  // verify Loops end-to-end without spamming the live list. Push fan-out
+  // is skipped in this mode because push subs are endpoint-hashed and
+  // can't be filtered by email. `?locale=<code>` picks which locale's
+  // event name to use; defaults to "en". Same CRON_SECRET gate as the
+  // normal trigger, so this is not a public spam vector.
+  const onlyRaw = req.nextUrl.searchParams.get("only");
+  const only = onlyRaw ? onlyRaw.trim().toLowerCase() : null;
+  const localeParam = req.nextUrl.searchParams.get("locale");
+  const onlyLocale: Locale = isLocale(localeParam) ? localeParam : "en";
+  const source = auth === `Bearer ${secret}` ? "cron" : "manual";
 
   const apiKey = process.env.LOOPS_API_KEY;
   if (!apiKey) {
@@ -119,15 +134,32 @@ export async function GET(req: NextRequest) {
   // notification body matches what the user sees when they tap through.
   const todayNum = puzzleNumber(todayUtc(), EPOCH);
 
-  for (const locale of LOCALES) {
+  console.log(
+    `${LOG_TAG} invoked source=${source} only=${only ?? "-"} onlyLocale=${
+      only ? onlyLocale : "-"
+    } puzzleNum=${todayNum} pushConfigured=${pushConfigured}`
+  );
+
+  // In test mode (`?only=`), iterate just the one chosen locale so the
+  // tester gets exactly one Loops event, not one per locale.
+  const localesToRun: readonly Locale[] = only ? [onlyLocale] : LOCALES;
+
+  for (const locale of localesToRun) {
     perLocale[locale] = {
       email: { attempted: 0, succeeded: 0, failed: 0 },
       push: { attempted: 0, succeeded: 0, failed: 0, expired: 0 },
     };
 
-    // ---- Email fan-out (existing behaviour, untouched) ----
-    const emails = await listSubscribers(locale);
+    // ---- Email fan-out ----
+    // Test mode swaps the subscriber list for a single address so we
+    // can dry-run against a real inbox without touching the live list.
+    const emails = only ? [only] : await listSubscribers(locale);
     perLocale[locale].email.attempted = emails.length;
+    console.log(
+      `${LOG_TAG} locale=${locale} event=${eventNameFor(locale)} emails=${emails.length}${
+        only ? " (test-mode)" : ""
+      }`
+    );
     if (emails.length > 0) {
       totalAttempted += emails.length;
       const queue = [...emails];
@@ -141,6 +173,9 @@ export async function GET(req: NextRequest) {
             totalSucceeded++;
           } else {
             perLocale[locale].email.failed++;
+            console.log(
+              `${LOG_TAG} loops-fail locale=${locale} status=${result.status} reason=${result.reason}`
+            );
             failures.push({
               email: maskEmail(email),
               locale,
@@ -154,7 +189,9 @@ export async function GET(req: NextRequest) {
     }
 
     // ---- Push fan-out ----
-    if (pushConfigured) {
+    // Skip in test mode: push subs are endpoint-hashed, so there's no
+    // way to filter to "just me" the way we can for email.
+    if (pushConfigured && !only) {
       const subs = await listPushSubscribers(locale);
       perLocale[locale].push.attempted = subs.length;
       if (subs.length > 0) {
@@ -191,16 +228,25 @@ export async function GET(req: NextRequest) {
         await Promise.all(workers);
       }
     }
+
+    console.log(`${LOG_TAG} result locale=${locale} ${JSON.stringify(perLocale[locale])}`);
   }
 
-  return NextResponse.json({
+  const summary = {
     ok: true,
+    source,
+    testMode: Boolean(only),
     attempted: totalAttempted,
     succeeded: totalSucceeded,
     failed: failures.length,
     pushConfigured,
     todayNum,
     perLocale,
+  };
+  console.log(`${LOG_TAG} done ${JSON.stringify(summary)}`);
+
+  return NextResponse.json({
+    ...summary,
     // Cap the failure detail in the response so a bad day doesn't
     // produce a 50KB JSON blob in the cron logs.
     failures: failures.slice(0, 20),
