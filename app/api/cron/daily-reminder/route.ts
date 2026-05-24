@@ -51,11 +51,17 @@ function eventNameFor(_locale: Locale): string {
 // short enough not to wedge the cron when Loops degrades.
 const LOOPS_TIMEOUT_MS = 8000;
 
-// Fan-out concurrency. Loops doesn't publish a hard rate limit, but
-// hammering them with hundreds of parallel events from a serverless
-// function is rude and likely to hit a soft limit. Eight at a time is
-// a comfortable middle ground for early-stage volumes.
-const CONCURRENCY = 8;
+// Fan-out concurrency. Loops applies a tight per-account rate limit
+// (~10 req/sec); at 8 parallel workers we were getting 429s on most of
+// the fan-out and only ~12 of 230 emails were actually sending. One
+// worker keeps us under the limit naturally (HTTP roundtrip is ~150ms
+// so sequential = ~6 req/sec). Combined with retry-on-429 below it's
+// belt-and-braces against transient throttling.
+const CONCURRENCY = 1;
+
+// Retry config for Loops 429 responses. Total worst-case wait per
+// event: 1 + 2 + 4 = 7s. Three attempts before giving up.
+const LOOPS_RETRY_DELAYS_MS = [1000, 2000, 4000];
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -281,32 +287,54 @@ async function sendEvent(
   apiKey: string,
   eventName: string
 ): Promise<{ ok: true } | { ok: false; status: number; reason: string }> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), LOOPS_TIMEOUT_MS);
-  try {
-    const res = await fetch(LOOPS_EVENT_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ email, eventName }),
-      signal: ctrl.signal,
-    });
-    if (!res.ok) {
+  // Retry-on-429 loop. Loops occasionally throttles even at sequential
+  // pace (e.g. when a stats-precompute run is hitting them in parallel
+  // from elsewhere). Treat 429 as transient and back off. Any other
+  // non-2xx is returned to the caller immediately.
+  let lastStatus = 0;
+  let lastReason = "";
+  for (let attempt = 0; attempt <= LOOPS_RETRY_DELAYS_MS.length; attempt++) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), LOOPS_TIMEOUT_MS);
+    try {
+      const res = await fetch(LOOPS_EVENT_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ email, eventName }),
+        signal: ctrl.signal,
+      });
+      if (res.ok) return { ok: true };
       const detail = await res.text().catch(() => "");
-      return { ok: false, status: res.status, reason: detail.slice(0, 200) || res.statusText };
+      lastStatus = res.status;
+      lastReason = detail.slice(0, 200) || res.statusText;
+      // Non-429 errors are not worth retrying — auth, validation,
+      // server errors won't resolve on a re-attempt within seconds.
+      if (res.status !== 429) {
+        return { ok: false, status: lastStatus, reason: lastReason };
+      }
+      // 429: back off if we have retries left, otherwise give up.
+      const delay = LOOPS_RETRY_DELAYS_MS[attempt];
+      if (delay === undefined) {
+        return { ok: false, status: lastStatus, reason: lastReason };
+      }
+      console.log(
+        `${LOG_TAG} loops-429 retry attempt=${attempt + 1} delayMs=${delay}`
+      );
+      await new Promise((r) => setTimeout(r, delay));
+    } catch (e) {
+      return {
+        ok: false,
+        status: 0,
+        reason: e instanceof Error ? e.message : String(e),
+      };
+    } finally {
+      clearTimeout(t);
     }
-    return { ok: true };
-  } catch (e) {
-    return {
-      ok: false,
-      status: 0,
-      reason: e instanceof Error ? e.message : String(e),
-    };
-  } finally {
-    clearTimeout(t);
   }
+  return { ok: false, status: lastStatus, reason: lastReason };
 }
 
 // Lightly redact the local-part so the cron log doesn't dump full
