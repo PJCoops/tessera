@@ -1,0 +1,51 @@
+name: Daily social post
+
+on:
+  schedule:
+    # 08:00 UTC every day. GitHub cron can drift up to ~15 min under load.
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Capture screenshot + print copy, skip posting"
+        required: false
+        default: "false"
+      only:
+        description: "Comma-separated subset: x,reddit,facebook"
+        required: false
+        default: "x"
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install posting deps
+        # Only the X post is wired up end-to-end today. X needs twitter-api-v2.
+        # Puppeteer (for Reddit/Facebook images) will be added when those
+        # platforms are wired up; skipping it here keeps the runner fast.
+        run: npm install --no-save twitter-api-v2
+
+      - name: Post
+        env:
+          PUZZLE_URL: https://tesserapuzzle.com/
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+          ONLY: ${{ github.event.inputs.only || 'x' }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+        run: node scripts/daily-social-post/index.mjs
