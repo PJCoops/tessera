@@ -24,9 +24,10 @@ const PAPER = "#fafaf7";
 const ACCENT = "#e6007a";
 
 export default async function Image() {
-  const [frauncesLight, frauncesBold] = await Promise.all([
+  const [frauncesLight, frauncesBold, interSemibold] = await Promise.all([
     readFile(path.join(process.cwd(), "app/_fonts/Fraunces-Light.ttf")),
     readFile(path.join(process.cwd(), "app/_fonts/Fraunces-Bold.ttf")),
+    readFile(path.join(process.cwd(), "app/_fonts/Inter-SemiBold.ttf")),
   ]);
 
   const today = todayUtc();
@@ -72,7 +73,7 @@ export default async function Image() {
           }}
         >
           <span>Tessera Puzzle™</span>
-          <span>#{num} · daily word puzzle</span>
+          <span>#{num} · {today}</span>
         </div>
 
         <div
@@ -132,9 +133,11 @@ export default async function Image() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 56,
-                      fontWeight: 300,
-                      letterSpacing: "-0.02em",
+                      // Matches the in-game tile typography: clean geometric
+                      // sans, semibold weight, optical centering.
+                      fontFamily: "InterTile",
+                      fontSize: 48,
+                      fontWeight: 600,
                     }}
                   >
                     {letter}
@@ -171,6 +174,7 @@ export default async function Image() {
       fonts: [
         { name: "FrauncesDisplay", data: frauncesLight, weight: 300, style: "normal" },
         { name: "FrauncesSmall", data: frauncesBold, weight: 700, style: "normal" },
+        { name: "InterTile", data: interSemibold, weight: 600, style: "normal" },
       ],
     },
   );
