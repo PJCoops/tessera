@@ -1,20 +1,20 @@
 import { ImageResponse } from "next/og";
 import { readFile } from "fs/promises";
 import path from "path";
+import { generateDailyPuzzleFor } from "./lib/puzzle";
+import { puzzleNumber, seedFromDate, todayUtc } from "./lib/rng";
+import { EPOCH } from "./lib/epoch";
+import { CLASSIC } from "./lib/mode";
 
 const OG_SIZE = { width: 1200, height: 630 };
 export const alt = "Tessera Puzzle, a daily word puzzle by Paul Cooper";
 export const size = OG_SIZE;
 export const contentType = "image/png" as const;
 
-// 4×4 mark: a partially-solved-looking grid for the OG card.
-// 0 = neutral (cream), 1 = sage (in valid row), 2 = rust (column bonus on sage).
-const PATTERN: number[][] = [
-  [1, 1, 1, 1],
-  [1, 2, 1, 1],
-  [0, 0, 1, 0],
-  [1, 1, 0, 1],
-];
+// Regenerate hourly so the card reflects today's puzzle after the daily
+// 00:00 UTC rollover. Cheap on edge cache; daily X/Reddit/Facebook posts
+// fire at 08:00 UTC, well after this refreshes.
+export const revalidate = 3600;
 
 const SAGE = "#7a9070";
 const RUST = "#b85a1c";
@@ -29,8 +29,21 @@ export default async function Image() {
     readFile(path.join(process.cwd(), "app/_fonts/Fraunces-Bold.ttf")),
   ]);
 
-  const tileSize = 96;
-  const tileGap = 12;
+  const today = todayUtc();
+  const num = puzzleNumber(today, EPOCH);
+  const { startTiles } = generateDailyPuzzleFor(
+    "en",
+    seedFromDate(today),
+    CLASSIC.swaps,
+    CLASSIC.N,
+  );
+  const N = CLASSIC.N;
+  const grid: string[][] = Array.from({ length: N }, (_, r) =>
+    Array.from({ length: N }, (_, c) => startTiles[r * N + c]?.letter ?? ""),
+  );
+
+  const tileSize = 88;
+  const tileGap = 10;
 
   return new ImageResponse(
     (
@@ -52,37 +65,37 @@ export default async function Image() {
             justifyContent: "space-between",
             alignItems: "center",
             fontFamily: "FrauncesSmall",
-            fontSize: 20,
-            letterSpacing: 5,
+            fontSize: 22,
+            letterSpacing: 4,
             textTransform: "uppercase",
-            opacity: 0.65,
+            opacity: 0.7,
           }}
         >
-          <span>Paul Cooper</span>
-          <span>Daily word puzzle</span>
+          <span>Tessera Puzzle™</span>
+          <span>#{num} · daily word puzzle</span>
         </div>
 
         <div
           style={{
             flex: 1,
             display: "flex",
-            alignItems: "flex-end",
+            alignItems: "center",
             justifyContent: "space-between",
             gap: 64,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, width: 560 }}>
             <div
               style={{
                 display: "flex",
                 alignItems: "baseline",
-                fontSize: 160,
+                fontSize: 144,
                 fontWeight: 300,
                 letterSpacing: "-0.035em",
                 lineHeight: 1,
               }}
             >
-              <span>Tessera Puzzle™</span>
+              <span>Play today</span>
               <span style={{ color: ACCENT }}>.</span>
             </div>
             <div
@@ -90,11 +103,10 @@ export default async function Image() {
                 fontFamily: "FrauncesSmall",
                 fontSize: 24,
                 opacity: 0.7,
-                maxWidth: 520,
                 lineHeight: 1.3,
               }}
             >
-              A daily word puzzle. Swap tiles until every row is a word.
+              Swap tiles until every row spells a word.
             </div>
           </div>
 
@@ -103,27 +115,54 @@ export default async function Image() {
               display: "flex",
               flexDirection: "column",
               gap: tileGap,
+              flexShrink: 0,
             }}
           >
-            {PATTERN.map((row, r) => (
+            {grid.map((row, r) => (
               <div key={r} style={{ display: "flex", gap: tileGap }}>
-                {row.map((cell, c) => {
-                  const bg = cell === 2 ? RUST : cell === 1 ? SAGE : CREAM;
-                  return (
-                    <div
-                      key={c}
-                      style={{
-                        width: tileSize,
-                        height: tileSize,
-                        background: bg,
-                        borderRadius: 12,
-                      }}
-                    />
-                  );
-                })}
+                {row.map((letter, c) => (
+                  <div
+                    key={c}
+                    style={{
+                      width: tileSize,
+                      height: tileSize,
+                      background: CREAM,
+                      color: INK,
+                      borderRadius: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 56,
+                      fontWeight: 300,
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {letter}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontFamily: "FrauncesSmall",
+            fontSize: 22,
+            letterSpacing: 4,
+            textTransform: "uppercase",
+            opacity: 0.55,
+          }}
+        >
+          <span>tesserapuzzle.com</span>
+          {/* Sage/rust swatches as a visual signature, mirroring the in-game legend. */}
+          <span style={{ display: "flex", gap: 10 }}>
+            <span style={{ width: 18, height: 18, background: SAGE, borderRadius: 4 }} />
+            <span style={{ width: 18, height: 18, background: RUST, borderRadius: 4 }} />
+          </span>
         </div>
       </div>
     ),
@@ -133,6 +172,6 @@ export default async function Image() {
         { name: "FrauncesDisplay", data: frauncesLight, weight: 300, style: "normal" },
         { name: "FrauncesSmall", data: frauncesBold, weight: 700, style: "normal" },
       ],
-    }
+    },
   );
 }
