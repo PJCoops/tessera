@@ -28,7 +28,12 @@ export function humanDate(today = todayUtc()) {
 }
 
 export function buildCopy({ num = puzzleNumber(), date = humanDate() } = {}) {
-  const url = "https://tesserapuzzle.com";
+  // Append a per-day version param so X (and other aggressive OG cachers)
+  // treat each day's link as a new URL and re-fetch the card. The page
+  // ignores the param entirely (the homepage always shows today's puzzle,
+  // not whichever puzzle the param suggests) — using `v` rather than `d`
+  // also avoids hinting at a tamperable date.
+  const url = `https://tesserapuzzle.com/?v=${num}`;
   return {
     num,
     date,
