@@ -13,7 +13,7 @@ on:
       only:
         description: "Comma-separated subset: x,reddit,facebook"
         required: false
-        default: "x"
+        default: "x,facebook"
 
 jobs:
   post:
@@ -28,16 +28,15 @@ jobs:
           cache: "npm"
 
       - name: Install posting deps
-        # Only the X post is wired up end-to-end today. X needs twitter-api-v2.
-        # Puppeteer (for Reddit/Facebook images) will be added when those
-        # platforms are wired up; skipping it here keeps the runner fast.
-        run: npm install --no-save twitter-api-v2
+        # twitter-api-v2 for the X post; puppeteer for the screenshot used by
+        # the Facebook (and eventually Reddit) image upload.
+        run: npm install --no-save twitter-api-v2 puppeteer
 
       - name: Post
         env:
           PUZZLE_URL: https://tesserapuzzle.com/
           DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
-          ONLY: ${{ github.event.inputs.only || 'x' }}
+          ONLY: ${{ github.event.inputs.only || 'x,facebook' }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
