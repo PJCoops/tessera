@@ -34,6 +34,13 @@ export function buildCopy({ num = puzzleNumber(), date = humanDate() } = {}) {
   // not whichever puzzle the param suggests) — using `v` rather than `d`
   // also avoids hinting at a tamperable date.
   const url = `https://tesserapuzzle.com/?v=${num}`;
+  // IG fetches image_url server-side; use www to avoid the apex→www 307.
+  // The homepage OG image renders today's puzzle with letters (cream tiles);
+  // the /api/og share route is for post-solve cards (sage, no letters).
+  // Append the puzzle number as a cache-bust hint — the route ignores
+  // unknown params but it nudges Instagram's fetcher to bypass any
+  // stale edge cache from a previous day.
+  const instagramImageUrl = `https://www.tesserapuzzle.com/opengraph-image?v=${num}`;
   return {
     num,
     date,
@@ -42,5 +49,7 @@ export function buildCopy({ num = puzzleNumber(), date = humanDate() } = {}) {
     redditTitle: `Tessera #${num}: ${date}`,
     redditBody: `Today's puzzle is live at ${url}. Share your solve in the comments.`,
     facebook: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Play at ${url}`,
+    instagram: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Play at ${url}\n\n#wordpuzzle #wordgame #dailypuzzle #puzzle #wordgames #tessera`,
+    instagramImageUrl,
   };
 }

@@ -30,6 +30,8 @@ async function main() {
     console.log("--- X ---\n" + copy.x);
     console.log("--- Reddit ---\n" + copy.redditTitle + "\n" + copy.redditBody);
     console.log("--- Facebook ---\n" + copy.facebook);
+    console.log("--- Instagram ---\n" + copy.instagram);
+    console.log("    image: " + copy.instagramImageUrl);
     return;
   }
 
@@ -64,6 +66,13 @@ async function main() {
   await run("facebook", async () => {
     const { postToFacebook } = await import("./post-facebook.mjs");
     return postToFacebook({ imagePath, message: copy.facebook });
+  });
+  await run("instagram", async () => {
+    const { postToInstagram } = await import("./post-instagram.mjs");
+    return postToInstagram({
+      imageUrl: copy.instagramImageUrl,
+      caption: copy.instagram,
+    });
   });
 
   if (errors.length) {
