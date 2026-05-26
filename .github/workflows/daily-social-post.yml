@@ -11,9 +11,9 @@ on:
         required: false
         default: "false"
       only:
-        description: "Comma-separated subset: x,reddit,facebook"
+        description: "Comma-separated subset: x,bluesky,reddit,facebook"
         required: false
-        default: "x,facebook"
+        default: "x,bluesky,facebook"
 
 jobs:
   post:
@@ -36,7 +36,7 @@ jobs:
         env:
           PUZZLE_URL: https://tesserapuzzle.com/
           DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
-          ONLY: ${{ github.event.inputs.only || 'x,facebook' }}
+          ONLY: ${{ github.event.inputs.only || 'x,bluesky,facebook' }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
@@ -47,4 +47,6 @@ jobs:
           REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
         run: node scripts/daily-social-post/index.mjs
