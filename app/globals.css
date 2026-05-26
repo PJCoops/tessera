@@ -58,6 +58,55 @@ body {
   color: var(--color-paper);
 }
 
+/* Minimal typography for /privacy, /cookies, /terms. */
+.legal-prose h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+.legal-prose h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+.legal-prose p {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.legal-prose ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.legal-prose li {
+  margin-top: 0.25rem;
+}
+.legal-prose a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.legal-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.legal-prose th,
+.legal-prose td {
+  border: 1px solid var(--color-rule);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.legal-prose th {
+  font-weight: 600;
+  background: var(--color-cream);
+}
+
 /* ?demo mode hides the OS cursor in favour of a synthetic grey follower
    rendered by TesseraGame for cleaner screen recordings. */
 html.demo-cursor-hide,

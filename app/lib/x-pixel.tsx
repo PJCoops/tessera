@@ -5,9 +5,13 @@
 // React/RSC hydration was re-executing the snippet, which X's Pixel Helper
 // flagged as "activated more than once" even with a window-flag guard.
 //
-// Imperative injection from a useEffect cleanly sidesteps that — the effect
-// only fires after mount, only once per page load, and only on the client.
+// Gated by consent.marketing — only loads when the user explicitly opts in.
+// If consent is later withdrawn, we tear down window.twq (so analytics.ts
+// stops firing X events) and clear _twq_* cookies. The script tag itself
+// can't be cleanly unloaded once browsers have parsed it, but with twq()
+// removed it's inert.
 import { useEffect } from "react";
+import { useConsent } from "./consent";
 
 const X_PIXEL_ID = process.env.NEXT_PUBLIC_X_PIXEL_ID;
 
@@ -22,9 +26,36 @@ declare global {
   }
 }
 
+function clearTwqCookies() {
+  if (typeof document === "undefined") return;
+  const host = window.location.hostname;
+  const parts = host.split(".");
+  const parentDomain = parts.length > 1 ? "." + parts.slice(-2).join(".") : host;
+  document.cookie.split(";").forEach((c) => {
+    const name = c.trim().split("=")[0];
+    if (name.startsWith("_twq") || name === "muc_ads" || name === "personalization_id") {
+      document.cookie = `${name}=; Max-Age=0; Path=/`;
+      document.cookie = `${name}=; Max-Age=0; Path=/; Domain=${parentDomain}`;
+    }
+  });
+}
+
 export function XPixel() {
+  const { consent } = useConsent();
+
   useEffect(() => {
     if (!X_PIXEL_ID) return;
+
+    if (!consent.marketing) {
+      // Either never consented, or consent withdrawn after init. Tear down.
+      if (window.__twqConfigured) {
+        delete window.twq;
+        window.__twqConfigured = false;
+        clearTwqCookies();
+      }
+      return;
+    }
+
     if (window.__twqConfigured) return;
     window.__twqConfigured = true;
 
@@ -45,7 +76,7 @@ export function XPixel() {
     }
 
     window.twq!("config", X_PIXEL_ID);
-  }, []);
+  }, [consent.marketing]);
 
   return null;
 }

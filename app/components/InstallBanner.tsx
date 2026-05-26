@@ -17,6 +17,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocale } from "../lib/locale-context";
+import { useConsent } from "../lib/consent";
 
 const DISMISS_KEY = "tessera:install-dismissed";
 const DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -46,6 +47,7 @@ function shouldShow(): boolean {
 
 export function InstallBanner() {
   const { t } = useLocale();
+  const { hasDecided } = useConsent();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -54,7 +56,9 @@ export function InstallBanner() {
     setVisible(shouldShow());
   }, []);
 
-  if (!visible) return null;
+  // Suppress until the user has dealt with the cookie banner; otherwise
+  // the two banners pile up on mobile.
+  if (!hasDecided || !visible) return null;
 
   const dismiss = () => {
     try {

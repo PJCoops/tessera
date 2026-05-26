@@ -8,12 +8,16 @@
 //
 // Same pattern as x-pixel.tsx; see that file for prior art.
 //
+// Currently env-disabled (NEXT_PUBLIC_META_PIXEL_ID unset). When re-enabled,
+// gating by consent.marketing applies automatically.
+//
 // No reverse proxy here on purpose: Meta's fbevents.js hardcodes its
 // event endpoint, so a URL rewrite doesn't help much. The right
 // bypass for adblocker losses is the Conversions API (server-side),
 // which dedupes against this Pixel via a shared event_id.
 
 import { useEffect } from "react";
+import { useConsent } from "./consent";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
@@ -33,9 +37,33 @@ declare global {
   }
 }
 
+function clearFbpFbcCookies() {
+  if (typeof document === "undefined") return;
+  const host = window.location.hostname;
+  const parts = host.split(".");
+  const parentDomain = parts.length > 1 ? "." + parts.slice(-2).join(".") : host;
+  ["_fbp", "_fbc"].forEach((name) => {
+    document.cookie = `${name}=; Max-Age=0; Path=/`;
+    document.cookie = `${name}=; Max-Age=0; Path=/; Domain=${parentDomain}`;
+  });
+}
+
 export function MetaPixel() {
+  const { consent } = useConsent();
+
   useEffect(() => {
     if (!META_PIXEL_ID) return;
+
+    if (!consent.marketing) {
+      if (window.__metaPixelConfigured) {
+        delete window.fbq;
+        delete window._fbq;
+        window.__metaPixelConfigured = false;
+        clearFbpFbcCookies();
+      }
+      return;
+    }
+
     if (window.__metaPixelConfigured) return;
     window.__metaPixelConfigured = true;
 
@@ -60,12 +88,16 @@ export function MetaPixel() {
 
     window.fbq!("init", META_PIXEL_ID);
     window.fbq!("track", "PageView");
-  }, []);
+  }, [consent.marketing]);
 
   return null;
 }
 
 export function MetaPixelNoScript() {
+  // No-op when consent is not granted. Rendered server-side, so we use a
+  // sibling client component to gate it; for now since the pixel is
+  // env-disabled the function returns null and the gating is moot. When
+  // re-enabled, switch this to read consent via a client wrapper.
   if (!META_PIXEL_ID) return null;
   return (
     <noscript>
