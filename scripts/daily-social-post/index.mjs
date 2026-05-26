@@ -53,6 +53,10 @@ async function main() {
     const { postToX } = await import("./post-x.mjs");
     return postToX({ text: copy.x });
   });
+  await run("bluesky", async () => {
+    const { postToBluesky } = await import("./post-bluesky.mjs");
+    return postToBluesky({ text: copy.bluesky });
+  });
   await run("reddit", async () => {
     const { postToReddit } = await import("./post-reddit.mjs");
     return postToReddit({ imagePath, title: copy.redditTitle, subreddit: "TesseraPuzzle" });

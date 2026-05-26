@@ -38,6 +38,7 @@ export function buildCopy({ num = puzzleNumber(), date = humanDate() } = {}) {
     num,
     date,
     x: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Can you solve it?\n\n${url}`,
+    bluesky: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Can you solve it?\n\n${url}`,
     redditTitle: `Tessera #${num}: ${date}`,
     redditBody: `Today's puzzle is live at ${url}. Share your solve in the comments.`,
     facebook: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Play at ${url}`,
