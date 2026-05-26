@@ -171,7 +171,9 @@
     "submitting": "Enviando…",
     "success": "Suscrito. Te enviaremos la cuadrícula de mañana a las 09:00 UTC.",
     "error": "Algo salió mal. Revisa la dirección e inténtalo de nuevo.",
-    "notConfigured": "Los recordatorios todavía no están activos. Vuelve pronto."
+    "notConfigured": "Los recordatorios todavía no están activos. Vuelve pronto.",
+    "privacyLeader": "Usamos Loops para enviarlos.",
+    "privacyLink": "Consulta nuestra política de privacidad."
   },
   "share": {
     "headlineRevealed": "Tessera #{num} · revelado",

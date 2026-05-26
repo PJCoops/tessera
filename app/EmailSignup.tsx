@@ -162,6 +162,12 @@ export function EmailSignup({
           {t("email.notConfigured")}
         </p>
       )}
+      <p className="mt-2 text-[10px] text-[color:var(--color-muted)]">
+        {t("email.privacyLeader")}{" "}
+        <a href="/privacy" className="underline-offset-4 hover:underline">
+          {t("email.privacyLink")}
+        </a>
+      </p>
     </div>
   );
 }

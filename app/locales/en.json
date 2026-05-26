@@ -171,7 +171,9 @@
     "submitting": "Sending…",
     "success": "Subscribed. We’ll send tomorrow’s grid at 09:00 UTC.",
     "error": "Something went wrong. Check the address and try again.",
-    "notConfigured": "Reminders aren’t live yet. Come back soon."
+    "notConfigured": "Reminders aren’t live yet. Come back soon.",
+    "privacyLeader": "We use Loops to send these.",
+    "privacyLink": "See our privacy policy."
   },
   "share": {
     "headlineRevealed": "Tessera #{num} · revealed",

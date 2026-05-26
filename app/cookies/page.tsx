@@ -75,6 +75,20 @@ export default function CookiesPage() {
             <td>Necessary</td>
           </tr>
           <tr>
+            <td>tessera:email-subscribed</td>
+            <td>localStorage</td>
+            <td>Hides the email signup form once you&apos;ve subscribed</td>
+            <td>Until cleared</td>
+            <td>Necessary</td>
+          </tr>
+          <tr>
+            <td>tessera:email-dismissed</td>
+            <td>localStorage</td>
+            <td>Hides the email signup form if you&apos;ve dismissed it</td>
+            <td>Until cleared</td>
+            <td>Necessary</td>
+          </tr>
+          <tr>
             <td>ph_*</td>
             <td>localStorage (PostHog)</td>
             <td>Persistent anonymous ID for retention analytics</td>

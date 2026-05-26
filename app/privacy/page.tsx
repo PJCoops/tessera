@@ -63,6 +63,17 @@ export default function PrivacyPage() {
       <h3>If you sign up for the email list</h3>
       <ul>
         <li>Your email address, until you unsubscribe.</li>
+        <li>
+          Your locale (English or Spanish) so we can send the right version of
+          the email.
+        </li>
+        <li>
+          Where on the site you signed up from. Used to understand which entry
+          points work and to prove you opted in.
+        </li>
+        <li>
+          The date and time you subscribed, recorded by our email provider.
+        </li>
       </ul>
 
       <h2>Why we collect it</h2>
@@ -121,6 +132,19 @@ export default function PrivacyPage() {
             rel="noopener noreferrer"
           >
             PostHog privacy policy
+          </a>
+          .
+        </li>
+        <li>
+          <strong>Loops</strong>, our email provider. Used only if you signed
+          up for the daily reminder list. Loops is based in the United States;
+          your email is transferred there under standard contractual clauses.{" "}
+          <a
+            href="https://loops.so/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Loops privacy policy
           </a>
           .
         </li>
