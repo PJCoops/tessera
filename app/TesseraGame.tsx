@@ -315,12 +315,6 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
       const hh = window.localStorage.getItem(HIDE_HINTS_KEY);
       if (hh !== null) {
         setHideHints(hh === "1");
-      } else if (visibleCurrent(streakNow, num) >= 2) {
-        // Players on a live 2+ streak don't need the dotted-tile hint —
-        // hide it by default. They can flip it back on via the Show
-        // hints button (which then writes an explicit pref so this
-        // auto-hide doesn't fight a manual choice).
-        setHideHints(true);
       }
       // Legend strip: once the player has logged two or more solves
       // for this mode, hide it. New players still get the swatch key.
