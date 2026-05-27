@@ -5,10 +5,10 @@
 // prominence: Accept all / Customise / Keep it minimal. Customise expands
 // the panel inline so users don't get bounced into a modal mid-decision.
 //
-// z-60 sits above everything else — InstallBanner, modals, subreddit pill,
-// Playlin badge — so we never need to negotiate stacking with those. The
-// page-level chrome (subreddit, Playlin, InstallBanner) is also suppressed
-// until `hasDecided` is true to keep the bottom of the screen calm.
+// z-60 sits above everything else — InstallBanner, modals, Playlin badge
+// — so we never need to negotiate stacking with those. The page-level
+// chrome (Playlin, InstallBanner, footer) is also suppressed until
+// `hasDecided` is true to keep the bottom of the screen calm.
 
 import { useState } from "react";
 import { useConsent } from "../lib/consent";

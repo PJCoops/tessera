@@ -84,7 +84,7 @@ const themeInitScript = `(function(){try{var t=localStorage.getItem('tessera:the
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Hide marketing badges (Playlin, subreddit pill) on the stats
+  // Hide marketing badges (Playlin) on the stats
   // subdomain — they're for the puzzle audience, not the dashboard.
   // Detect via host header rather than pathname so it works both
   // before and after the proxy.ts rewrite.
