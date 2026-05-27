@@ -47,7 +47,10 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
           FORCE: ${{ github.event.inputs.force == 'true' && '1' || '0' }}
           ONLY: ${{ github.event.inputs.only || 'x,bluesky,facebook,instagram' }}
-          APP_URL: https://tesserapuzzle.com
+          # Canonical host — the apex 307-redirects to www, which would
+          # force the script's lock-check fetch to follow a redirect. Hit
+          # www directly so the call is a single hop.
+          APP_URL: https://www.tesserapuzzle.com
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
