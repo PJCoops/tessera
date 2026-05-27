@@ -1,4 +1,4 @@
-// Primary trigger for the daily social-post workflow.
+// Primary trigger for the daily social-post workflow. Fired by Vercel Cron.
 //
 // Why this exists: GitHub's hosted `schedule:` cron is unreliable at
 // popular times — it skipped 2026-05-26 entirely and ran 3+ hours late
