@@ -36,24 +36,25 @@ const COMMON_CONFIG = {
   autocapture: false,
 };
 
-let initialized = false;
-
-function initOrReconfigure(analyticsConsent: boolean) {
-  if (typeof window === "undefined") return;
+// Module-scope init so PostHog is ready before any child component effect
+// can fire a track() call. Defaulting to cookieless mode keeps the
+// no-consent posture; PHProvider upgrades or re-downgrades in response to
+// consent changes below.
+if (typeof window !== "undefined") {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  if (!key) return;
-
-  if (!initialized) {
+  if (key) {
     posthog.init(key, {
       ...COMMON_CONFIG,
-      persistence: analyticsConsent ? "localStorage" : "memory",
-      property_blacklist: analyticsConsent ? [] : ["$ip"],
+      persistence: "memory",
+      property_blacklist: ["$ip"],
     });
-    initialized = true;
-    return;
   }
+}
 
-  // Already initialized — switch modes based on new consent state.
+function reconfigure(analyticsConsent: boolean) {
+  if (typeof window === "undefined") return;
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
+
   if (analyticsConsent) {
     posthog.set_config({
       persistence: "localStorage",
@@ -72,11 +73,23 @@ function initOrReconfigure(analyticsConsent: boolean) {
   }
 }
 
+// Init already put us in cookieless mode, so only diverge from that on a
+// real consent change. Skipping the no-op reconfigure avoids an early
+// posthog.reset() that would split the initial $pageview and the first
+// puzzle_started across two distinct_ids.
+let lastApplied: boolean | null = null;
+
 export function PHProvider({ children }: { children: React.ReactNode }) {
   const { consent } = useConsent();
 
   useEffect(() => {
-    initOrReconfigure(consent.analytics);
+    if (lastApplied === null && consent.analytics === false) {
+      lastApplied = false;
+      return;
+    }
+    if (lastApplied === consent.analytics) return;
+    lastApplied = consent.analytics;
+    reconfigure(consent.analytics);
   }, [consent.analytics]);
 
   return <PostHogProvider client={posthog}>{children}</PostHogProvider>;
