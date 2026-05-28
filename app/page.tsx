@@ -37,8 +37,20 @@ export async function generateMetadata({
   const params = await searchParams;
   const raw = typeof params.s === "string" ? params.s : null;
   const parsed = raw ? parseShareSlug(raw) : null;
-  if (!parsed) return {};
-  return buildShareMetadata(parsed, "en");
+  if (parsed) return buildShareMetadata(parsed, "en");
+
+  // Daily-rolling OG image. Twitter (and other aggressive OG cachers)
+  // key their preview cache on the image URL inside the HTML, not the
+  // share URL. Without a daily-varying image URL, X's first scrape of
+  // /?v=32 returns whatever image was cached for /?v=31 the day before,
+  // because the page still advertises the same /opengraph-image hash.
+  // Adding the UTC date as a query param produces a fresh image URL
+  // every 24h so X re-fetches and stays in sync with the actual puzzle.
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    openGraph: { images: [{ url: `/opengraph-image?d=${today}`, width: 1200, height: 630 }] },
+    twitter: { images: [`/opengraph-image?d=${today}`] },
+  };
 }
 
 export default function Home() {

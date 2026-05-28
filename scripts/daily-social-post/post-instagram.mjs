@@ -31,6 +31,37 @@ export async function postToInstagram({ imageUrl, caption }) {
   }
   const { id: creationId } = await createRes.json();
 
+  // Instagram processes the uploaded image asynchronously. Publishing
+  // before the container reaches FINISHED returns 400 "Media ID is not
+  // available". Poll the container's status_code every 2s up to ~30s,
+  // which is well above the empirically-observed processing time (~5s).
+  // status_code values: IN_PROGRESS, FINISHED, ERROR, EXPIRED, PUBLISHED.
+  const POLL_INTERVAL_MS = 2000;
+  const POLL_TIMEOUT_MS = 30_000;
+  const start = Date.now();
+  while (true) {
+    const statusUrl = new URL(
+      `https://graph.facebook.com/${GRAPH_VERSION}/${creationId}`,
+    );
+    statusUrl.searchParams.set("fields", "status_code");
+    statusUrl.searchParams.set("access_token", FB_PAGE_ACCESS_TOKEN);
+    const statusRes = await fetch(statusUrl);
+    if (!statusRes.ok) {
+      throw new Error(
+        `IG status check failed: ${statusRes.status} ${await statusRes.text()}`,
+      );
+    }
+    const { status_code: statusCode } = await statusRes.json();
+    if (statusCode === "FINISHED") break;
+    if (statusCode === "ERROR" || statusCode === "EXPIRED") {
+      throw new Error(`IG container ${statusCode} during processing`);
+    }
+    if (Date.now() - start > POLL_TIMEOUT_MS) {
+      throw new Error(`IG container still ${statusCode} after ${POLL_TIMEOUT_MS}ms`);
+    }
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+  }
+
   const publishUrl = new URL(
     `https://graph.facebook.com/${GRAPH_VERSION}/${IG_USER_ID}/media_publish`,
   );
