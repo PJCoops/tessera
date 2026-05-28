@@ -43,6 +43,8 @@ import {
 
 import { tiersToday, tiersLast30d } from "./definitions/tiers";
 
+import { socialReferralsLast7d, socialHourlyLast7d } from "./definitions/social";
+
 // Every metric, indexed by key. Use `METRICS["visitors.today"]` to get
 // a definition. The cron iterates `Object.values(METRICS)` to know
 // what to refresh.
@@ -79,6 +81,9 @@ export const METRICS: Record<string, MetricDef<unknown>> = {
 
   [tiersToday.key]: tiersToday,
   [tiersLast30d.key]: tiersLast30d,
+
+  [socialReferralsLast7d.key]: socialReferralsLast7d,
+  [socialHourlyLast7d.key]: socialHourlyLast7d,
 };
 
 export type MetricKey = keyof typeof METRICS;
