@@ -33,6 +33,13 @@ export function buildCopy({ num = puzzleNumber(), date = humanDate() } = {}) {
   // ignores the param entirely (the homepage always shows today's puzzle,
   // not whichever puzzle the param suggests) — using `v` rather than `d`
   // also avoids hinting at a tamperable date.
+  // Per-platform UTM-tagged URL so PostHog attributes clicks to the
+  // right source. utm_source matches the platform name so HogQL groups
+  // stay clean. Instagram captions aren't clickable, so its URL stays
+  // bare — UTM in the caption text would just look ugly without
+  // producing trackable clicks.
+  const taggedUrl = (source) =>
+    `https://tesserapuzzle.com/?v=${num}&utm_source=${source}&utm_medium=social&utm_campaign=daily-post`;
   const url = `https://tesserapuzzle.com/?v=${num}`;
   // IG fetches image_url server-side; use www to avoid the apex→www 307.
   // The homepage OG image renders today's puzzle with letters (cream tiles);
@@ -44,11 +51,11 @@ export function buildCopy({ num = puzzleNumber(), date = humanDate() } = {}) {
   return {
     num,
     date,
-    x: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Can you solve it?\n\n${url}`,
-    bluesky: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Can you solve it?\n\n${url}`,
+    x: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Can you solve it?\n\n${taggedUrl("x")}`,
+    bluesky: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Can you solve it?\n\n${taggedUrl("bluesky")}`,
     redditTitle: `Tessera #${num}: ${date}`,
-    redditBody: `Today's puzzle is live at ${url}. Share your solve in the comments.`,
-    facebook: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Play at ${url}`,
+    redditBody: `Today's puzzle is live at ${taggedUrl("reddit")}. Share your solve in the comments.`,
+    facebook: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Play at ${taggedUrl("facebook")}`,
     instagram: `Tessera #${num}, ${date}.\n\nToday's puzzle is live. Play at ${url}\n\n#wordpuzzle #wordgame #dailypuzzle #puzzle #wordgames #tessera`,
     instagramImageUrl,
   };
