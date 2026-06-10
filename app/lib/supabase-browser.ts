@@ -24,13 +24,15 @@ export function accountsEnabled(): boolean {
 export type AuthState = { user: User | null; loaded: boolean };
 
 export function useSupabaseUser(): AuthState {
-  const [state, setState] = useState<AuthState>({ user: null, loaded: false });
+  // Loaded immediately when Supabase isn't configured; otherwise the
+  // INITIAL_SESSION callback below flips it.
+  const [state, setState] = useState<AuthState>(() => ({
+    user: null,
+    loaded: getSupabaseBrowser() === null,
+  }));
   useEffect(() => {
     const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setState({ user: null, loaded: true });
-      return;
-    }
+    if (!supabase) return;
     // INITIAL_SESSION fires on subscribe with the restored session, so no
     // separate getSession() read is needed.
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {

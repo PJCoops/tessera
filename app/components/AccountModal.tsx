@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocale } from "../lib/locale-context";
 import { getSupabaseBrowser, useSupabaseUser } from "../lib/supabase-browser";
@@ -16,18 +16,22 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
 
-  useEffect(() => {
-    if (open) setStatus("idle");
-  }, [open]);
+  // Reset on the way out (instead of an open-effect) so reopening always
+  // starts from the form, including after a "sent" confirmation.
+  const close = useCallback(() => {
+    setStatus("idle");
+    setEmail("");
+    onClose();
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, close]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +56,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
 
   const signOut = async () => {
     await getSupabaseBrowser()?.auth.signOut();
-    onClose();
+    close();
   };
 
   return (
@@ -65,7 +69,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-[color:var(--color-ink)]/30 backdrop-blur-sm"
-          onClick={onClose}
+          onClick={close}
         >
           <motion.div
             key="panel"
@@ -77,7 +81,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
             className="relative w-full max-w-sm bg-[color:var(--color-paper)] border border-[color:var(--color-rule)] rounded-lg p-8 shadow-xl"
           >
             <button
-              onClick={onClose}
+              onClick={close}
               aria-label={t("account.ariaClose")}
               className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] rounded"
             >

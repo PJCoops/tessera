@@ -13,6 +13,7 @@ import { dominantTier } from "./lib/dominant-tier";
 import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
 import { HowToPlay } from "./HowToPlay";
 import { AccountModal } from "./components/AccountModal";
+import { submitResult, SYNC_EVENT } from "./lib/sync";
 import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
 import { Legend } from "./components/Legend";
 import { HistoryModal } from "./HistoryModal";
@@ -388,6 +389,16 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         setStoredResult(r);
         const s = recordWin(puzzle.num, mode.streakKey);
         setStreak(s);
+        void submitResult({
+          num: puzzle.num,
+          mode: mode.id,
+          locale,
+          moves,
+          bonus: validity.isBonus,
+          history: history ?? undefined,
+          timeMs: r.timeMs,
+          completedAt: r.completedAt,
+        });
         track("puzzle_solved", {
           num: puzzle.num,
           moves,
@@ -400,7 +411,23 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
       }
     }
     if (validity.isBonus && bonusAt === null) setBonusAt(moves);
-  }, [validity.isSolved, validity.isBonus, moves, solvedAt, bonusAt, puzzle, storedResult, history]);
+  }, [validity.isSolved, validity.isBonus, moves, solvedAt, bonusAt, puzzle, storedResult, history, locale]);
+
+  // Cross-device sync: refresh the streak and today's stored result when
+  // AccountSync finishes a pull. Isolated modes keep their own state.
+  useEffect(() => {
+    if (!puzzle || puzzle.demo || puzzle.forceSolved || puzzle.replay) return;
+    const onSync = () => {
+      setStreak(readStreak(mode.streakKey));
+      if (!storedResult) {
+        const stored = readResult(puzzle.num, mode.resultPrefix);
+        if (stored) setStoredResult(stored);
+      }
+    };
+    window.addEventListener(SYNC_EVENT, onSync);
+    return () => window.removeEventListener(SYNC_EVENT, onSync);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puzzle, storedResult]);
 
   // Play the win jingle once when the puzzle solves this session. Only fires
   // on a fresh solve (solvedAt was just set this render) — never on a stored
@@ -533,6 +560,16 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
       writeResult(puzzle.num, r, mode.resultPrefix);
       clearProgress(puzzle.num, mode.progressPrefix);
       setStoredResult(r);
+      void submitResult({
+        num: puzzle.num,
+        mode: mode.id,
+        locale,
+        moves,
+        bonus: false,
+        revealed: true,
+        history: history ?? undefined,
+        completedAt: r.completedAt,
+      });
       track("puzzle_revealed", {
         num: puzzle.num,
         moves,
@@ -546,7 +583,8 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     setPositions(goldPositions);
     setSelectedIdx(null);
     setConfirmReveal(false);
-  }, [puzzle, moves, history]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puzzle, moves, history, locale]);
 
   const handleTap = useCallback(
     (idx: number) => {
