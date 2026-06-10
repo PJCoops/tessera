@@ -182,7 +182,7 @@
     "signOut": "Sign out",
     "signedInAs": "Signed in as {email}",
     "saveStreak": "Save your streak",
-    "modalTitle": "Save your progress",
+    "modalTitle": "Sign in to save your streak",
     "modalBody": "Get a sign-in link by email. Your streak and history follow you to any device.",
     "placeholder": "you@example.com",
     "submit": "Email me a link",
