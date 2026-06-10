@@ -185,7 +185,7 @@
     "modalTitle": "Sign in to save your streak",
     "modalBody": "Get a sign-in link by email. Your streak and history follow you to any device.",
     "placeholder": "you@example.com",
-    "submit": "Email me a link",
+    "submit": "Send the link",
     "submitting": "Sending…",
     "sent": "Check your email. The link signs you in on this device.",
     "error": "Something went wrong. Check the address and try again.",

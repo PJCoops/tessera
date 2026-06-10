@@ -185,7 +185,7 @@
     "modalTitle": "Inicia sesión y guarda tu racha",
     "modalBody": "Recibe un enlace de acceso por correo. Tu racha y tu historial te siguen a cualquier dispositivo.",
     "placeholder": "tu@ejemplo.com",
-    "submit": "Envíame un enlace",
+    "submit": "Enviar el enlace",
     "submitting": "Enviando…",
     "sent": "Revisa tu correo. El enlace inicia sesión en este dispositivo.",
     "error": "Algo salió mal. Revisa la dirección e inténtalo de nuevo.",
