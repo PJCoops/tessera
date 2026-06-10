@@ -12,7 +12,7 @@ import { getTier } from "./lib/tier";
 import { dominantTier } from "./lib/dominant-tier";
 import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
 import { HowToPlay } from "./HowToPlay";
-import { AccountModal } from "./components/AccountModal";
+import { AccountModal, AccountButton } from "./components/AccountModal";
 import { AccountCta } from "./components/AccountCta";
 import { submitResult, SYNC_EVENT } from "./lib/sync";
 import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
@@ -1058,6 +1058,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
               🔥 {liveStreak}
             </button>
           )}
+          <AccountButton onOpenAccount={() => setAccountOpen(true)} />
         </div>
       </div>
       <AnimatePresence>

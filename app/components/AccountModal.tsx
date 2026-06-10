@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocale } from "../lib/locale-context";
-import { getSupabaseBrowser, useSupabaseUser } from "../lib/supabase-browser";
+import { accountsEnabled, getSupabaseBrowser, useSupabaseUser } from "../lib/supabase-browser";
 import { track } from "../lib/analytics";
 
 type Status = "idle" | "submitting" | "sent" | "error";
@@ -139,6 +139,32 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+// Persistent round icon for the bottom chrome row, matching the ? and
+// history buttons. Filled when signed in so the state reads at a glance.
+// Hidden entirely when accounts are off. Opens the same AccountModal.
+export function AccountButton({ onOpenAccount }: { onOpenAccount: () => void }) {
+  const { t } = useLocale();
+  const { user, loaded } = useSupabaseUser();
+  if (!accountsEnabled() || !loaded) return null;
+  const signedIn = user !== null;
+  return (
+    <button
+      onClick={onOpenAccount}
+      aria-label={t("account.title")}
+      className={`inline-flex items-center justify-center w-7 h-7 rounded-full border transition-colors ${
+        signedIn
+          ? "border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]"
+          : "border-[color:var(--color-rule)] hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)]"
+      }`}
+    >
+      <svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="6" cy="4" r="2.2" />
+        <path d="M2 10.2c0-2.2 1.8-3.4 4-3.4s4 1.2 4 3.4" />
+      </svg>
+    </button>
   );
 }
 
