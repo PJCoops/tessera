@@ -71,13 +71,16 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
       return;
     }
     setStatus("busy");
+    const e164 = email.trim().toLowerCase();
+    const token = code.trim();
     // On success the browser client writes the session to cookies and
     // useSupabaseUser flips to the signed-in view; no redirect route needed.
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim().toLowerCase(),
-      token: code.trim(),
-      type: "email",
-    });
+    // A returning user's OTP verifies as type "email"; a brand-new user's
+    // first code is a signup confirmation, so fall back to "signup".
+    let { error } = await supabase.auth.verifyOtp({ email: e164, token, type: "email" });
+    if (error) {
+      ({ error } = await supabase.auth.verifyOtp({ email: e164, token, type: "signup" }));
+    }
     if (error) {
       setStatus("error");
       return;
@@ -182,7 +185,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                     autoComplete="one-time-code"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    maxLength={6}
+                    maxLength={10}
                     autoFocus
                     spellCheck={false}
                     placeholder={t("account.codePlaceholder")}
