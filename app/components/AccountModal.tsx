@@ -6,21 +6,28 @@ import { useLocale } from "../lib/locale-context";
 import { accountsEnabled, getSupabaseBrowser, useSupabaseUser } from "../lib/supabase-browser";
 import { track } from "../lib/analytics";
 
-type Status = "idle" | "submitting" | "sent" | "error";
+type Step = "email" | "code";
+type Status = "idle" | "busy" | "error";
 
-// Magic-link sign-in modal. Signed-in users see their email and a sign-out
-// button instead of the form.
+// Email + 6-digit code sign-in. A code keeps the player on the device
+// they're already playing on (a magic link would sign in whichever device
+// opened the email), which matters for a cross-device sync feature.
+// Signed-in users see their email and a sign-out button instead.
 export function AccountModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useLocale();
   const { user } = useSupabaseUser();
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState<Step>("email");
   const [status, setStatus] = useState<Status>("idle");
 
   // Reset on the way out (instead of an open-effect) so reopening always
-  // starts from the form, including after a "sent" confirmation.
+  // starts from the email step.
   const close = useCallback(() => {
     setStatus("idle");
+    setStep("email");
     setEmail("");
+    setCode("");
     onClose();
   }, [onClose]);
 
@@ -33,25 +40,56 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
     return () => window.removeEventListener("keydown", onKey);
   }, [open, close]);
 
-  const submit = async (e: React.FormEvent) => {
+  const sendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (status === "submitting") return;
+    if (status === "busy") return;
     const supabase = getSupabaseBrowser();
     if (!supabase) {
       setStatus("error");
       return;
     }
-    setStatus("submitting");
+    setStatus("busy");
+    // No emailRedirectTo: the email template carries the code, not a link.
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: { emailRedirectTo: `${window.location.origin}/api/auth/confirm` },
     });
     if (error) {
       setStatus("error");
       return;
     }
-    track("sign_in_link_sent", {});
-    setStatus("sent");
+    track("sign_in_code_sent", {});
+    setStep("code");
+    setStatus("idle");
+  };
+
+  const verifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (status === "busy") return;
+    const supabase = getSupabaseBrowser();
+    if (!supabase) {
+      setStatus("error");
+      return;
+    }
+    setStatus("busy");
+    // On success the browser client writes the session to cookies and
+    // useSupabaseUser flips to the signed-in view; no redirect route needed.
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: code.trim(),
+      type: "email",
+    });
+    if (error) {
+      setStatus("error");
+      return;
+    }
+    track("sign_in_verified", {});
+    setStatus("idle");
+  };
+
+  const restart = () => {
+    setStep("email");
+    setStatus("idle");
+    setCode("");
   };
 
   const signOut = async () => {
@@ -102,14 +140,12 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                   {t("account.signOut")}
                 </button>
               </div>
-            ) : status === "sent" ? (
-              <p className="mt-4 text-sm text-[color:var(--color-ink-soft)]">{t("account.sent")}</p>
-            ) : (
+            ) : step === "email" ? (
               <>
                 <p className="mt-2 text-sm text-[color:var(--color-muted)]">
                   {t("account.modalBody")}
                 </p>
-                <form onSubmit={submit} className="mt-4 flex flex-col gap-2">
+                <form onSubmit={sendCode} className="mt-4 flex flex-col gap-2">
                   <input
                     type="email"
                     required
@@ -119,20 +155,59 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                     placeholder={t("account.placeholder")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    disabled={status === "submitting"}
+                    disabled={status === "busy"}
                     className="w-full rounded-md border border-[color:var(--color-rule)] bg-[color:var(--color-paper)] px-3 py-2 text-sm placeholder:text-[color:var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-ink)]/20"
                   />
                   <button
                     type="submit"
-                    disabled={status === "submitting"}
+                    disabled={status === "busy"}
                     className="w-full px-4 py-2.5 text-sm bg-[color:var(--color-ink)] text-[color:var(--color-paper)] rounded-md hover:opacity-90 transition-opacity disabled:opacity-50"
                   >
-                    {status === "submitting" ? t("account.submitting") : t("account.submit")}
+                    {status === "busy" ? t("account.submitting") : t("account.submit")}
                   </button>
                 </form>
                 {status === "error" && (
                   <p className="mt-2 text-[11px] text-red-700">{t("account.error")}</p>
                 )}
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-sm text-[color:var(--color-muted)]">
+                  {t("account.codePrompt", { email })}
+                </p>
+                <form onSubmit={verifyCode} className="mt-4 flex flex-col gap-2">
+                  <input
+                    type="text"
+                    required
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    autoFocus
+                    spellCheck={false}
+                    placeholder={t("account.codePlaceholder")}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                    disabled={status === "busy"}
+                    className="w-full rounded-md border border-[color:var(--color-rule)] bg-[color:var(--color-paper)] px-3 py-2 text-base tracking-[0.4em] text-center placeholder:tracking-normal placeholder:text-[color:var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-ink)]/20"
+                  />
+                  <button
+                    type="submit"
+                    disabled={status === "busy" || code.length < 6}
+                    className="w-full px-4 py-2.5 text-sm bg-[color:var(--color-ink)] text-[color:var(--color-paper)] rounded-md hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    {status === "busy" ? t("account.verifying") : t("account.verify")}
+                  </button>
+                </form>
+                {status === "error" && (
+                  <p className="mt-2 text-[11px] text-red-700">{t("account.codeError")}</p>
+                )}
+                <button
+                  onClick={restart}
+                  className="mt-3 text-[11px] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] underline-offset-4 hover:underline"
+                >
+                  {t("account.restart")}
+                </button>
               </>
             )}
           </motion.div>

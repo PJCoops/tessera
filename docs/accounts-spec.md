@@ -28,16 +28,21 @@ Deliberate divergences from the spec below:
   client at the same time, so "solve first, sign in later" still verifies.
 - **History sync is in scope** (the spec deferred it): results pull to new
   devices, streak merge is fresher-lastWon-wins plus max-of-maxes.
+- **6-digit codes, not magic links.** A code keeps the player on the device
+  they're already on; a link would sign in whichever device opened the
+  email, which fights the cross-device purpose. `signInWithOtp` + client
+  `verifyOtp`, no server redirect route.
 
 Still deferred, matching the spec's phasing: milestone and streak-at-risk
 nudges, the `/account` page (display name, delete account, email change,
 login history, data export), custom email templates.
 
 Setup required before flipping the flag: Supabase project (EU), apply
-schema.sql, point the Magic Link / Confirm signup email templates at
-`/api/auth/confirm?token_hash={{ .TokenHash }}&type=email`, set
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
-`DATABASE_URL` (transaction pooler, port 6543) in Vercel.
+schema.sql, edit the **Magic Link** email template so it sends the code,
+i.e. include `{{ .Token }}` in the body (the default `{{ .ConfirmationURL }}`
+link is unused), set `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `DATABASE_URL` (transaction pooler,
+port 6543) in Vercel.
 
 ## Goals
 

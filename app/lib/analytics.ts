@@ -28,7 +28,8 @@ export type AnalyticsEvent =
   | "start_howto_clicked"
   // Accounts + cross-device sync.
   | "account_cta_clicked" // post-win "save your streak" tapped
-  | "sign_in_link_sent" // magic link requested
+  | "sign_in_code_sent" // 6-digit code requested
+  | "sign_in_verified" // code accepted, session established
   | "result_submitted" // solve posted to the server
   | "sync_completed"; // first sync after sign-in finished
 
