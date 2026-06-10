@@ -39,16 +39,27 @@ export async function bumpImportedMax(
   }
 }
 
-// Upsert that never downgrades: verified solve (2) beats unverified solve
-// (1) beats revealed (0); equal rank keeps the existing row, which also
-// makes resubmits of the same result no-ops.
-export async function upsertResult(sql: Sql, userId: string, r: ResultRow): Promise<void> {
+// Multi-row upsert that never downgrades: verified solve (2) beats
+// unverified solve (1) beats revealed (0); equal rank keeps the existing
+// row, which also makes resubmits of the same result no-ops. Callers must
+// dedupe rows by (mode, puzzle_number) first — ON CONFLICT cannot touch
+// the same row twice in one statement.
+export async function upsertResults(sql: Sql, userId: string, rows: ResultRow[]): Promise<void> {
+  if (rows.length === 0) return;
+  const values = rows.map((r) => ({
+    user_id: userId,
+    mode: r.mode,
+    puzzle_number: r.puzzleNumber,
+    moves: r.moves,
+    bonus: r.bonus,
+    revealed: r.revealed,
+    verified: r.verified,
+    locale: r.locale,
+    time_ms: r.timeMs,
+    completed_at: new Date(r.completedAtMs),
+  }));
   await sql`
-    insert into puzzle_results
-      (user_id, mode, puzzle_number, moves, bonus, revealed, verified, locale, time_ms, completed_at)
-    values
-      (${userId}, ${r.mode}, ${r.puzzleNumber}, ${r.moves}, ${r.bonus}, ${r.revealed},
-       ${r.verified}, ${r.locale}, ${r.timeMs}, to_timestamp(${r.completedAtMs} / 1000.0))
+    insert into puzzle_results ${sql(values)}
     on conflict (user_id, mode, puzzle_number) do update set
       moves = excluded.moves,
       bonus = excluded.bonus,
