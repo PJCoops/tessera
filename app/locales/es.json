@@ -175,6 +175,22 @@
     "privacyLeader": "Usamos Loops para enviarlos.",
     "privacyLink": "Consulta nuestra política de privacidad."
   },
+  "account": {
+    "title": "Cuenta",
+    "description": "Sincroniza tu racha y tu historial entre dispositivos.",
+    "signIn": "Iniciar sesión",
+    "signOut": "Cerrar sesión",
+    "signedInAs": "Sesión iniciada como {email}",
+    "saveStreak": "Guarda tu racha",
+    "modalTitle": "Guarda tu progreso",
+    "modalBody": "Recibe un enlace de acceso por correo. Tu racha y tu historial te siguen a cualquier dispositivo.",
+    "placeholder": "tu@ejemplo.com",
+    "submit": "Envíame un enlace",
+    "submitting": "Enviando…",
+    "sent": "Revisa tu correo. El enlace inicia sesión en este dispositivo.",
+    "error": "Algo salió mal. Revisa la dirección e inténtalo de nuevo.",
+    "ariaClose": "Cerrar"
+  },
   "share": {
     "headlineRevealed": "Tessera #{num} · revelado",
     "headlineRevealedHard": "Tessera Difícil #{num} · revelado",

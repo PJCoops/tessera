@@ -12,6 +12,7 @@ import { getTier } from "./lib/tier";
 import { dominantTier } from "./lib/dominant-tier";
 import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
 import { HowToPlay } from "./HowToPlay";
+import { AccountModal } from "./components/AccountModal";
 import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
 import { Legend } from "./components/Legend";
 import { HistoryModal } from "./HistoryModal";
@@ -196,6 +197,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [helpTab, setHelpTab] = useState<"how" | "words">("how");
   const [confirmReveal, setConfirmReveal] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [demoPlaying, setDemoPlaying] = useState(false);
   const [demoSelected, setDemoSelected] = useState<number | null>(null);
   const [demoTap, setDemoTap] = useState<{ idx: number; key: number } | null>(null);
@@ -612,7 +614,9 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           theme={theme}
           onThemeChange={updateTheme}
           mode={mode}
+          onOpenAccount={() => setAccountOpen(true)}
         />
+        <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
       </>
     );
   }
@@ -744,7 +748,9 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         theme={theme}
         onThemeChange={updateTheme}
         mode={mode}
+        onOpenAccount={() => setAccountOpen(true)}
       />
+      <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
       <HistoryModal
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}

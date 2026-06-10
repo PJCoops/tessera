@@ -175,6 +175,22 @@
     "privacyLeader": "We use Loops to send these.",
     "privacyLink": "See our privacy policy."
   },
+  "account": {
+    "title": "Account",
+    "description": "Sync your streak and history across devices.",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "signedInAs": "Signed in as {email}",
+    "saveStreak": "Save your streak",
+    "modalTitle": "Save your progress",
+    "modalBody": "Get a sign-in link by email. Your streak and history follow you to any device.",
+    "placeholder": "you@example.com",
+    "submit": "Email me a link",
+    "submitting": "Sending…",
+    "sent": "Check your email. The link signs you in on this device.",
+    "error": "Something went wrong. Check the address and try again.",
+    "ariaClose": "Close"
+  },
   "share": {
     "headlineRevealed": "Tessera #{num} · revealed",
     "headlineRevealedHard": "Tessera Hard #{num} · revealed",
