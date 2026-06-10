@@ -129,7 +129,9 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
               ×
             </button>
 
-            <h2 className="text-2xl font-light tracking-tight">{t("account.modalTitle")}</h2>
+            <h2 className="text-2xl font-light tracking-tight">
+              {user ? t("account.title") : t("account.modalTitle")}
+            </h2>
 
             {user ? (
               <div className="mt-4">
