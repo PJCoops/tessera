@@ -18,6 +18,16 @@ import { HistoryModal } from "./HistoryModal";
 import { EmailSignup } from "./EmailSignup";
 import { track } from "./lib/analytics";
 import { useLocale } from "./lib/locale-context";
+import {
+  readResult,
+  writeResult,
+  readProgress,
+  writeProgress,
+  clearProgress,
+  pruneOldProgress,
+  type StoredResult,
+} from "./lib/results-local";
+import type { SwapPair } from "./lib/replay-validate";
 
 // Tile sizing is responsive: pick the largest size that fits the
 // available container width, then clamp. The same formula serves both
@@ -36,7 +46,6 @@ function tileSizeFor(N: number, availableWidth: number): number {
   return Math.max(MIN_TILE, Math.min(MAX_TILE, raw));
 }
 
-type Result = { moves: number; bonus: boolean; completedAt: number; revealed?: boolean };
 
 function rowLetters(positions: Tile[], r: number, N: number): string[] {
   return Array.from({ length: N }, (_, c) => positions[r * N + c].letter);
@@ -108,57 +117,6 @@ function applyTheme(t: ThemePref) {
   if (t !== "system") root.classList.add(t);
 }
 
-type Progress = { positions: Tile[]; moves: number };
-
-function readResult(num: number, prefix: string): Result | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(prefix + num);
-    return raw ? (JSON.parse(raw) as Result) : null;
-  } catch {
-    return null;
-  }
-}
-function writeResult(num: number, r: Result, prefix: string) {
-  try {
-    window.localStorage.setItem(prefix + num, JSON.stringify(r));
-  } catch {}
-}
-function readProgress(num: number, prefix: string): Progress | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(prefix + num);
-    return raw ? (JSON.parse(raw) as Progress) : null;
-  } catch {
-    return null;
-  }
-}
-function writeProgress(num: number, p: Progress, prefix: string) {
-  try {
-    window.localStorage.setItem(prefix + num, JSON.stringify(p));
-  } catch {}
-}
-function clearProgress(num: number, prefix: string) {
-  try {
-    window.localStorage.removeItem(prefix + num);
-  } catch {}
-}
-// Drop progress entries for any puzzle other than today's. Players abandon
-// puzzles often — without this, those keys accumulate forever.
-function pruneOldProgress(currentNum: number, prefix: string) {
-  if (typeof window === "undefined") return;
-  try {
-    const toRemove: string[] = [];
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const key = window.localStorage.key(i);
-      if (!key || !key.startsWith(prefix)) continue;
-      const num = Number(key.slice(prefix.length));
-      if (Number.isFinite(num) && num !== currentNum) toRemove.push(key);
-    }
-    for (const k of toRemove) window.localStorage.removeItem(k);
-  } catch {}
-}
-
 function msToNextUtcMidnight(): number {
   const now = new Date();
   const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
@@ -224,7 +182,12 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   const [moves, setMoves] = useState(0);
   const [solvedAt, setSolvedAt] = useState<number | null>(null);
   const [bonusAt, setBonusAt] = useState<number | null>(null);
-  const [storedResult, setStoredResult] = useState<Result | null>(null);
+  const [storedResult, setStoredResult] = useState<StoredResult | null>(null);
+  // Ordered swap pairs for this session's solve. Null means the chain is
+  // broken (resumed progress saved before history capture existed) and the
+  // result can only sync unverified.
+  const [history, setHistory] = useState<SwapPair[] | null>([]);
+  const startedAtRef = useRef<number | null>(null);
   const [countdown, setCountdown] = useState<string>("");
   const [streak, setStreak] = useState<Streak>({ current: 0, max: 0, lastWon: 0 });
   const [copied, setCopied] = useState(false);
@@ -295,6 +258,10 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     if (progress) {
       setPositions(progress.positions);
       setMoves(progress.moves);
+      // Progress saved before history capture existed has no swap chain;
+      // mark it broken so the eventual result syncs unverified.
+      setHistory(progress.history ?? null);
+      startedAtRef.current = progress.startedAt ?? null;
     } else {
       setPositions(startTiles);
     }
@@ -407,7 +374,13 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           minSwaps: puzzle.minSwaps,
         });
       } else if (!puzzle.demo) {
-        const r: Result = { moves, bonus: validity.isBonus, completedAt: Date.now() };
+        const r: StoredResult = {
+          moves,
+          bonus: validity.isBonus,
+          completedAt: Date.now(),
+          history: history ?? undefined,
+          timeMs: startedAtRef.current ? Date.now() - startedAtRef.current : undefined,
+        };
         writeResult(puzzle.num, r, mode.resultPrefix);
         clearProgress(puzzle.num, mode.progressPrefix);
         setStoredResult(r);
@@ -425,7 +398,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
       }
     }
     if (validity.isBonus && bonusAt === null) setBonusAt(moves);
-  }, [validity.isSolved, validity.isBonus, moves, solvedAt, bonusAt, puzzle, storedResult]);
+  }, [validity.isSolved, validity.isBonus, moves, solvedAt, bonusAt, puzzle, storedResult, history]);
 
   // Play the win jingle once when the puzzle solves this session. Only fires
   // on a fresh solve (solvedAt was just set this render) — never on a stored
@@ -548,7 +521,13 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
       .split("")
       .map((letter, id) => ({ id, letter }));
     if (!puzzle.demo && !puzzle.forceSolved && !puzzle.replay) {
-      const r: Result = { moves, bonus: false, completedAt: Date.now(), revealed: true };
+      const r: StoredResult = {
+        moves,
+        bonus: false,
+        completedAt: Date.now(),
+        revealed: true,
+        history: history ?? undefined,
+      };
       writeResult(puzzle.num, r, mode.resultPrefix);
       clearProgress(puzzle.num, mode.progressPrefix);
       setStoredResult(r);
@@ -565,7 +544,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     setPositions(goldPositions);
     setSelectedIdx(null);
     setConfirmReveal(false);
-  }, [puzzle, moves]);
+  }, [puzzle, moves, history]);
 
   const handleTap = useCallback(
     (idx: number) => {
@@ -574,17 +553,25 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
       setDemoTap(null);
       if (selectedIdx === null) return setSelectedIdx(idx);
       if (selectedIdx === idx) return setSelectedIdx(null);
+      startedAtRef.current ??= Date.now();
+      const startedAt = startedAtRef.current;
+      const nextHistory = history ? [...history, [selectedIdx, idx] as SwapPair] : null;
+      setHistory(nextHistory);
       setPositions((p) => {
         const next = swapAt(p, selectedIdx, idx);
         if (puzzle && !puzzle.demo && !puzzle.forceSolved && !puzzle.replay) {
-          writeProgress(puzzle.num, { positions: next, moves: moves + 1 }, mode.progressPrefix);
+          writeProgress(
+            puzzle.num,
+            { positions: next, moves: moves + 1, history: nextHistory ?? undefined, startedAt },
+            mode.progressPrefix
+          );
         }
         return next;
       });
       setMoves((n) => n + 1);
       setSelectedIdx(null);
     },
-    [selectedIdx, puzzle, moves]
+    [selectedIdx, puzzle, moves, history]
   );
 
   const gridPx = TILE * N + GAP * (N - 1);
