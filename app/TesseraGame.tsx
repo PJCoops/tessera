@@ -13,6 +13,7 @@ import { dominantTier } from "./lib/dominant-tier";
 import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
 import { HowToPlay } from "./HowToPlay";
 import { AccountModal } from "./components/AccountModal";
+import { AccountCta } from "./components/AccountCta";
 import { submitResult, SYNC_EVENT } from "./lib/sync";
 import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
 import { Legend } from "./components/Legend";
@@ -989,6 +990,9 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         )}
         {finished && !puzzle.replay && (
           <p className="text-xs text-[color:var(--color-muted)]">{t("game.nextPuzzle", { countdown })}</p>
+        )}
+        {finished && !puzzle.replay && (
+          <AccountCta onOpenAccount={() => setAccountOpen(true)} />
         )}
         {finished && !puzzle.replay && (
           <div className="mt-2 w-full max-w-xs">
