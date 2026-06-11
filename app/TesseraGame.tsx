@@ -1016,7 +1016,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           </div>
         )}
 
-        <div className="mt-2 flex items-center gap-3 text-[color:var(--color-muted)]">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[color:var(--color-muted)]">
           <button
             onClick={() => openHelp("how")}
             aria-label={t("game.ariaHowToPlay")}
