@@ -197,6 +197,37 @@
     "error": "Algo salió mal. Revisa la dirección e inténtalo de nuevo.",
     "ariaClose": "Cerrar"
   },
+  "handle": {
+    "title": "Elige un nombre",
+    "body": "Así apareces en las clasificaciones y en las ligas. Puedes cambiarlo después.",
+    "placeholder": "tunombre",
+    "submit": "Guardar",
+    "saving": "Guardando…",
+    "taken": "Ese nombre ya existe. Prueba con otro.",
+    "invalid": "De 3 a 20 letras, números, _ o -, no solo números.",
+    "ariaClose": "Cerrar"
+  },
+  "leaderboard": {
+    "title": "Clasificación",
+    "sub": "Tessera #{num}",
+    "subHard": "Tessera Difícil #{num}",
+    "tabGlobal": "Global",
+    "tabCountry": "País",
+    "tabLeagues": "Ligas",
+    "colRank": "#",
+    "colPlayer": "Jugador",
+    "colMoves": "Mov.",
+    "colTime": "Tiempo",
+    "empty": "Aún no hay partidas hoy. Sé el primero.",
+    "loading": "Cargando…",
+    "signInPrompt": "Inicia sesión y elige un nombre para entrar.",
+    "optInPrompt": "Elige un nombre para aparecer en la clasificación.",
+    "pickName": "Elegir nombre",
+    "yourRank": "Tu posición",
+    "cta": "Clasificación de hoy",
+    "ariaOpen": "Clasificación",
+    "ariaClose": "Cerrar"
+  },
   "share": {
     "headlineRevealed": "Tessera #{num} · revelado",
     "headlineRevealedHard": "Tessera Difícil #{num} · revelado",

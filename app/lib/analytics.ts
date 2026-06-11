@@ -31,7 +31,13 @@ export type AnalyticsEvent =
   | "sign_in_code_sent" // 6-digit code requested
   | "sign_in_verified" // code accepted, session established
   | "result_submitted" // solve posted to the server
-  | "sync_completed"; // first sync after sign-in finished
+  | "sync_completed" // first sync after sign-in finished
+  // Leaderboards + mini-leagues.
+  | "handle_set" // display name chosen (opt-in to competition)
+  | "leaderboard_opened"
+  | "league_created"
+  | "league_joined"
+  | "league_standings_viewed";
 
 // Mirror to Meta only the events worth optimizing ad delivery against.
 // PageView is auto-fired by the Pixel snippet itself. ViewContent is a

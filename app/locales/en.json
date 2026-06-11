@@ -197,6 +197,37 @@
     "error": "Something went wrong. Check the address and try again.",
     "ariaClose": "Close"
   },
+  "handle": {
+    "title": "Pick a display name",
+    "body": "This is how you show up on leaderboards and in leagues. You can change it later.",
+    "placeholder": "yourname",
+    "submit": "Save",
+    "saving": "Saving…",
+    "taken": "That name is taken. Try another.",
+    "invalid": "3 to 20 letters, numbers, _ or -, not all numbers.",
+    "ariaClose": "Close"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "sub": "Tessera #{num}",
+    "subHard": "Tessera Hard #{num}",
+    "tabGlobal": "Global",
+    "tabCountry": "Country",
+    "tabLeagues": "Leagues",
+    "colRank": "#",
+    "colPlayer": "Player",
+    "colMoves": "Moves",
+    "colTime": "Time",
+    "empty": "No solves yet today. Be the first.",
+    "loading": "Loading…",
+    "signInPrompt": "Sign in and pick a name to join the board.",
+    "optInPrompt": "Pick a display name to appear on the board.",
+    "pickName": "Pick a name",
+    "yourRank": "Your rank",
+    "cta": "Today's leaderboard",
+    "ariaOpen": "Leaderboard",
+    "ariaClose": "Close"
+  },
   "share": {
     "headlineRevealed": "Tessera #{num} · revealed",
     "headlineRevealedHard": "Tessera Hard #{num} · revealed",

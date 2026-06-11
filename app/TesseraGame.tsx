@@ -14,6 +14,8 @@ import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
 import { HowToPlay } from "./HowToPlay";
 import { AccountModal, AccountButton } from "./components/AccountModal";
 import { AccountCta } from "./components/AccountCta";
+import { LeaderboardModal, LeaderboardButton, LeaderboardCta } from "./components/LeaderboardModal";
+import { HandleModal } from "./components/HandleModal";
 import { submitResult, SYNC_EVENT } from "./lib/sync";
 import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
 import { Legend } from "./components/Legend";
@@ -200,6 +202,8 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   const [helpTab, setHelpTab] = useState<"how" | "words">("how");
   const [confirmReveal, setConfirmReveal] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [handleOpen, setHandleOpen] = useState(false);
   const [demoPlaying, setDemoPlaying] = useState(false);
   const [demoSelected, setDemoSelected] = useState<number | null>(null);
   const [demoTap, setDemoTap] = useState<{ idx: number; key: number } | null>(null);
@@ -656,6 +660,15 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           onOpenAccount={() => setAccountOpen(true)}
         />
         <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
+        <LeaderboardModal
+          open={leaderboardOpen}
+          onClose={() => setLeaderboardOpen(false)}
+          mode={mode.id}
+          num={puzzle.num}
+          onOpenAccount={() => setAccountOpen(true)}
+          onOpenHandle={() => setHandleOpen(true)}
+        />
+        <HandleModal open={handleOpen} onClose={() => setHandleOpen(false)} />
       </>
     );
   }
@@ -790,6 +803,15 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         onOpenAccount={() => setAccountOpen(true)}
       />
       <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
+      <LeaderboardModal
+        open={leaderboardOpen}
+        onClose={() => setLeaderboardOpen(false)}
+        mode={mode.id}
+        num={puzzle.num}
+        onOpenAccount={() => setAccountOpen(true)}
+        onOpenHandle={() => setHandleOpen(true)}
+      />
+      <HandleModal open={handleOpen} onClose={() => setHandleOpen(false)} />
       <HistoryModal
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
@@ -992,7 +1014,10 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           <p className="text-xs text-[color:var(--color-muted)]">{t("game.nextPuzzle", { countdown })}</p>
         )}
         {finished && !puzzle.replay && (
-          <AccountCta onOpenAccount={() => setAccountOpen(true)} liveStreak={liveStreak} />
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <LeaderboardCta onOpen={() => setLeaderboardOpen(true)} />
+            <AccountCta onOpenAccount={() => setAccountOpen(true)} liveStreak={liveStreak} />
+          </div>
         )}
         {finished && !puzzle.replay && (
           <div className="mt-2 w-full max-w-xs">
@@ -1058,6 +1083,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
               🔥 {liveStreak}
             </button>
           )}
+          <LeaderboardButton onOpen={() => setLeaderboardOpen(true)} />
           <AccountButton onOpenAccount={() => setAccountOpen(true)} />
         </div>
       </div>
