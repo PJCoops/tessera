@@ -992,7 +992,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           <p className="text-xs text-[color:var(--color-muted)]">{t("game.nextPuzzle", { countdown })}</p>
         )}
         {finished && !puzzle.replay && (
-          <AccountCta onOpenAccount={() => setAccountOpen(true)} />
+          <AccountCta onOpenAccount={() => setAccountOpen(true)} liveStreak={liveStreak} />
         )}
         {finished && !puzzle.replay && (
           <div className="mt-2 w-full max-w-xs">

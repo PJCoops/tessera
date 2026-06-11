@@ -182,6 +182,7 @@
     "signOut": "Cerrar sesión",
     "signedInAs": "Sesión iniciada como {email}",
     "saveStreak": "Guarda tu racha",
+    "saveStreakN": "Guarda tu racha de {n} días",
     "modalTitle": "Inicia sesión y guarda tu racha",
     "modalBody": "Te enviaremos un código de un solo uso. Tu racha y tu historial te seguirán a cualquier dispositivo.",
     "placeholder": "tu@ejemplo.com",
