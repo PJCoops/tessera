@@ -7,6 +7,7 @@ import { ConsentProvider } from "./lib/consent";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { FloatingChrome } from "./components/FloatingChrome";
 import { Footer } from "./components/Footer";
+import { AccountSync } from "./components/AccountSync";
 import { MetaPixel, MetaPixelNoScript } from "./lib/meta-pixel";
 import { XPixel } from "./lib/x-pixel";
 import "./globals.css";
@@ -122,6 +123,7 @@ export default async function RootLayout({
             {children}
           </main>
           <Analytics />
+          <AccountSync />
           <FloatingChrome />
           <Footer />
           </PHProvider>

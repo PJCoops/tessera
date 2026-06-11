@@ -6,6 +6,8 @@ import { LOCALES, LOCALE_COOKIE, type Locale, pathnameWithLocale } from "./lib/i
 import { useLocale } from "./lib/locale-context";
 import { PushReminderToggle } from "./components/PushReminderToggle";
 import { Legend } from "./components/Legend";
+import { AccountControl } from "./components/AccountModal";
+import { accountsEnabled } from "./lib/supabase-browser";
 import { CLASSIC, type ModeConfig } from "./lib/mode";
 import definitionsEs from "./locales/definitions-es.json";
 import definitionsEn from "./locales/definitions-en.json";
@@ -44,6 +46,7 @@ export function HowToPlay({
   theme,
   onThemeChange,
   mode = CLASSIC,
+  onOpenAccount,
 }: {
   open: boolean;
   onClose: () => void;
@@ -56,6 +59,7 @@ export function HowToPlay({
   theme: ThemePref;
   onThemeChange: (v: ThemePref) => void;
   mode?: ModeConfig;
+  onOpenAccount?: () => void;
 }) {
   const { t } = useLocale();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -136,6 +140,7 @@ export function HowToPlay({
                   onMutedChange={onMutedChange}
                   theme={theme}
                   onThemeChange={onThemeChange}
+                  onOpenAccount={onOpenAccount}
                 />
               )}
               {tab === "credits" && <CreditsContent />}
@@ -396,6 +401,7 @@ function SettingsContent({
   onMutedChange,
   theme,
   onThemeChange,
+  onOpenAccount,
 }: {
   hideHints: boolean;
   onHideHintsChange: (v: boolean) => void;
@@ -403,6 +409,7 @@ function SettingsContent({
   onMutedChange: (v: boolean) => void;
   theme: ThemePref;
   onThemeChange: (v: ThemePref) => void;
+  onOpenAccount?: () => void;
 }) {
   const { locale, t } = useLocale();
 
@@ -459,6 +466,13 @@ function SettingsContent({
         inlineControl
       />
       <PushReminderToggle />
+      {accountsEnabled() && onOpenAccount && (
+        <SettingRow
+          title={t("account.title")}
+          description={t("account.description")}
+          control={<AccountControl onOpenAccount={onOpenAccount} />}
+        />
+      )}
     </div>
   );
 }

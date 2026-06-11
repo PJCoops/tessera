@@ -1,8 +1,48 @@
 # Tessera Accounts & Streak Sync — Spec
 
-Status: Draft
+Status: Phase 0 + core Phase 1 implemented (see Implementation notes)
 Owner: Paul
-Last updated: 2026-05-25
+Last updated: 2026-06-10
+
+## Implementation notes (2026-06-10)
+
+The first slice is built on the `worktree-accounts-sync` branch: Supabase
+magic-link auth, result submission with server-side replay validation,
+two-way streak/history sync, post-win CTA and Account settings row. Ships
+dark behind `NEXT_PUBLIC_ACCOUNTS_ENABLED`. Schema lives in `schema.sql`
+at the repo root.
+
+Deliberate divergences from the spec below:
+
+- **No `streaks` table, no `record_win` RPC.** Streaks are derived from
+  `puzzle_results` rows (the spec's own "recompute if corrupted" rationale,
+  made the default). Pre-account maxima are preserved via
+  `imported_max_streak_*` columns on `profiles`.
+- **RLS is enabled with zero policies.** The spec's client-direct RPC model
+  can't validate that a claimed win actually happened. All reads/writes go
+  through `/api/results*` routes, which replay the submitted move history
+  against the day's pinned puzzle (`puzzles` table) and only then mark a row
+  `verified`. Leaderboards (next slice) rank verified rows only.
+- **`puzzle_results` is richer than spec'd:** moves, bonus, revealed,
+  verified, locale, time_ms. Replay history capture shipped in the game
+  client at the same time, so "solve first, sign in later" still verifies.
+- **History sync is in scope** (the spec deferred it): results pull to new
+  devices, streak merge is fresher-lastWon-wins plus max-of-maxes.
+- **6-digit codes, not magic links.** A code keeps the player on the device
+  they're already on; a link would sign in whichever device opened the
+  email, which fights the cross-device purpose. `signInWithOtp` + client
+  `verifyOtp`, no server redirect route.
+
+Still deferred, matching the spec's phasing: milestone and streak-at-risk
+nudges, the `/account` page (display name, delete account, email change,
+login history, data export), custom email templates.
+
+Setup required before flipping the flag: Supabase project (EU), apply
+schema.sql, edit the **Magic Link** email template so it sends the code,
+i.e. include `{{ .Token }}` in the body (the default `{{ .ConfirmationURL }}`
+link is unused), set `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `DATABASE_URL` (transaction pooler,
+port 6543) in Vercel.
 
 ## Goals
 

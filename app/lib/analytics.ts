@@ -25,7 +25,13 @@ export type AnalyticsEvent =
   // Title/start screen funnel.
   | "start_screen_shown"
   | "start_play_clicked"
-  | "start_howto_clicked";
+  | "start_howto_clicked"
+  // Accounts + cross-device sync.
+  | "account_cta_clicked" // post-win "save your streak" tapped
+  | "sign_in_code_sent" // 6-digit code requested
+  | "sign_in_verified" // code accepted, session established
+  | "result_submitted" // solve posted to the server
+  | "sync_completed"; // first sync after sign-in finished
 
 // Mirror to Meta only the events worth optimizing ad delivery against.
 // PageView is auto-fired by the Pixel snippet itself. ViewContent is a
