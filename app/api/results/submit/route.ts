@@ -43,6 +43,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "bad_input" }, { status: 400 });
   }
 
+  // Vercel sets this on every edge request; missing locally → "ZZ".
+  const country = req.headers.get("x-vercel-ip-country") ?? "ZZ";
+
   try {
     await ensureProfile(sql, userId);
     const verdict = await verifyIncoming(sql, parsed, [parsed.locale], new Map());
@@ -56,6 +59,7 @@ export async function POST(req: NextRequest) {
         verified: verdict.verified,
         locale: parsed.locale,
         timeMs: parsed.timeMs,
+        country,
         completedAtMs: parsed.completedAtMs,
       },
     ]);

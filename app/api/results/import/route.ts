@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
         verified: verdict.verified,
         locale: r.locale,
         timeMs: r.timeMs,
+        country: null,
         completedAtMs: r.completedAtMs,
       });
     }

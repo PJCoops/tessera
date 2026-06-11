@@ -10,6 +10,9 @@ export type ResultRow = {
   verified: boolean;
   locale: string;
   timeMs: number | null;
+  // ISO-2 country of the recording request, or null for imported rows
+  // (localStorage history has no trustworthy geo).
+  country: string | null;
   completedAtMs: number;
 };
 
@@ -56,6 +59,7 @@ export async function upsertResults(sql: Sql, userId: string, rows: ResultRow[])
     verified: r.verified,
     locale: r.locale,
     time_ms: r.timeMs,
+    country: r.country,
     completed_at: new Date(r.completedAtMs),
   }));
   await sql`
@@ -67,6 +71,7 @@ export async function upsertResults(sql: Sql, userId: string, rows: ResultRow[])
       verified = excluded.verified,
       locale = excluded.locale,
       time_ms = excluded.time_ms,
+      country = excluded.country,
       completed_at = excluded.completed_at,
       updated_at = now()
     where (case when excluded.verified then 2 when not excluded.revealed then 1 else 0 end)
@@ -82,12 +87,13 @@ type DbResultRow = {
   verified: boolean;
   locale: string;
   time_ms: number | null;
+  country: string | null;
   completed_at_ms: string;
 };
 
 export async function listResults(sql: Sql, userId: string): Promise<ResultRow[]> {
   const rows = await sql<DbResultRow[]>`
-    select mode, puzzle_number, moves, bonus, revealed, verified, locale, time_ms,
+    select mode, puzzle_number, moves, bonus, revealed, verified, locale, time_ms, country,
            (extract(epoch from completed_at) * 1000)::bigint as completed_at_ms
     from puzzle_results
     where user_id = ${userId}
@@ -101,6 +107,7 @@ export async function listResults(sql: Sql, userId: string): Promise<ResultRow[]
     verified: r.verified,
     locale: r.locale,
     timeMs: r.time_ms === null ? null : Number(r.time_ms),
+    country: r.country ?? null,
     completedAtMs: Number(r.completed_at_ms),
   }));
 }
