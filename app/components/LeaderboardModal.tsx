@@ -183,6 +183,12 @@ export function LeaderboardModal({
               />
             ) : (
               <>
+                {data && !data.signedIn && (
+                  <PromptCard text={t("leaderboard.signInPrompt")} cta={t("account.signIn")} onClick={onOpenAccount} />
+                )}
+                {data && data.signedIn && !data.hasHandle && (
+                  <PromptCard text={t("leaderboard.optInPrompt")} cta={t("leaderboard.pickName")} onClick={onOpenHandle} />
+                )}
                 <div className="mt-3">
                   <div className="grid grid-cols-[2.25rem_1fr_3rem_3.25rem] gap-2 px-2 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
                     <span>{t("leaderboard.colRank")}</span>
@@ -208,21 +214,6 @@ export function LeaderboardModal({
                     )}
                   </div>
                 </div>
-
-                {data && !data.signedIn && (
-                  <Footer
-                    text={t("leaderboard.signInPrompt")}
-                    cta={t("account.signIn")}
-                    onClick={onOpenAccount}
-                  />
-                )}
-                {data && data.signedIn && !data.hasHandle && (
-                  <Footer
-                    text={t("leaderboard.optInPrompt")}
-                    cta={t("leaderboard.pickName")}
-                    onClick={onOpenHandle}
-                  />
-                )}
               </>
             )}
           </motion.div>
@@ -255,13 +246,15 @@ function TabButton({
   );
 }
 
-function Footer({ text, cta, onClick }: { text: string; cta: string; onClick: () => void }) {
+// Prominent nudge above the board for signed-out / no-handle viewers, so
+// they're invited to join rather than just shown other players' scores.
+function PromptCard({ text, cta, onClick }: { text: string; cta: string; onClick: () => void }) {
   return (
-    <div className="mt-4 pt-3 border-t border-[color:var(--color-rule)] flex items-center justify-between gap-3">
-      <p className="text-xs text-[color:var(--color-muted)]">{text}</p>
+    <div className="mt-3 rounded-md border border-[color:var(--color-rule)] bg-[color:var(--color-cream)] p-3 flex items-center justify-between gap-3">
+      <p className="text-xs text-[color:var(--color-ink)]">{text}</p>
       <button
         onClick={onClick}
-        className="flex-shrink-0 px-3 py-1.5 text-xs border border-[color:var(--color-rule)] rounded-md hover:bg-[color:var(--color-cream)] transition-colors"
+        className="flex-shrink-0 px-3 py-1.5 text-xs bg-[color:var(--color-ink)] text-[color:var(--color-paper)] rounded-md hover:opacity-90 transition-opacity"
       >
         {cta}
       </button>
