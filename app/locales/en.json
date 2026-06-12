@@ -182,7 +182,6 @@
     "signOut": "Sign out",
     "signedInAs": "Signed in as {email}",
     "saveStreak": "Save your streak",
-    "saveStreakN": "Save your {n}-day streak",
     "modalTitle": "Sign in to save your streak",
     "modalBody": "We'll email you a one-time code. Your streak and history then follow you to any device.",
     "placeholder": "you@example.com",
@@ -224,7 +223,7 @@
     "optInPrompt": "Pick a display name to appear on the board.",
     "pickName": "Pick a name",
     "yourRank": "Your rank",
-    "cta": "Today's leaderboard",
+    "cta": "Leaderboard",
     "ariaOpen": "Leaderboard",
     "ariaClose": "Close"
   },

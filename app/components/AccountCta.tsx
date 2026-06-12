@@ -19,7 +19,7 @@ export function AccountCta({
   const { t } = useLocale();
   const { user, loaded } = useSupabaseUser();
   if (!accountsEnabled() || !loaded || user) return null;
-  const label = liveStreak >= 1 ? t("account.saveStreakN", { n: liveStreak }) : t("account.saveStreak");
+  const label = t("account.saveStreak");
   const bold = liveStreak >= 7;
   return (
     <button
