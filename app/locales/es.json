@@ -228,6 +228,26 @@
     "ariaOpen": "Clasificación",
     "ariaClose": "Cerrar"
   },
+  "leagues": {
+    "signInPrompt": "Inicia sesión para jugar en ligas con amigos.",
+    "empty": "Aún no estás en ninguna liga. Crea una o únete con un código.",
+    "create": "Crear",
+    "join": "Unirse",
+    "back": "Atrás",
+    "namePlaceholder": "Nombre de la liga",
+    "codePlaceholder": "Código de invitación",
+    "notFound": "No hay ninguna liga con ese código.",
+    "members": "{n} miembros",
+    "shareInvite": "Comparte este enlace para invitar a tus amigos:",
+    "copyLink": "Copiar enlace",
+    "copied": "Copiado",
+    "done": "Listo",
+    "today": "Hoy",
+    "noneToday": "Nadie ha resuelto hoy todavía.",
+    "daysWon": "Días ganados",
+    "noHandlePrompt": "Elige un nombre para aparecer en la clasificación",
+    "joinedToast": "Te uniste a {name}"
+  },
   "share": {
     "headlineRevealed": "Tessera #{num} · revelado",
     "headlineRevealedHard": "Tessera Difícil #{num} · revelado",

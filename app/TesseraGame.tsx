@@ -17,6 +17,7 @@ import { AccountCta } from "./components/AccountCta";
 import { LeaderboardModal, LeaderboardButton, LeaderboardCta } from "./components/LeaderboardModal";
 import { HandleModal } from "./components/HandleModal";
 import { submitResult, SYNC_EVENT } from "./lib/sync";
+import { useSupabaseUser, accountsEnabled } from "./lib/supabase-browser";
 import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
 import { Legend } from "./components/Legend";
 import { HistoryModal } from "./HistoryModal";
@@ -433,6 +434,55 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     return () => window.removeEventListener(SYNC_EVENT, onSync);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [puzzle, storedResult]);
+
+  // League invite links arrive as /?join=<code>. Stash the code (so it
+  // survives the sign-in OTP round-trip), strip the param, then join: if
+  // already signed in, immediately; otherwise open the account modal and
+  // finish when `user` flips. Reuses the streak toast for confirmation.
+  const { user: authUser } = useSupabaseUser();
+  useEffect(() => {
+    if (!accountsEnabled()) return;
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("join");
+    if (fromUrl) {
+      try {
+        sessionStorage.setItem("tessera:pending-join", fromUrl);
+      } catch {}
+      params.delete("join");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash);
+    }
+    let pending: string | null = null;
+    try {
+      pending = sessionStorage.getItem("tessera:pending-join");
+    } catch {}
+    if (!pending) return;
+    if (!authUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAccountOpen(true);
+      return;
+    }
+    void (async () => {
+      try {
+        const res = await fetch("/api/leagues/join", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ code: pending }),
+        });
+        const json = (await res.json()) as { ok: boolean; league?: { name: string } };
+        try {
+          sessionStorage.removeItem("tessera:pending-join");
+        } catch {}
+        if (json.ok && json.league) {
+          track("league_joined", { via: "link" });
+          const msg = t("leagues.joinedToast", { name: json.league.name });
+          setStreakToast(msg);
+          window.setTimeout(() => setStreakToast((c) => (c === msg ? null : c)), 2600);
+        }
+      } catch {}
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser]);
 
   // Play the win jingle once when the puzzle solves this session. Only fires
   // on a fresh solve (solvedAt was just set this render) — never on a stored

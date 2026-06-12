@@ -228,6 +228,26 @@
     "ariaOpen": "Leaderboard",
     "ariaClose": "Close"
   },
+  "leagues": {
+    "signInPrompt": "Sign in to play in leagues with friends.",
+    "empty": "You're not in any leagues yet. Create one or join with a code.",
+    "create": "Create",
+    "join": "Join",
+    "back": "Back",
+    "namePlaceholder": "League name",
+    "codePlaceholder": "Invite code",
+    "notFound": "No league with that code.",
+    "members": "{n} members",
+    "shareInvite": "Share this link to invite friends:",
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "done": "Done",
+    "today": "Today",
+    "noneToday": "No one has solved today yet.",
+    "daysWon": "Days won",
+    "noHandlePrompt": "Pick a display name to appear in standings",
+    "joinedToast": "Joined {name}"
+  },
   "share": {
     "headlineRevealed": "Tessera #{num} · revealed",
     "headlineRevealedHard": "Tessera Hard #{num} · revealed",

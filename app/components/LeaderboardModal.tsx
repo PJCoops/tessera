@@ -6,6 +6,7 @@ import { useLocale } from "../lib/locale-context";
 import type { ModeId } from "../lib/mode";
 import { track } from "../lib/analytics";
 import { accountsEnabled } from "../lib/supabase-browser";
+import { LeaguesPanel } from "./LeaguesPanel";
 
 // Round trophy icon for the chrome row, matching AccountButton's style.
 // Visible whenever accounts are on; the board itself is public.
@@ -41,7 +42,7 @@ export function LeaderboardCta({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-type Entry = { rank: number; handle: string; moves: number; timeMs: number | null; isMe: boolean };
+export type Entry = { rank: number; handle: string; moves: number; timeMs: number | null; isMe: boolean };
 type LeaderboardResponse = {
   ok: true;
   global: Entry[];
@@ -51,15 +52,15 @@ type LeaderboardResponse = {
   signedIn: boolean;
 };
 
-type Tab = "global" | "country";
+type Tab = "global" | "country" | "leagues";
 
-function fmtTime(ms: number | null): string {
+export function fmtTime(ms: number | null): string {
   if (ms === null) return "—";
   const total = Math.floor(ms / 1000);
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
-function BoardRow({ e }: { e: Entry }) {
+export function BoardRow({ e }: { e: Entry }) {
   return (
     <div
       className={`grid grid-cols-[2.25rem_1fr_3rem_3.25rem] gap-2 items-center px-2 py-1.5 text-xs tabular-nums border-t border-[color:var(--color-rule)] ${
@@ -167,47 +168,62 @@ export function LeaderboardModal({
                   {data?.country.code ?? t("leaderboard.tabCountry")}
                 </TabButton>
               )}
+              <TabButton active={tab === "leagues"} onClick={() => setTab("leagues")}>
+                {t("leaderboard.tabLeagues")}
+              </TabButton>
             </div>
 
-            <div className="mt-3">
-              <div className="grid grid-cols-[2.25rem_1fr_3rem_3.25rem] gap-2 px-2 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
-                <span>{t("leaderboard.colRank")}</span>
-                <span>{t("leaderboard.colPlayer")}</span>
-                <span className="text-right">{t("leaderboard.colMoves")}</span>
-                <span className="text-right">{t("leaderboard.colTime")}</span>
-              </div>
-              <div className="mt-1 max-h-[50vh] overflow-y-auto">
-                {entries.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-[color:var(--color-muted)]">
-                    {loading ? t("leaderboard.loading") : t("leaderboard.empty")}
-                  </p>
-                ) : (
-                  entries.map((e) => <BoardRow key={`${e.rank}-${e.handle}`} e={e} />)
-                )}
-                {meRow && !entries.some((e) => e.isMe) && (
-                  <>
-                    <p className="mt-2 px-2 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
-                      {t("leaderboard.yourRank")}
-                    </p>
-                    <BoardRow e={{ ...meRow, isMe: true }} />
-                  </>
-                )}
-              </div>
-            </div>
+            {tab === "leagues" ? (
+              <LeaguesPanel
+                mode={mode}
+                num={num}
+                signedIn={data?.signedIn ?? false}
+                onOpenAccount={onOpenAccount}
+                onOpenHandle={onOpenHandle}
+              />
+            ) : (
+              <>
+                <div className="mt-3">
+                  <div className="grid grid-cols-[2.25rem_1fr_3rem_3.25rem] gap-2 px-2 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
+                    <span>{t("leaderboard.colRank")}</span>
+                    <span>{t("leaderboard.colPlayer")}</span>
+                    <span className="text-right">{t("leaderboard.colMoves")}</span>
+                    <span className="text-right">{t("leaderboard.colTime")}</span>
+                  </div>
+                  <div className="mt-1 max-h-[50vh] overflow-y-auto">
+                    {entries.length === 0 ? (
+                      <p className="py-6 text-center text-xs text-[color:var(--color-muted)]">
+                        {loading ? t("leaderboard.loading") : t("leaderboard.empty")}
+                      </p>
+                    ) : (
+                      entries.map((e) => <BoardRow key={`${e.rank}-${e.handle}`} e={e} />)
+                    )}
+                    {meRow && !entries.some((e) => e.isMe) && (
+                      <>
+                        <p className="mt-2 px-2 text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
+                          {t("leaderboard.yourRank")}
+                        </p>
+                        <BoardRow e={{ ...meRow, isMe: true }} />
+                      </>
+                    )}
+                  </div>
+                </div>
 
-            {data && !data.signedIn && (
-              <Footer
-                text={t("leaderboard.signInPrompt")}
-                cta={t("account.signIn")}
-                onClick={onOpenAccount}
-              />
-            )}
-            {data && data.signedIn && !data.hasHandle && (
-              <Footer
-                text={t("leaderboard.optInPrompt")}
-                cta={t("leaderboard.pickName")}
-                onClick={onOpenHandle}
-              />
+                {data && !data.signedIn && (
+                  <Footer
+                    text={t("leaderboard.signInPrompt")}
+                    cta={t("account.signIn")}
+                    onClick={onOpenAccount}
+                  />
+                )}
+                {data && data.signedIn && !data.hasHandle && (
+                  <Footer
+                    text={t("leaderboard.optInPrompt")}
+                    cta={t("leaderboard.pickName")}
+                    onClick={onOpenHandle}
+                  />
+                )}
+              </>
             )}
           </motion.div>
         </motion.div>
