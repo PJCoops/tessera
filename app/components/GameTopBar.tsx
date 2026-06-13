@@ -29,9 +29,9 @@ export function GameTopBar({
   const { t, locale } = useLocale();
   const showStreak = liveStreak > 0 && !replay;
   return (
-    // In-flow on mobile (where the narrow column reads well); pinned to the
-    // viewport's top corners on desktop so the logo and icons reach the edges.
-    <div className="mb-6 w-full flex items-center justify-between gap-3 md:fixed md:top-0 md:inset-x-0 md:z-40 md:mb-0 md:px-6 md:py-4">
+    // Pinned to the viewport's top corners at every size so the logo and
+    // icons sit in the corners; the centered play column clears it.
+    <div className="fixed top-0 inset-x-0 z-40 flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
       <a
         href={homePath(CLASSIC, locale)}
         aria-label="Tessera"
