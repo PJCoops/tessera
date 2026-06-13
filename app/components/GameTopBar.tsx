@@ -29,12 +29,22 @@ export function GameTopBar({
   const { t, locale } = useLocale();
   const showStreak = liveStreak > 0 && !replay;
   return (
-    <div className="mb-6 w-full flex items-center justify-between gap-3">
+    // In-flow on mobile (where the narrow column reads well); pinned to the
+    // viewport's top corners on desktop so the logo and icons reach the edges.
+    <div className="mb-6 w-full flex items-center justify-between gap-3 md:fixed md:top-0 md:inset-x-0 md:z-40 md:mb-0 md:px-6 md:py-4">
       <a
         href={homePath(CLASSIC, locale)}
-        className="text-lg font-medium tracking-tight text-[color:var(--color-ink)] hover:opacity-80 transition-opacity"
+        aria-label="Tessera"
+        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
       >
-        Tessera
+        <span
+          aria-hidden
+          className="inline-flex items-center justify-center w-7 h-7 rounded-md text-[color:var(--color-paper)] text-base font-bold"
+          style={{ background: "#b85a1c" }}
+        >
+          T
+        </span>
+        <span className="text-lg font-medium tracking-tight text-[color:var(--color-ink)]">Tessera</span>
       </a>
       <div className="flex items-center gap-2 text-[color:var(--color-muted)]">
         {showStreak && (

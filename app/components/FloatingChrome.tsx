@@ -15,7 +15,7 @@ export function FloatingChrome() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Featured on Playlin"
-      className="hidden md:block fixed top-4 right-4 z-40 opacity-70 hover:opacity-100 transition-opacity"
+      className="hidden md:block fixed bottom-4 right-4 z-40 opacity-70 hover:opacity-100 transition-opacity"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
