@@ -182,6 +182,7 @@
     "signOut": "Sign out",
     "signedInAs": "Signed in as {email}",
     "saveStreak": "Save your streak",
+    "saveStreakLine": "Sign in to save your {n}-day streak →",
     "modalTitle": "Sign in to save your streak",
     "modalBody": "We'll email you a one-time code. Your streak and history then follow you to any device.",
     "placeholder": "you@example.com",

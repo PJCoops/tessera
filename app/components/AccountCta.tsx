@@ -4,36 +4,29 @@ import { accountsEnabled, useSupabaseUser } from "../lib/supabase-browser";
 import { useLocale } from "../lib/locale-context";
 import { track } from "../lib/analytics";
 
-// Post-win nudge, styled like the share row buttons. Hidden when accounts
-// are off, auth state hasn't loaded, or the player is already signed in.
-// When the player has a live streak, the label names it ("Save your N-day
-// streak") so the thing they'd lose is concrete; at 7+ it goes filled-ink
-// for a touch more urgency.
-export function AccountCta({
+// Slim post-win nudge: a single low-weight line that only shows for a
+// signed-out player who has a streak to lose. Account is otherwise always
+// reachable from the top bar (with a dot), so this stays quiet and names
+// the streak to make the stakes concrete.
+export function AccountNudgeLine({
   onOpenAccount,
-  liveStreak = 0,
+  liveStreak,
 }: {
   onOpenAccount: () => void;
-  liveStreak?: number;
+  liveStreak: number;
 }) {
   const { t } = useLocale();
   const { user, loaded } = useSupabaseUser();
-  if (!accountsEnabled() || !loaded || user) return null;
-  const label = t("account.saveStreak");
-  const bold = liveStreak >= 7;
+  if (!accountsEnabled() || !loaded || user || liveStreak < 1) return null;
   return (
     <button
       onClick={() => {
         track("account_cta_clicked", { streak: liveStreak });
         onOpenAccount();
       }}
-      className={
-        bold
-          ? "px-5 py-2 text-sm rounded-md bg-[color:var(--color-ink)] text-[color:var(--color-paper)] hover:opacity-90 transition-opacity"
-          : "px-5 py-2 text-sm border border-[color:var(--color-rule)] rounded-md hover:bg-[color:var(--color-cream)] transition-colors"
-      }
+      className="text-xs text-[color:var(--color-muted)] underline-offset-4 hover:underline hover:text-[color:var(--color-ink)] transition-colors"
     >
-      {label}
+      {t("account.saveStreakLine", { n: liveStreak })}
     </button>
   );
 }

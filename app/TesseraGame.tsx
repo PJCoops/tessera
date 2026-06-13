@@ -12,10 +12,11 @@ import { getTier } from "./lib/tier";
 import { dominantTier } from "./lib/dominant-tier";
 import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
 import { HowToPlay } from "./HowToPlay";
-import { AccountModal, AccountButton } from "./components/AccountModal";
-import { AccountCta } from "./components/AccountCta";
-import { LeaderboardModal, LeaderboardButton, LeaderboardCta } from "./components/LeaderboardModal";
+import { AccountModal } from "./components/AccountModal";
+import { AccountNudgeLine } from "./components/AccountCta";
+import { LeaderboardModal } from "./components/LeaderboardModal";
 import { HandleModal } from "./components/HandleModal";
+import { GameTopBar } from "./components/GameTopBar";
 import { submitResult, SYNC_EVENT } from "./lib/sync";
 import { useSupabaseUser, accountsEnabled } from "./lib/supabase-browser";
 import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
@@ -817,6 +818,18 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     setHowToOpen(true);
   };
 
+  // Tapping the streak chip flashes the current streak + tier as a toast.
+  const showStreakToast = () => {
+    const tierKey = dominantTier(mode, locale, EPOCH);
+    const tierName = tierKey ? t(`tiers.${tierKey}`) : "";
+    const key = liveStreak === 1 ? "streakToast.single" : "streakToast.plural";
+    const msg = tierKey
+      ? t(key, { n: liveStreak, tier: tierName })
+      : t("streakToast.noTier", { n: liveStreak });
+    setStreakToast(msg);
+    window.setTimeout(() => setStreakToast((c) => (c === msg ? null : c)), 2600);
+  };
+
   const finished = validity.isSolved || isRevealed;
 
   return (
@@ -870,6 +883,18 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         mode={mode}
       />
       <RevealConfirm open={confirmReveal} onClose={() => setConfirmReveal(false)} onConfirm={handleReveal} />
+      {!puzzle.demo && (
+        <GameTopBar
+          liveStreak={liveStreak}
+          replay={puzzle.replay}
+          accountNudge={liveStreak > 0}
+          onOpenHelp={() => openHelp("how")}
+          onOpenHistory={() => setHistoryOpen(true)}
+          onOpenLeaderboard={() => setLeaderboardOpen(true)}
+          onOpenAccount={() => setAccountOpen(true)}
+          onStreakClick={showStreakToast}
+        />
+      )}
       <div className="mb-6 text-center">
         {puzzle.replay ? (
           <>
@@ -1041,12 +1066,6 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         {!validity.isSolved && !storedResult && (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => openHelp("how")}
-              className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] bg-[color:var(--color-cream)] rounded-md hover:text-[color:var(--color-ink)] transition-colors"
-            >
-              {t("game.howToPlay")}
-            </button>
-            <button
               onClick={() => updateHideHints(!hideHints)}
               className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] bg-[color:var(--color-cream)] rounded-md hover:text-[color:var(--color-ink)] transition-colors"
             >
@@ -1064,10 +1083,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           <p className="text-xs text-[color:var(--color-muted)]">{t("game.nextPuzzle", { countdown })}</p>
         )}
         {finished && !puzzle.replay && (
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <LeaderboardCta onOpen={() => setLeaderboardOpen(true)} />
-            <AccountCta onOpenAccount={() => setAccountOpen(true)} liveStreak={liveStreak} />
-          </div>
+          <AccountNudgeLine onOpenAccount={() => setAccountOpen(true)} liveStreak={liveStreak} />
         )}
         {finished && !puzzle.replay && (
           <div className="mt-2 w-full max-w-xs">
@@ -1091,51 +1107,16 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           </div>
         )}
 
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[color:var(--color-muted)]">
-          <button
-            onClick={() => openHelp("how")}
-            aria-label={t("game.ariaHowToPlay")}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[color:var(--color-rule)] text-xs hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
-          >
-            ?
-          </button>
-          <button
-            onClick={() => setHistoryOpen(true)}
-            aria-label={t("game.ariaHistory")}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[color:var(--color-rule)] hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
-          >
-            <svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="6" cy="6" r="4.5" />
-              <path d="M6 3.2v3l1.8 1.1" />
-            </svg>
-          </button>
-          <a
-            href={homePath(mode.id === "hard" ? CLASSIC : HARD, locale)}
-            className="inline-flex items-center h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
-          >
-            {t(mode.id === "hard" ? "game.switchToClassic" : "game.switchToHard")}
-          </a>
-          {liveStreak > 0 && !puzzle.replay && (
-            <button
-              type="button"
-              onClick={() => {
-                const tierKey = dominantTier(mode, locale, EPOCH);
-                const tierName = tierKey ? t(`tiers.${tierKey}`) : "";
-                const key = liveStreak === 1 ? "streakToast.single" : "streakToast.plural";
-                const msg = tierKey
-                  ? t(key, { n: liveStreak, tier: tierName })
-                  : t("streakToast.noTier", { n: liveStreak });
-                setStreakToast(msg);
-                window.setTimeout(() => setStreakToast((c) => (c === msg ? null : c)), 2600);
-              }}
-              className="inline-flex items-center gap-1 h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs tabular-nums hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
+        {!puzzle.demo && !puzzle.replay && (
+          <div className="mt-4 w-full flex justify-start">
+            <a
+              href={homePath(mode.id === "hard" ? CLASSIC : HARD, locale)}
+              className="inline-flex items-center h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs text-[color:var(--color-muted)] hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
             >
-              🔥 {liveStreak}
-            </button>
-          )}
-          <LeaderboardButton onOpen={() => setLeaderboardOpen(true)} />
-          <AccountButton onOpenAccount={() => setAccountOpen(true)} />
-        </div>
+              {t(mode.id === "hard" ? "game.switchToClassic" : "game.switchToHard")}
+            </a>
+          </div>
+        )}
       </div>
       <AnimatePresence>
         {streakToast && (
