@@ -12,9 +12,13 @@ import { getTier } from "./lib/tier";
 import { dominantTier } from "./lib/dominant-tier";
 import { CLASSIC, HARD, homePath, type ModeConfig } from "./lib/mode";
 import { HowToPlay } from "./HowToPlay";
-import { AccountModal, AccountButton } from "./components/AccountModal";
-import { AccountCta } from "./components/AccountCta";
+import { AccountModal } from "./components/AccountModal";
+import { AccountNudgeLine } from "./components/AccountCta";
+import { LeaderboardModal } from "./components/LeaderboardModal";
+import { HandleModal } from "./components/HandleModal";
+import { GameTopBar } from "./components/GameTopBar";
 import { submitResult, SYNC_EVENT } from "./lib/sync";
+import { useSupabaseUser, accountsEnabled } from "./lib/supabase-browser";
 import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
 import { Legend } from "./components/Legend";
 import { HistoryModal } from "./HistoryModal";
@@ -200,6 +204,8 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   const [helpTab, setHelpTab] = useState<"how" | "words">("how");
   const [confirmReveal, setConfirmReveal] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [handleOpen, setHandleOpen] = useState(false);
   const [demoPlaying, setDemoPlaying] = useState(false);
   const [demoSelected, setDemoSelected] = useState<number | null>(null);
   const [demoTap, setDemoTap] = useState<{ idx: number; key: number } | null>(null);
@@ -430,6 +436,55 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [puzzle, storedResult]);
 
+  // League invite links arrive as /?join=<code>. Stash the code (so it
+  // survives the sign-in OTP round-trip), strip the param, then join: if
+  // already signed in, immediately; otherwise open the account modal and
+  // finish when `user` flips. Reuses the streak toast for confirmation.
+  const { user: authUser } = useSupabaseUser();
+  useEffect(() => {
+    if (!accountsEnabled()) return;
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("join");
+    if (fromUrl) {
+      try {
+        sessionStorage.setItem("tessera:pending-join", fromUrl);
+      } catch {}
+      params.delete("join");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash);
+    }
+    let pending: string | null = null;
+    try {
+      pending = sessionStorage.getItem("tessera:pending-join");
+    } catch {}
+    if (!pending) return;
+    if (!authUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAccountOpen(true);
+      return;
+    }
+    void (async () => {
+      try {
+        const res = await fetch("/api/leagues/join", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ code: pending }),
+        });
+        const json = (await res.json()) as { ok: boolean; league?: { name: string } };
+        try {
+          sessionStorage.removeItem("tessera:pending-join");
+        } catch {}
+        if (json.ok && json.league) {
+          track("league_joined", { via: "link" });
+          const msg = t("leagues.joinedToast", { name: json.league.name });
+          setStreakToast(msg);
+          window.setTimeout(() => setStreakToast((c) => (c === msg ? null : c)), 2600);
+        }
+      } catch {}
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser]);
+
   // Play the win jingle once when the puzzle solves this session. Only fires
   // on a fresh solve (solvedAt was just set this render) — never on a stored
   // result from yesterday or on a forced reveal-as-solve, since those don't
@@ -656,6 +711,15 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           onOpenAccount={() => setAccountOpen(true)}
         />
         <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
+        <LeaderboardModal
+          open={leaderboardOpen}
+          onClose={() => setLeaderboardOpen(false)}
+          mode={mode.id}
+          num={puzzle.num}
+          onOpenAccount={() => setAccountOpen(true)}
+          onOpenHandle={() => setHandleOpen(true)}
+        />
+        <HandleModal open={handleOpen} onClose={() => setHandleOpen(false)} />
       </>
     );
   }
@@ -754,6 +818,18 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     setHowToOpen(true);
   };
 
+  // Tapping the streak chip flashes the current streak + tier as a toast.
+  const showStreakToast = () => {
+    const tierKey = dominantTier(mode, locale, EPOCH);
+    const tierName = tierKey ? t(`tiers.${tierKey}`) : "";
+    const key = liveStreak === 1 ? "streakToast.single" : "streakToast.plural";
+    const msg = tierKey
+      ? t(key, { n: liveStreak, tier: tierName })
+      : t("streakToast.noTier", { n: liveStreak });
+    setStreakToast(msg);
+    window.setTimeout(() => setStreakToast((c) => (c === msg ? null : c)), 2600);
+  };
+
   const finished = validity.isSolved || isRevealed;
 
   return (
@@ -790,6 +866,15 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         onOpenAccount={() => setAccountOpen(true)}
       />
       <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
+      <LeaderboardModal
+        open={leaderboardOpen}
+        onClose={() => setLeaderboardOpen(false)}
+        mode={mode.id}
+        num={puzzle.num}
+        onOpenAccount={() => setAccountOpen(true)}
+        onOpenHandle={() => setHandleOpen(true)}
+      />
+      <HandleModal open={handleOpen} onClose={() => setHandleOpen(false)} />
       <HistoryModal
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
@@ -798,6 +883,18 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         mode={mode}
       />
       <RevealConfirm open={confirmReveal} onClose={() => setConfirmReveal(false)} onConfirm={handleReveal} />
+      {!puzzle.demo && (
+        <GameTopBar
+          liveStreak={liveStreak}
+          replay={puzzle.replay}
+          accountNudge={liveStreak > 0}
+          onOpenHelp={() => openHelp("how")}
+          onOpenHistory={() => setHistoryOpen(true)}
+          onOpenLeaderboard={() => setLeaderboardOpen(true)}
+          onOpenAccount={() => setAccountOpen(true)}
+          onStreakClick={showStreakToast}
+        />
+      )}
       <div className="mb-6 text-center">
         {puzzle.replay ? (
           <>
@@ -969,12 +1066,6 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         {!validity.isSolved && !storedResult && (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => openHelp("how")}
-              className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] bg-[color:var(--color-cream)] rounded-md hover:text-[color:var(--color-ink)] transition-colors"
-            >
-              {t("game.howToPlay")}
-            </button>
-            <button
               onClick={() => updateHideHints(!hideHints)}
               className="px-3 py-1.5 text-xs text-[color:var(--color-muted)] bg-[color:var(--color-cream)] rounded-md hover:text-[color:var(--color-ink)] transition-colors"
             >
@@ -992,7 +1083,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           <p className="text-xs text-[color:var(--color-muted)]">{t("game.nextPuzzle", { countdown })}</p>
         )}
         {finished && !puzzle.replay && (
-          <AccountCta onOpenAccount={() => setAccountOpen(true)} />
+          <AccountNudgeLine onOpenAccount={() => setAccountOpen(true)} liveStreak={liveStreak} />
         )}
         {finished && !puzzle.replay && (
           <div className="mt-2 w-full max-w-xs">
@@ -1016,50 +1107,16 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           </div>
         )}
 
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[color:var(--color-muted)]">
-          <button
-            onClick={() => openHelp("how")}
-            aria-label={t("game.ariaHowToPlay")}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[color:var(--color-rule)] text-xs hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
-          >
-            ?
-          </button>
-          <button
-            onClick={() => setHistoryOpen(true)}
-            aria-label={t("game.ariaHistory")}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[color:var(--color-rule)] hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
-          >
-            <svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="6" cy="6" r="4.5" />
-              <path d="M6 3.2v3l1.8 1.1" />
-            </svg>
-          </button>
-          <a
-            href={homePath(mode.id === "hard" ? CLASSIC : HARD, locale)}
-            className="inline-flex items-center h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
-          >
-            {t(mode.id === "hard" ? "game.switchToClassic" : "game.switchToHard")}
-          </a>
-          {liveStreak > 0 && !puzzle.replay && (
-            <button
-              type="button"
-              onClick={() => {
-                const tierKey = dominantTier(mode, locale, EPOCH);
-                const tierName = tierKey ? t(`tiers.${tierKey}`) : "";
-                const key = liveStreak === 1 ? "streakToast.single" : "streakToast.plural";
-                const msg = tierKey
-                  ? t(key, { n: liveStreak, tier: tierName })
-                  : t("streakToast.noTier", { n: liveStreak });
-                setStreakToast(msg);
-                window.setTimeout(() => setStreakToast((c) => (c === msg ? null : c)), 2600);
-              }}
-              className="inline-flex items-center gap-1 h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs tabular-nums hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
+        {!puzzle.demo && !puzzle.replay && (
+          <div className="mt-4 w-full flex justify-start">
+            <a
+              href={homePath(mode.id === "hard" ? CLASSIC : HARD, locale)}
+              className="inline-flex items-center h-7 px-3 rounded-full border border-[color:var(--color-rule)] text-xs text-[color:var(--color-muted)] hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
             >
-              🔥 {liveStreak}
-            </button>
-          )}
-          <AccountButton onOpenAccount={() => setAccountOpen(true)} />
-        </div>
+              {t(mode.id === "hard" ? "game.switchToClassic" : "game.switchToHard")}
+            </a>
+          </div>
+        )}
       </div>
       <AnimatePresence>
         {streakToast && (

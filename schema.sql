@@ -65,3 +65,41 @@ create index results_leaderboard_idx
 alter table profiles enable row level security;
 alter table puzzles enable row level security;
 alter table puzzle_results enable row level security;
+
+-- ── Launch bundle: leaderboards + mini-leagues ──────────────────────
+
+-- Country of the request that recorded a verified solve (ISO-3166-1
+-- alpha-2 from Vercel's x-vercel-ip-country); 'ZZ' when the header is
+-- missing (local dev). Rows that predate capture stay null and simply
+-- don't appear on country boards until re-solved.
+alter table puzzle_results add column if not exists country text;
+
+-- Country leaderboard: filter by (mode, puzzle_number, country) then
+-- order by moves, time_ms, over the same verified/not-revealed predicate.
+create index if not exists results_country_leaderboard_idx
+  on puzzle_results (mode, puzzle_number, country, moves, time_ms)
+  where verified and not revealed;
+
+-- Mini-leagues: invite-code groups. Standings are computed live as the
+-- global board filtered to member handles, no seasons, no cron.
+create table if not exists leagues (
+  id uuid primary key default gen_random_uuid(),
+  invite_code text unique not null,
+  name text not null,
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists league_members (
+  league_id uuid not null references leagues(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  primary key (league_id, user_id)
+);
+
+-- Reverse lookup for the "my leagues" list.
+create index if not exists league_members_user_idx on league_members (user_id);
+
+-- Same lockdown as the rest: RLS on, zero policies, all access server-side.
+alter table leagues enable row level security;
+alter table league_members enable row level security;
