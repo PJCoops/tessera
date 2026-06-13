@@ -248,6 +248,13 @@
     "noHandlePrompt": "Elige un nombre para aparecer en la clasificación",
     "joinedToast": "Te uniste a {name}"
   },
+  "whatsNew": {
+    "label": "Nuevo",
+    "title": "Cuentas, clasificaciones y ligas",
+    "body": "Inicia sesión para guardar tu racha entre dispositivos, sube en la clasificación diaria y juega en ligas con amigos.",
+    "cta": "Entendido",
+    "dismiss": "Cerrar"
+  },
   "share": {
     "headlineRevealed": "Tessera #{num} · revelado",
     "headlineRevealedHard": "Tessera Difícil #{num} · revelado",
