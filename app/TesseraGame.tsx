@@ -17,6 +17,7 @@ import { AccountNudgeLine } from "./components/AccountCta";
 import { LeaderboardModal } from "./components/LeaderboardModal";
 import { HandleModal } from "./components/HandleModal";
 import { GameTopBar } from "./components/GameTopBar";
+import { WhatsNewToast } from "./components/WhatsNewToast";
 import { submitResult, SYNC_EVENT } from "./lib/sync";
 import { useSupabaseUser, accountsEnabled } from "./lib/supabase-browser";
 import { StartScreen, hasSeenStart, markStartSeen } from "./StartScreen";
@@ -1118,6 +1119,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           </div>
         )}
       </div>
+      {!puzzle.demo && !puzzle.replay && <WhatsNewToast />}
       <AnimatePresence>
         {streakToast && (
           <motion.div

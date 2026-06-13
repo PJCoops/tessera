@@ -248,6 +248,13 @@
     "noHandlePrompt": "Pick a display name to appear in standings",
     "joinedToast": "Joined {name}"
   },
+  "whatsNew": {
+    "label": "New",
+    "title": "Accounts, leaderboards and leagues",
+    "body": "Sign in to save your streak across devices, climb the daily leaderboard, and play in leagues with friends.",
+    "cta": "Got it",
+    "dismiss": "Dismiss"
+  },
   "share": {
     "headlineRevealed": "Tessera #{num} · revealed",
     "headlineRevealedHard": "Tessera Hard #{num} · revealed",
