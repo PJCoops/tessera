@@ -10,8 +10,12 @@
 //     scrollable row that sits just below the page header.
 //
 // One component, both layouts, controlled by Tailwind responsive
-// classes. App Router prefetches Link hrefs on hover, so navigation
-// between pages is instant once the data layer warms up.
+// classes. Links set prefetch={false}: every stats route is
+// force-dynamic and fires its own PostHog queries on render, so the
+// default viewport-prefetch warmed all six sibling routes at once and
+// fanned out ~34 concurrent Query API calls per visit — enough to trip
+// PostHog's concurrency limit and 503 the page. With prefetch off, a
+// route only queries PostHog when you actually navigate to it.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -33,6 +37,7 @@ const GROUPS: Group[] = [
     items: [
       { href: "/stats/players", label: "Players" },
       { href: "/stats/cohorts", label: "Cohorts" },
+      { href: "/stats/accounts", label: "Accounts" },
       { href: "/stats/notifications", label: "Notifications" },
     ],
   },
@@ -69,6 +74,7 @@ export function Sidenav() {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      prefetch={false}
                       className={
                         active
                           ? "block px-2 py-1 rounded text-[color:var(--color-ink)] bg-[color:var(--color-cream)]"
@@ -97,6 +103,7 @@ export function Sidenav() {
                 <li key={item.href} className="flex-shrink-0">
                   <Link
                     href={item.href}
+                    prefetch={false}
                     aria-current={active ? "page" : undefined}
                     className={
                       active

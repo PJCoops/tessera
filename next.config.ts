@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
       { source: "/ingest/static/:path*", destination: "https://eu-assets.i.posthog.com/static/:path*" },
       { source: "/ingest/:path*", destination: "https://eu.i.posthog.com/:path*" },
       { source: "/ingest/decide", destination: "https://eu.i.posthog.com/decide" },
+      // Browsers and link-preview crawlers probe these legacy fixed paths
+      // regardless of the <link rel> tags Next emits. In this Next version
+      // file-based metadata serves icons at /icon.png (from app/icon.png) and
+      // /apple-icon.png (from app/apple-icon.png) — NOT at these root paths —
+      // so the probes 404 without these rewrites. Map them to the canonical
+      // routes so the same branded assets are served.
+      { source: "/favicon.ico", destination: "/icon.png" },
+      { source: "/apple-touch-icon.png", destination: "/apple-icon.png" },
+      { source: "/apple-touch-icon-precomposed.png", destination: "/apple-icon.png" },
     ];
   },
   // Required for the rewrites above so trailing-slash handling doesn't bounce

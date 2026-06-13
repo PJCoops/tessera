@@ -1,7 +1,7 @@
 // Players — language breakdown, hide-hints toggle preferences,
 // returning rate. All live HogQL.
 
-import { hogql } from "../../../lib/posthog-api";
+import { cachedHogql } from "../../../lib/posthog-api";
 import { EXCLUDE } from "../../_lib";
 import { Big, Section, Empty, BarCell, fmt } from "../../_components";
 
@@ -45,7 +45,7 @@ export default async function PlayersStatsPage() {
   let error: string | null = null;
   try {
     [langs, hints, returning, streaks, devices, countries] = await Promise.all([
-      hogql<LangRow>(`
+      cachedHogql<LangRow>(`
         SELECT coalesce(toString(properties.language), 'en') AS language,
           toInt(uniq(distinct_id)) AS unique_players,
           toInt(countIf(event = 'puzzle_started')) AS started,
@@ -58,7 +58,7 @@ export default async function PlayersStatsPage() {
         GROUP BY language
         ORDER BY started DESC
       `),
-      hogql<HintsRow>(`
+      cachedHogql<HintsRow>(`
         SELECT properties.enabled AS enabled,
           toInt(count()) AS toggles,
           toInt(uniq(distinct_id)) AS users
@@ -66,7 +66,7 @@ export default async function PlayersStatsPage() {
         WHERE event = 'hide_hints_toggled' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
         GROUP BY enabled
       `),
-      hogql<ReturningRow>(`
+      cachedHogql<ReturningRow>(`
         SELECT
           toInt(countIf(n >= 2)) AS returning,
           toInt(count()) AS total,
@@ -83,7 +83,7 @@ export default async function PlayersStatsPage() {
       // events (the streak counter is sent on each solve). Players
       // who only solved once have streak 1; the 0 bucket exists only
       // for legacy events that pre-date the streak property.
-      hogql<StreakBucketRow>(`
+      cachedHogql<StreakBucketRow>(`
         SELECT bucket, toInt(count()) AS players
         FROM (
           SELECT
@@ -109,7 +109,7 @@ export default async function PlayersStatsPage() {
       // Device split — uses PostHog's autocaptured $device_type. Falls
       // back to 'Unknown' for events from clients that didn't surface
       // it (rare, mostly very old browsers / scripted requests).
-      hogql<DeviceRow>(`
+      cachedHogql<DeviceRow>(`
         SELECT
           coalesce(toString(properties.$device_type), 'Unknown') AS device,
           toInt(uniq(distinct_id)) AS users,
@@ -127,7 +127,7 @@ export default async function PlayersStatsPage() {
       // with puzzle_solved) is the engagement-quality column, not raw
       // event count, so a country with one player solving twice
       // doesn't out-rank a country with two players solving once.
-      hogql<CountryRow>(`
+      cachedHogql<CountryRow>(`
         SELECT
           coalesce(toString(properties.$geoip_country_name), 'Unknown') AS country,
           toInt(uniq(distinct_id)) AS users,

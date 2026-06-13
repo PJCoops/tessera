@@ -2,7 +2,7 @@
 // Two backends: subscriber counts come from Upstash (HLEN/SCARD per
 // locale); push_received / push_clicked come from PostHog.
 
-import { hogql } from "../../../lib/posthog-api";
+import { cachedHogql } from "../../../lib/posthog-api";
 import { EXCLUDE } from "../../_lib";
 import { Big, Section, fmt } from "../../_components";
 import { subscriberCounts } from "../../../lib/subscribers";
@@ -21,7 +21,7 @@ export default async function NotificationsStatsPage() {
 
   try {
     [pushFunnel] = await Promise.all([
-      hogql<PushFunnelRow>(`
+      cachedHogql<PushFunnelRow>(`
         SELECT
           toInt(countIf(event = 'push_received')) AS received,
           toInt(countIf(event = 'push_clicked')) AS clicked

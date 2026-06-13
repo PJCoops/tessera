@@ -1,9 +1,13 @@
 // Server-side PostHog Query API helper. Personal API keys must never reach
 // the client — this module only runs in server components / route handlers.
 //
-// No caching layer: the /stats page is force-dynamic and only hit a handful
-// of times a day. Adding a cache (Next's unstable_cache or otherwise) just
-// hides freshness bugs. Every page render = a fresh PostHog query.
+// Two entry points: hogql() is raw and uncached (used by the precompute
+// cron, which must bypass any request cache to write fresh values), and
+// cachedHogql() wraps it in a 60s unstable_cache so a page's many
+// concurrent queries (and prefetch/Refresh re-renders) don't fan out into a
+// flood of PostHog calls that trips its rate limit (503).
+
+import { unstable_cache } from "next/cache";
 
 // Ingestion runs through eu.i.posthog.com but the Query API lives on the
 // non-`i.` host. Derive the API host from the public ingestion host so we
@@ -41,4 +45,15 @@ export async function hogql<T>(query: string): Promise<T[]> {
   const cols = data.columns ?? [];
   const rows = data.results ?? [];
   return rows.map((r) => Object.fromEntries(cols.map((c, i) => [c, r[i]])) as T);
+}
+
+// 60s cache keyed on the query string. Identical queries (repeat visits,
+// duplicate renders, the every-minute window) collapse to one PostHog call.
+// Tagged 'metrics' so the dashboard's Refresh action — updateTag('metrics')
+// — expires every cached query at once and the next render pulls fresh data.
+export function cachedHogql<T>(query: string): Promise<T[]> {
+  return unstable_cache(() => hogql<T>(query), ["hogql", query], {
+    revalidate: 60,
+    tags: ["metrics"],
+  })();
 }

@@ -2,7 +2,7 @@
 // distribution. Both are PostHog-backed live queries; precomputing
 // would only help once we're seeing many concurrent dashboard users.
 
-import { hogql } from "../../../lib/posthog-api";
+import { cachedHogql } from "../../../lib/posthog-api";
 import { EXCLUDE } from "../../_lib";
 import { BarCell, StackedBarCell, LegendDot, Section, Empty, MODE_SQL, fmt } from "../../_components";
 
@@ -58,7 +58,7 @@ export default async function DailyStatsPage() {
   let error: string | null = null;
   try {
     [dailyRaw, moves, hours] = await Promise.all([
-      hogql<DailyByModeRow>(`
+      cachedHogql<DailyByModeRow>(`
         SELECT toString(toDate(timestamp)) AS day,
           ${MODE_SQL} AS mode,
           toInt(countIf(event = 'puzzle_started')) AS started,
@@ -70,7 +70,7 @@ export default async function DailyStatsPage() {
         GROUP BY day, mode
         ORDER BY day DESC
       `),
-      hogql<MovesRow>(`
+      cachedHogql<MovesRow>(`
         SELECT toInt(toString(properties.moves)) AS moves,
           toInt(count()) AS solves
         FROM events
@@ -83,7 +83,7 @@ export default async function DailyStatsPage() {
       // and what the licensing audience expects (a publisher will
       // mentally shift to GMT for a UK-centric pitch). 00 is included
       // so the histogram has all 24 buckets even on quiet hours.
-      hogql<HourRow>(`
+      cachedHogql<HourRow>(`
         SELECT
           toInt(toHour(timestamp)) AS hour,
           toInt(count()) AS starts

@@ -12,7 +12,7 @@
 // even when the rest of the dashboard is busy.
 
 import type { Metadata } from "next";
-import { hogql } from "../../lib/posthog-api";
+import { cachedHogql } from "../../lib/posthog-api";
 import { puzzleNumber, todayUtc } from "../../lib/rng";
 import { EXCLUDE } from "../_lib";
 import { Hero, Big, Section, fmt, sortTiers, TIER_SQL, MODE_SQL, type TierRow } from "../_components";
@@ -68,10 +68,16 @@ type BiggestDayRow = { day: string; solves: number };
 type ReturningRow = { returning: number; total: number; top_player_solves: number };
 type TodayUniquesRow = { visitors: number; players: number; solvers: number };
 type DataSinceRow = { first_event: string | null };
-// Per-day count of players who started a puzzle today AND also started
-// one yesterday — the numerator for day-over-day retention. Combined
-// with dailyTrend.players (yesterday's denominator) on the client.
-type ReturnedRow = { day: string; returned: number };
+// Per-day solver retention, derived from the streak property on
+// puzzle_solved. PostHog runs cookieless by default (memory persistence,
+// distinct_id resets every session), so cross-day identity joins are
+// structurally impossible for the ~99% of players who never opt into
+// analytics. The streak counter lives in localStorage independent of
+// consent, and recordWin only increments it when yesterday's puzzle was
+// also solved — so a solve today with streak >= 2 *is* a player who came
+// back from yesterday. `returned` = solves today with streak >= 2;
+// `solvers` = all solves today. Retention = returned / solvers.
+type ReturnedRow = { day: string; returned: number; solvers: number };
 // DAU/MAU stickiness — the headline daily-habit metric. avg_dau is the
 // mean of the last 30 days' unique-player counts; mau is the unique
 // players over the same 30-day window. Stickiness = avg_dau / mau.
@@ -133,7 +139,7 @@ export default async function StatsOverviewPage() {
       sevenPlusStreak,
       shareRate,
     ] = await Promise.all([
-      hogql<DailyRow>(`
+      cachedHogql<DailyRow>(`
         SELECT toString(toDate(timestamp)) AS day,
           toInt(countIf(event = 'puzzle_started')) AS started,
           toInt(countIf(event = 'puzzle_solved')) AS solved,
@@ -151,7 +157,7 @@ export default async function StatsOverviewPage() {
       // trend version of the heroes, not a separate "events" view.
       // Pull 90d server-side; the chart's range pills (7/30/90)
       // slice client-side so switching is instant.
-      hogql<DailyTrendRow>(`
+      cachedHogql<DailyTrendRow>(`
         SELECT toString(toDate(timestamp)) AS day,
           toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS visitors,
           toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS players,
@@ -165,7 +171,7 @@ export default async function StatsOverviewPage() {
       // own social blurb (tab-switched on the page). Pooling Classic
       // and Hard would muddy the "fastest 8 moves" headline — same
       // move count means very different things across modes.
-      hogql<TodayRow>(`
+      cachedHogql<TodayRow>(`
         SELECT toInt(toString(properties.num)) AS num,
           toInt(count()) AS solves,
           toInt(min(toInt(toString(properties.moves)))) AS fastest,
@@ -182,7 +188,7 @@ export default async function StatsOverviewPage() {
       // Today's tier rows feed the social blurb's "🏆 X% Legendary
       // · ..." line. One query per mode so each blurb's percentages
       // total 100% within its own mode.
-      hogql<TierRow>(`
+      cachedHogql<TierRow>(`
         SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
         FROM events
         WHERE event = 'puzzle_solved'
@@ -191,7 +197,7 @@ export default async function StatsOverviewPage() {
           AND ${MODE_SQL} = 'classic'${EXCLUDE}
         GROUP BY tier
       `),
-      hogql<TodayRow>(`
+      cachedHogql<TodayRow>(`
         SELECT toInt(toString(properties.num)) AS num,
           toInt(count()) AS solves,
           toInt(min(toInt(toString(properties.moves)))) AS fastest,
@@ -205,7 +211,7 @@ export default async function StatsOverviewPage() {
           AND ${MODE_SQL} = 'hard'${EXCLUDE}
         GROUP BY num
       `),
-      hogql<TierRow>(`
+      cachedHogql<TierRow>(`
         SELECT ${TIER_SQL} AS tier, toInt(count()) AS solves
         FROM events
         WHERE event = 'puzzle_solved'
@@ -220,7 +226,7 @@ export default async function StatsOverviewPage() {
       // events (other nums, missing props) sneak in. The social blurb
       // uses these for both the headline solve count and the
       // tier-percentage divisor so percentages can't exceed 100%.
-      hogql<{ solved: number }>(`
+      cachedHogql<{ solved: number }>(`
         SELECT toInt(count()) AS solved
         FROM events
         WHERE event = 'puzzle_solved'
@@ -228,7 +234,7 @@ export default async function StatsOverviewPage() {
           AND toInt(toString(properties.num)) = ${todayPuzzleNum}
           AND ${MODE_SQL} = 'classic'${EXCLUDE}
       `),
-      hogql<{ solved: number }>(`
+      cachedHogql<{ solved: number }>(`
         SELECT toInt(count()) AS solved
         FROM events
         WHERE event = 'puzzle_solved'
@@ -236,7 +242,7 @@ export default async function StatsOverviewPage() {
           AND toInt(toString(properties.num)) = ${todayPuzzleNum}
           AND ${MODE_SQL} = 'hard'${EXCLUDE}
       `),
-      hogql<SummaryRow>(`
+      cachedHogql<SummaryRow>(`
         SELECT
           toInt(count()) AS total_solves,
           toInt(countIf(toString(properties.bonus) = 'true')) AS bonus_solves,
@@ -246,7 +252,7 @@ export default async function StatsOverviewPage() {
         FROM events
         WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 90 DAY${EXCLUDE}
       `),
-      hogql<AllTimeRow>(`
+      cachedHogql<AllTimeRow>(`
         SELECT
           toInt(countIf(event = 'puzzle_started')) AS total_started,
           toInt(countIf(event = 'puzzle_solved')) AS total_solved,
@@ -260,7 +266,7 @@ export default async function StatsOverviewPage() {
         FROM events
         WHERE 1=1${EXCLUDE}
       `),
-      hogql<BiggestDayRow>(`
+      cachedHogql<BiggestDayRow>(`
         SELECT toString(toDate(timestamp)) AS day,
           toInt(count()) AS solves
         FROM events
@@ -269,7 +275,7 @@ export default async function StatsOverviewPage() {
         ORDER BY solves DESC
         LIMIT 1
       `),
-      hogql<ReturningRow>(`
+      cachedHogql<ReturningRow>(`
         SELECT
           toInt(countIf(n >= 2)) AS returning,
           toInt(count()) AS total,
@@ -281,7 +287,7 @@ export default async function StatsOverviewPage() {
           GROUP BY distinct_id
         )
       `),
-      hogql<TodayUniquesRow>(`
+      cachedHogql<TodayUniquesRow>(`
         SELECT
           toInt(uniqIf(distinct_id, event IN ('$pageview', 'puzzle_started'))) AS visitors,
           toInt(uniqIf(distinct_id, event = 'puzzle_started')) AS players,
@@ -289,34 +295,25 @@ export default async function StatsOverviewPage() {
         FROM events
         WHERE toDate(timestamp) = today()${EXCLUDE}
       `),
-      hogql<DataSinceRow>(`
+      cachedHogql<DataSinceRow>(`
         SELECT toString(min(timestamp)) AS first_event
         FROM events
         WHERE 1=1${EXCLUDE}
       `),
-      // Per-day "returned from yesterday" counts. Inner join the daily
-      // (day, distinct_id) pairs to themselves, offset by one day.
-      // Each row in the joined table is "this player played both days",
-      // and per_day already de-dupes within a day, so count() = unique
-      // returners. Divided client-side by the previous day's player
-      // count from dailyTrend to get the retention %.
-      hogql<ReturnedRow>(`
-        WITH per_day AS (
-          SELECT toDate(timestamp) AS day, distinct_id
-          FROM events
-          WHERE event = 'puzzle_started'${EXCLUDE}
-            AND timestamp >= now() - INTERVAL 16 DAY
-          GROUP BY day, distinct_id
-        )
+      // Per-day solver retention via the streak property (see ReturnedRow).
+      // streak >= 2 means yesterday's puzzle was also solved, so this is a
+      // genuine day-over-day return signal that survives cookieless mode.
+      cachedHogql<ReturnedRow>(`
         SELECT
-          toString(t.day) AS day,
-          toInt(count()) AS returned
-        FROM per_day AS t
-        INNER JOIN per_day AS y
-          ON y.distinct_id = t.distinct_id AND y.day = t.day - 1
-        GROUP BY t.day
-        ORDER BY t.day DESC
-        LIMIT 14
+          toString(toDate(timestamp)) AS day,
+          toInt(countIf(toInt(properties.streak) >= 2)) AS returned,
+          toInt(count()) AS solvers
+        FROM events
+        WHERE event = 'puzzle_solved'${EXCLUDE}
+          AND timestamp >= now() - INTERVAL 16 DAY
+        GROUP BY day
+        ORDER BY day DESC
+        LIMIT 16
       `),
       // Stickiness = avg(DAU) / MAU over the last 30 days, the industry-
       // standard daily-habit metric. DAU is unique players who started
@@ -324,7 +321,7 @@ export default async function StatsOverviewPage() {
       // anywhere in the 30-day window. Wordle famously hit ~50%; >20%
       // is "real daily habit" territory. Computed in two passes inside
       // a CTE so DAU and MAU come from the same row of data.
-      hogql<StickinessRow>(`
+      cachedHogql<StickinessRow>(`
         WITH per_day AS (
           SELECT toDate(timestamp) AS day, distinct_id
           FROM events
@@ -344,7 +341,7 @@ export default async function StatsOverviewPage() {
       // Headline streak metric: of all-time solvers, how many have hit
       // a personal-best streak of 7+ days. Mirrors the histogram on
       // /stats/players but returns just the two numbers we render.
-      hogql<SevenPlusStreakRow>(`
+      cachedHogql<SevenPlusStreakRow>(`
         SELECT
           toInt(countIf(max_streak >= 7)) AS seven_plus,
           toInt(count()) AS total_solvers
@@ -364,7 +361,7 @@ export default async function StatsOverviewPage() {
       // against 30 days of solves would lowball the rate by ~5x in the
       // first month. The dashboard shows "—" rather than 0% when shares
       // is 0 to avoid presenting a missing-data state as a real metric.
-      hogql<ShareRateRow>(`
+      cachedHogql<ShareRateRow>(`
         WITH first_share AS (
           SELECT min(timestamp) AS ts
           FROM events
@@ -404,30 +401,23 @@ export default async function StatsOverviewPage() {
     : 0;
   const totalTilesFlippedAllTime = (at?.total_moves ?? 0) * 2;
 
-  // Day-over-day retention. For each day d we have:
-  //   returned[d] = players who started a puzzle on d AND on d-1
-  //   players[d-1] from dailyTrend = total players on d-1
-  // Retention[d] = returned[d] / players[d-1]. We average the last 7
-  // computable days for the headline and surface yesterday's value as
-  // suffix context. Today is excluded because "yesterday's players who
-  // came back today" only stabilises after UTC rollover for most users.
-  const playersByDay = new Map(dailyTrend.map((r) => [r.day, r.players]));
-  const returnedByDay = new Map(returned.map((r) => [r.day, r.returned]));
+  // Day-over-day retention, streak-based (see ReturnedRow). For each day:
+  //   retention[d] = returned[d] / solvers[d]
+  //                = share of today's solvers whose streak >= 2, i.e. who
+  //                  also solved yesterday's puzzle.
+  // We average the last 7 days for the headline and surface yesterday's
+  // value as suffix context. Today is excluded because it's still
+  // accumulating solves and would understate the rate.
+  const retByDay = new Map(returned.map((r) => [r.day, r]));
   const retentionDaily: { day: string; pct: number }[] = [];
-  // Walk backwards from yesterday for up to 7 days, skipping any day
-  // where the previous day had zero players (would divide by zero).
   const todayIso = todayUtc();
   for (let i = 1; i <= 8 && retentionDaily.length < 7; i++) {
     const d = new Date(`${todayIso}T00:00:00Z`);
     d.setUTCDate(d.getUTCDate() - i);
     const day = d.toISOString().slice(0, 10);
-    const prev = new Date(d);
-    prev.setUTCDate(prev.getUTCDate() - 1);
-    const prevDay = prev.toISOString().slice(0, 10);
-    const ret = returnedByDay.get(day) ?? 0;
-    const prevPlayers = playersByDay.get(prevDay) ?? 0;
-    if (prevPlayers > 0) {
-      retentionDaily.push({ day, pct: (ret / prevPlayers) * 100 });
+    const row = retByDay.get(day);
+    if (row && row.solvers > 0) {
+      retentionDaily.push({ day, pct: (row.returned / row.solvers) * 100 });
     }
   }
   const retention7d = retentionDaily.length
@@ -647,7 +637,7 @@ export default async function StatsOverviewPage() {
                   ? `7-day avg · yesterday ${retentionYesterday.toFixed(0)}%`
                   : undefined
               }
-              tooltip="Day-over-day retention: of yesterday's unique players, the share who started a puzzle again today. The headline averages the last 7 such days; the suffix shows yesterday's value alone. distinct_id is per-device, so cross-device players appear as different people and undercount retention. For weekly cohorts (D1/D7/D30) see /stats/cohorts."
+              tooltip="Day-over-day retention: of today's solvers, the share whose streak is 2+, meaning they also solved yesterday's puzzle. Headline averages the last 7 days; suffix is yesterday alone. Read from the streak counter (localStorage), which survives our cookieless analytics, so unlike a distinct_id join this counts anonymous returning players too. For weekly cohorts (D1/D7/D30) see /stats/cohorts."
             />
             <Big
               label="All-time solve rate"

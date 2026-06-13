@@ -2,7 +2,7 @@
 // puzzles in the last 30, today's tier distribution, and the
 // 30-day tier distribution.
 
-import { hogql } from "../../../lib/posthog-api";
+import { cachedHogql } from "../../../lib/posthog-api";
 import { EXCLUDE } from "../../_lib";
 import {
   Section,
@@ -42,7 +42,7 @@ export default async function PuzzlesStatsPage() {
   let error: string | null = null;
   try {
     [puzzles, todayTiers, allTiers, hardest, easiest] = await Promise.all([
-      hogql<PuzzleRow>(`
+      cachedHogql<PuzzleRow>(`
         SELECT toInt(toString(properties.num)) AS num,
           ${MODE_SQL} AS mode,
           toInt(count()) AS solves,
@@ -55,19 +55,19 @@ export default async function PuzzlesStatsPage() {
         ORDER BY num DESC, mode ASC
         LIMIT 28
       `),
-      hogql<TierByModeRow>(`
+      cachedHogql<TierByModeRow>(`
         SELECT ${TIER_SQL} AS tier, ${MODE_SQL} AS mode, toInt(count()) AS solves
         FROM events
         WHERE event = 'puzzle_solved' AND toDate(timestamp) = today()${EXCLUDE}
         GROUP BY tier, mode
       `),
-      hogql<TierByModeRow>(`
+      cachedHogql<TierByModeRow>(`
         SELECT ${TIER_SQL} AS tier, ${MODE_SQL} AS mode, toInt(count()) AS solves
         FROM events
         WHERE event = 'puzzle_solved' AND timestamp >= now() - INTERVAL 30 DAY${EXCLUDE}
         GROUP BY tier, mode
       `),
-      hogql<ExtremeRow>(`
+      cachedHogql<ExtremeRow>(`
         SELECT toInt(toString(properties.num)) AS num,
           ${MODE_SQL} AS mode,
           toInt(count()) AS solves,
@@ -79,7 +79,7 @@ export default async function PuzzlesStatsPage() {
         ORDER BY avg_moves DESC
         LIMIT 2
       `),
-      hogql<ExtremeRow>(`
+      cachedHogql<ExtremeRow>(`
         SELECT toInt(toString(properties.num)) AS num,
           ${MODE_SQL} AS mode,
           toInt(count()) AS solves,

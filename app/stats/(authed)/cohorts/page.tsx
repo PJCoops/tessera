@@ -7,7 +7,7 @@
 // inflates the cohort size and understates retention. Directional
 // only until we can identify by email.
 
-import { hogql } from "../../../lib/posthog-api";
+import { cachedHogql } from "../../../lib/posthog-api";
 import { EXCLUDE } from "../../_lib";
 import { CohortTable, Section, type CohortRow } from "../../_components";
 
@@ -17,7 +17,7 @@ export default async function CohortsStatsPage() {
   let cohorts: CohortRow[] = [];
   let error: string | null = null;
   try {
-    cohorts = await hogql<CohortRow>(`
+    cohorts = await cachedHogql<CohortRow>(`
       WITH player_first AS (
         SELECT distinct_id, min(toDate(timestamp)) AS first_day
         FROM events
