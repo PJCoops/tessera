@@ -11,7 +11,7 @@ import { useConsent } from "../lib/consent";
 // never stacks on the consent banner. Dismissal is remembered.
 const KEY = "tessera:whatsnew:accounts";
 
-export function WhatsNewToast() {
+export function WhatsNewToast({ onCreateAccount }: { onCreateAccount: () => void }) {
   const { t } = useLocale();
   const { hasDecided } = useConsent();
   const [open, setOpen] = useState(false);
@@ -31,6 +31,11 @@ export function WhatsNewToast() {
       window.localStorage.setItem(KEY, "1");
     } catch {}
     setOpen(false);
+  };
+
+  const createAccount = () => {
+    dismiss();
+    onCreateAccount();
   };
 
   return (
@@ -60,7 +65,7 @@ export function WhatsNewToast() {
           <p className="mt-1 text-sm font-medium">{t("whatsNew.title")}</p>
           <p className="mt-1 text-xs text-[color:var(--color-muted)] leading-relaxed">{t("whatsNew.body")}</p>
           <button
-            onClick={dismiss}
+            onClick={createAccount}
             className="mt-3 w-full px-4 py-2 text-xs bg-[color:var(--color-ink)] text-[color:var(--color-paper)] rounded-md hover:opacity-90 transition-opacity"
           >
             {t("whatsNew.cta")}

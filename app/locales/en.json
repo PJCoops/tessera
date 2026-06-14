@@ -183,7 +183,7 @@
     "signedInAs": "Signed in as {email}",
     "saveStreak": "Save your streak",
     "saveStreakLine": "Sign in to save your {n}-day streak →",
-    "modalTitle": "Sign in to save your streak",
+    "modalTitle": "Sign in or create account",
     "modalBody": "We'll email you a one-time code. Your streak and history then follow you to any device.",
     "placeholder": "you@example.com",
     "submit": "Send code",
@@ -252,7 +252,7 @@
     "label": "New",
     "title": "Accounts, leaderboards and leagues",
     "body": "Sign in to save your streak across devices, climb the daily leaderboard, and play in leagues with friends.",
-    "cta": "Got it",
+    "cta": "Create account",
     "dismiss": "Dismiss"
   },
   "share": {
