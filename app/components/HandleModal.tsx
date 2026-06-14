@@ -79,7 +79,7 @@ export function HandleModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-[color:var(--color-ink)]/30 backdrop-blur-sm"
+          className="fixed inset-0 z-[80] flex items-center justify-center p-6 bg-[color:var(--color-ink)]/30 backdrop-blur-sm"
           onClick={close}
         >
           <motion.div
