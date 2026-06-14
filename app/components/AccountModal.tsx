@@ -20,6 +20,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
   const [code, setCode] = useState("");
   const [step, setStep] = useState<Step>("email");
   const [status, setStatus] = useState<Status>("idle");
+  const [justVerified, setJustVerified] = useState(false);
 
   // Reset on the way out (instead of an open-effect) so reopening always
   // starts from the email step.
@@ -28,6 +29,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
     setStep("email");
     setEmail("");
     setCode("");
+    setJustVerified(false);
     onClose();
   }, [onClose]);
 
@@ -87,6 +89,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
     }
     track("sign_in_verified", {});
     setStatus("idle");
+    setJustVerified(true);
   };
 
   const restart = () => {
@@ -130,17 +133,29 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
             </button>
 
             <h2 className="text-2xl font-light tracking-tight">
-              {user ? t("account.title") : t("account.modalTitle")}
+              {user
+                ? justVerified
+                  ? t("account.welcomeTitle")
+                  : t("account.title")
+                : t("account.modalTitle")}
             </h2>
 
             {user ? (
-              <div className="mt-4">
+              <div className="mt-2 flex flex-col">
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  {t("account.signedInAs", { email: user.email ?? "" })}
+                  {justVerified
+                    ? t("account.welcomeBody", { email: user.email ?? "" })
+                    : t("account.signedInAs", { email: user.email ?? "" })}
                 </p>
                 <button
+                  onClick={close}
+                  className="mt-4 w-full px-4 py-2.5 text-sm bg-[color:var(--color-ink)] text-[color:var(--color-paper)] rounded-md hover:opacity-90 transition-opacity"
+                >
+                  {t("account.play")}
+                </button>
+                <button
                   onClick={signOut}
-                  className="mt-4 w-full px-4 py-2.5 text-sm border border-[color:var(--color-rule)] rounded-md hover:bg-[color:var(--color-cream)] transition-colors"
+                  className="mt-3 self-center text-[11px] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] underline-offset-4 hover:underline"
                 >
                   {t("account.signOut")}
                 </button>
