@@ -78,10 +78,15 @@ type DataSinceRow = { first_event: string | null };
 // back from yesterday. `returned` = solves today with streak >= 2;
 // `solvers` = all solves today. Retention = returned / solvers.
 type ReturnedRow = { day: string; returned: number; solvers: number };
-// DAU/MAU stickiness — the headline daily-habit metric. avg_dau is the
-// mean of the last 30 days' unique-player counts; mau is the unique
-// players over the same 30-day window. Stickiness = avg_dau / mau.
-type StickinessRow = { avg_dau: number | null; mau: number };
+// Streak-derived habit metrics over the last 30 days of solves. See the
+// query comment for how each field is built. avg_dau / mau is the
+// stickiness estimate; returning / total is the repeat-play share.
+type StickinessRow = {
+  avg_dau: number | null;
+  mau: number;
+  returning: number;
+  total: number;
+};
 // Headline "% of solvers with a personal-best streak of 7+ days".
 // Computed as a single number on the server so the Overview card
 // doesn't pull the full histogram (that lives on /stats/players).
@@ -315,28 +320,26 @@ export default async function StatsOverviewPage() {
         ORDER BY day DESC
         LIMIT 16
       `),
-      // Stickiness = avg(DAU) / MAU over the last 30 days, the industry-
-      // standard daily-habit metric. DAU is unique players who started
-      // a puzzle on a given day; MAU is unique players who started one
-      // anywhere in the 30-day window. Wordle famously hit ~50%; >20%
-      // is "real daily habit" territory. Computed in two passes inside
-      // a CTE so DAU and MAU come from the same row of data.
+      // Habit metrics from the streak property — DAU/MAU by distinct_id is
+      // meaningless cookieless (rotating ids inflate MAU ~5x). Over the last
+      // 30 days of solves (one per player per day):
+      //   solves        = total solves (avg/30 = avg daily solvers = DAU)
+      //   run_starts    = solves with streak == 1, i.e. a streak beginning
+      //                   (first play or return after a gap). Stands in for
+      //                   monthly unique players — far closer than the
+      //                   rotating-id MAU, though it double-counts players
+      //                   who lapse and restart within the window.
+      //   returning     = solves with streak >= 2 (continued from yesterday)
       cachedHogql<StickinessRow>(`
-        WITH per_day AS (
-          SELECT toDate(timestamp) AS day, distinct_id
-          FROM events
-          WHERE event = 'puzzle_started'${EXCLUDE}
-            AND timestamp >= now() - INTERVAL 30 DAY
-          GROUP BY day, distinct_id
-        ),
-        daus AS (
-          SELECT day, toInt(count()) AS dau
-          FROM per_day GROUP BY day
-        )
         SELECT
-          round(avg(daus.dau), 1) AS avg_dau,
-          toInt((SELECT uniq(distinct_id) FROM per_day)) AS mau
-        FROM daus
+          round(count() / 30.0, 1) AS avg_dau,
+          toInt(countIf(toInt(properties.streak) = 1)) AS mau,
+          toInt(countIf(toInt(properties.streak) >= 2)) AS returning,
+          toInt(count()) AS total
+        FROM events
+        WHERE event = 'puzzle_solved'${EXCLUDE}
+          AND toInt(properties.streak) >= 1
+          AND timestamp >= now() - INTERVAL 30 DAY
       `),
       // Headline streak metric: of all-time solvers, how many have hit
       // a personal-best streak of 7+ days. Mirrors the histogram on
@@ -391,7 +394,6 @@ export default async function StatsOverviewPage() {
   const ret = returning[0];
 
   const todayTiersOrdered = sortTiers(todayTiers);
-  const returningPct = ret?.total ? (ret.returning / ret.total) * 100 : 0;
   const allTimeSolveRate = at?.total_started ? (at.total_solved / at.total_started) * 100 : 0;
   const visitorEngageRate = at?.unique_visitors
     ? ((at.unique_players ?? 0) / at.unique_visitors) * 100
@@ -425,12 +427,14 @@ export default async function StatsOverviewPage() {
     : null;
   const retentionYesterday = retentionDaily[0]?.pct ?? null;
 
-  // Stickiness = avg DAU / MAU. Industry definition: >20% means a
-  // real daily habit; >50% is exceptional (Wordle-tier). Falsy mau
-  // means no players in the window — show "—" rather than NaN.
+  // Habit metrics from the streak property (see the query). Stickiness =
+  // avg daily solvers / monthly run-starts (a cookieless-proof MAU proxy);
+  // >20% is a real daily habit, >50% is Wordle-tier. Returning = share of
+  // solves continuing a streak. Both null-guard against an empty window.
   const stick = stickiness[0];
   const stickinessPct =
     stick?.avg_dau != null && stick.mau > 0 ? (stick.avg_dau / stick.mau) * 100 : null;
+  const returningPct = stick?.total ? (stick.returning / stick.total) * 100 : 0;
 
   const sps = sevenPlusStreak[0];
   const sevenPlusPct =
@@ -594,18 +598,20 @@ export default async function StatsOverviewPage() {
             <Big
               label="Returning players"
               value={`${returningPct.toFixed(0)}%`}
-              suffix={ret?.total ? `${fmt(ret.returning)}/${fmt(ret.total)}` : undefined}
-              tooltip="Of all-time solvers, the share that solved more than once. Denominator is solvers (not visitors), so this is really 'repeat-solver rate'. A player counts as returning once they fire a 2nd puzzle_solved event."
+              suffix={
+                stick?.total ? `${fmt(stick.returning)}/${fmt(stick.total)} solves` : undefined
+              }
+              tooltip="Share of the last 30 days' solves played by someone continuing a streak (streak 2+, so they solved the day before too). Read from the streak counter in localStorage, which survives our cookieless analytics — unlike a distinct_id count, which rotates every session and can't tell a returning player from a new one."
             />
             <Big
               label="Stickiness (DAU/MAU)"
               value={stickinessPct != null ? `${stickinessPct.toFixed(0)}%` : "—"}
               suffix={
                 stick && stick.avg_dau != null && stick.mau > 0
-                  ? `${stick.avg_dau} avg DAU / ${fmt(stick.mau)} MAU`
+                  ? `${fmt(Math.round(stick.avg_dau))} DAU / ~${fmt(stick.mau)} MAU est.`
                   : undefined
               }
-              tooltip="DAU/MAU ratio. The standard daily-habit metric used across consumer apps. Average daily players over the last 30 days, divided by total unique players over the same window. Benchmarks: >20% = real daily habit; >30% = strong; >50% = exceptional (Wordle-tier)."
+              tooltip="DAU/MAU daily-habit ratio. DAU = avg daily solvers over 30 days. True MAU (unique monthly players) is unmeasurable under cookieless analytics — distinct_id resets each session — so MAU is estimated as the number of streak runs started in the window (each a player beginning or resuming a streak). Rough, but far closer than the ~5x-inflated rotating-id count. Benchmarks: >20% real habit; >50% Wordle-tier. Treat as directional."
             />
             <Big
               label="Share rate"
