@@ -69,7 +69,7 @@ export function Footer() {
   if (!hasDecided) return null;
 
   return (
-    <footer className="px-4 py-6 flex flex-col items-center gap-3 text-[11px] text-[color:var(--color-muted)]">
+    <footer className="px-4 pt-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col items-center gap-3 text-[11px] text-[color:var(--color-muted)]">
       <ul className="flex items-center gap-4">
         {socials.map((s) => (
           <li key={s.href}>
@@ -78,7 +78,7 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={s.label}
-              className="block opacity-60 hover:opacity-100 transition-opacity"
+              className="block p-1 -m-1 opacity-60 hover:opacity-100 transition-opacity"
             >
               {s.icon}
             </a>

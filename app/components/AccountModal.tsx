@@ -240,7 +240,7 @@ export function AccountButton({
     <button
       onClick={onOpenAccount}
       aria-label={t("account.title")}
-      className={`relative inline-flex items-center justify-center w-7 h-7 rounded-full border transition-colors ${
+      className={`relative inline-flex items-center justify-center w-9 h-9 rounded-full border transition-colors ${
         signedIn
           ? "border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]"
           : "border-[color:var(--color-rule)] hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)]"

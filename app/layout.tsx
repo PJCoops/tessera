@@ -111,16 +111,16 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         {!isStats && <MetaPixelNoScript />}
         {isStats ? (
-          <main className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
-            {children}
+          <main className="flex-1 flex flex-col items-center px-4 pt-24 pb-12 sm:pt-16 sm:pb-16">
+            <div className="my-auto w-full flex flex-col items-center">{children}</div>
           </main>
         ) : (
         <ConsentProvider>
           <MetaPixel />
           <XPixel />
           <PHProvider>
-          <main className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
-            {children}
+          <main className="flex-1 flex flex-col items-center px-4 pt-24 pb-12 sm:pt-16 sm:pb-16">
+            <div className="my-auto w-full flex flex-col items-center">{children}</div>
           </main>
           <Analytics />
           <AccountSync />

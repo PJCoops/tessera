@@ -17,7 +17,7 @@ export function LeaderboardButton({ onOpen }: { onOpen: () => void }) {
     <button
       onClick={onOpen}
       aria-label={t("leaderboard.ariaOpen")}
-      className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[color:var(--color-rule)] hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
+      className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-[color:var(--color-rule)] hover:bg-[color:var(--color-cream)] hover:text-[color:var(--color-ink)] transition-colors"
     >
       <svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 1.5h6v2a3 3 0 0 1-6 0v-2z" />
