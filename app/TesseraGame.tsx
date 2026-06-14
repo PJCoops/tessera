@@ -1119,7 +1119,9 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           </div>
         )}
       </div>
-      {!puzzle.demo && !puzzle.replay && <WhatsNewToast />}
+      {!puzzle.demo && !puzzle.replay && (
+        <WhatsNewToast onCreateAccount={() => setAccountOpen(true)} />
+      )}
       <AnimatePresence>
         {streakToast && (
           <motion.div

@@ -183,7 +183,7 @@
     "signedInAs": "Sesión iniciada como {email}",
     "saveStreak": "Guarda tu racha",
     "saveStreakLine": "Inicia sesión y guarda tu racha de {n} días →",
-    "modalTitle": "Inicia sesión y guarda tu racha",
+    "modalTitle": "Inicia sesión o crea una cuenta",
     "modalBody": "Te enviaremos un código de un solo uso. Tu racha y tu historial te seguirán a cualquier dispositivo.",
     "placeholder": "tu@ejemplo.com",
     "submit": "Enviar código",
@@ -252,7 +252,7 @@
     "label": "Nuevo",
     "title": "Cuentas, clasificaciones y ligas",
     "body": "Inicia sesión para guardar tu racha entre dispositivos, sube en la clasificación diaria y juega en ligas con amigos.",
-    "cta": "Entendido",
+    "cta": "Crear cuenta",
     "dismiss": "Cerrar"
   },
   "share": {
