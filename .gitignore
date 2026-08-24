@@ -47,3 +47,9 @@ next-env.d.ts
 /app/lib/.dict-cache-es.json
 /app/lib/.defs-cache-es.json
 .env*.local
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# A second push supersedes the first — cancel the older run rather than
+# paying for a result nobody will read. Grouped per branch/PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # A push to a branch with an open PR fires both events. Skip the
+    # duplicate: run `pull_request` only for forks, which `push` can't see.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      # Fastest signal first — the whole vitest suite is ~5s locally. The
+      # Playwright specs in e2e/ share the .spec.ts suffix but are excluded
+      # by vitest.config.ts; they don't run here.
+      - name: Unit tests
+        run: npm test
+
+      # `next typegen` first: next-env.d.ts is gitignored, so a fresh CI
+      # clone has to generate it before tsc has the Next globals.
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Advisory for now: the repo carries 13 pre-existing eslint errors.
+      # Drop `continue-on-error` once that backlog is cleared to make it gate.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true

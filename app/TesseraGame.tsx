@@ -1019,6 +1019,11 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
                     : { duration: 0.2 },
                 }}
                 onClick={() => handleTap(idx)}
+                // Grid position (0..N*N-1) this tile currently occupies. Tiles
+                // are absolutely positioned by framer, so DOM order says
+                // nothing about layout — e2e tests address cells through this.
+                data-testid="tile"
+                data-position={idx}
                 style={{
                   position: "absolute",
                   top: 0,
