@@ -46,7 +46,9 @@ const REVEALED_TILE = "⬜";
 // Render an N×N emoji grid encoding the player's result. Solved rows
 // fill green; on a bonus solve the corner tiles flip to orange as a
 // visual flourish ("rows + columns"); on a reveal the grid is empty.
-function buildGrid({
+// Exported so the mobile parity fixture (and the Dart port) can lock the
+// exact grid string, including the colour-blind 🟩→🟦 variant.
+export function buildGrid({
   revealed,
   bonus,
   N,
