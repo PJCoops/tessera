@@ -16,6 +16,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    exclude: [...configDefaults.exclude, "e2e/**", ".next/**", "dist/**"],
+    // `.claude/worktrees/**` holds full working copies from parallel agent
+    // sessions — never run their (duplicate) test files.
+    exclude: [...configDefaults.exclude, "e2e/**", ".next/**", "dist/**", ".claude/**"],
+    // A couple of route contract tests generate many 5×5 puzzles.
+    testTimeout: 20000,
   },
 });
