@@ -14,14 +14,26 @@ export type LeagueStandings = {
 export const LEAGUE_NAME_MAX = 40;
 
 // Crockford-ish alphabet: no 0/O/1/I/L to keep codes easy to read aloud.
-const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-const CODE_LEN = 7;
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // 30 chars
+const CODE_LEN = 8; // 30^8 ≈ 6.6e11 keyspace
+export const CODE_RE = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{7,8}$/;
 
-function genCode(): string {
-  const bytes = new Uint8Array(CODE_LEN);
-  crypto.getRandomValues(bytes);
+// Rejection sampling: 256 % 30 = 16, so a plain `byte % 30` would bias
+// toward the first 16 letters. Draw fresh bytes past the largest exact
+// multiple of 30 (240) instead. A niche-game invite code isn't a
+// security boundary — the join flow is a confirmation screen, rate
+// limited per user and per IP (§12.2) — but an unbiased draw is free.
+export function genCode(): string {
   let out = "";
-  for (let i = 0; i < CODE_LEN; i++) out += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
+  while (out.length < CODE_LEN) {
+    const buf = new Uint8Array(CODE_LEN * 2);
+    crypto.getRandomValues(buf);
+    for (const b of buf) {
+      if (b >= 240) continue;
+      out += CODE_ALPHABET[b % 30];
+      if (out.length === CODE_LEN) break;
+    }
+  }
   return out;
 }
 
@@ -61,7 +73,11 @@ export async function joinByCode(
   userId: string,
   rawCode: string
 ): Promise<{ ok: true; league: { id: string; name: string } } | { ok: false; reason: "not_found" }> {
-  const code = rawCode.trim().toUpperCase();
+  const code = rawCode.trim().toUpperCase().replace(/[\s-]/g, "");
+  // Reject anything that can't be a real code before spending a query on
+  // it. Same "not_found" either way — wrong code and no-such-league are
+  // indistinguishable, so there's no enumeration oracle (§12.2).
+  if (!CODE_RE.test(code)) return { ok: false, reason: "not_found" };
   const rows = await sql<{ id: string; name: string }[]>`
     select id, name from leagues where invite_code = ${code}`;
   if (rows.length === 0) return { ok: false, reason: "not_found" };
