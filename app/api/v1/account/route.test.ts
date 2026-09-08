@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { accountDeleteResponseSchema } from "../../../lib/api/v1-schema";
 
 // Mock every dependency the route reaches for — this test is about the
 // route's control flow (auth, freshness, idempotency), not the DB.
@@ -61,7 +62,11 @@ describe("DELETE /api/v1/account", () => {
     const res = await del();
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toMatchObject({ ok: true, status: "pending_deletion", alreadyPending: false });
+    expect(accountDeleteResponseSchema.parse(body)).toMatchObject({
+      ok: true,
+      status: "pending_deletion",
+      alreadyPending: false,
+    });
     expect(softDelete).toHaveBeenCalledWith(expect.anything(), "u1");
     expect(loops).toHaveBeenCalledWith("a@b.com", "account_deletion_scheduled", expect.objectContaining({ permanent_at: expect.any(String) }));
   });

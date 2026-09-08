@@ -16,7 +16,6 @@ describe("invite code generation", () => {
       for (const ch of genCode()) counts.set(ch, (counts.get(ch) ?? 0) + 1);
     }
     const freqs = [...counts.values()];
-    const mean = freqs.reduce((a, b) => a + b, 0) / freqs.length;
     // The first 16 letters would be ~1.6x the rest under a plain byte%30.
     expect(Math.max(...freqs) / Math.min(...freqs)).toBeLessThan(1.35);
   });

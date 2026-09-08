@@ -109,5 +109,170 @@
       "flags"
     ],
     "additionalProperties": false
+  },
+  "GET /api/v1/results": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "ok": {
+        "type": "boolean",
+        "const": true
+      },
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "num": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "classic",
+                "hard"
+              ]
+            },
+            "moves": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "bonus": {
+              "type": "boolean"
+            },
+            "revealed": {
+              "type": "boolean"
+            },
+            "verified": {
+              "type": "boolean"
+            },
+            "timeMs": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "completedAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "num",
+            "mode",
+            "moves",
+            "bonus",
+            "revealed",
+            "verified",
+            "timeMs",
+            "completedAt"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "streaks": {
+        "type": "object",
+        "properties": {
+          "classic": {
+            "type": "object",
+            "properties": {
+              "current": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "max": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "lastWon": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "current",
+              "max",
+              "lastWon"
+            ],
+            "additionalProperties": false
+          },
+          "hard": {
+            "type": "object",
+            "properties": {
+              "current": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "max": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "lastWon": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "current",
+              "max",
+              "lastWon"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "classic",
+          "hard"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "ok",
+      "results",
+      "streaks"
+    ],
+    "additionalProperties": false
+  },
+  "DELETE /api/v1/account": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "ok": {
+        "type": "boolean",
+        "const": true
+      },
+      "status": {
+        "type": "string",
+        "const": "pending_deletion"
+      },
+      "permanentAt": {
+        "type": "string"
+      },
+      "alreadyPending": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "ok",
+      "status",
+      "permanentAt",
+      "alreadyPending"
+    ],
+    "additionalProperties": false
   }
 }
