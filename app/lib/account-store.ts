@@ -59,6 +59,45 @@ export async function restoreAccount(sql: Sql, userId: string): Promise<boolean>
   return rows.length > 0;
 }
 
+/**
+ * Everything the app stores about one user, for the GDPR data-export
+ * path (§14.2). Read-only; no PII beyond what's already in the tables.
+ */
+export async function exportAccountData(sql: Sql, userId: string): Promise<Record<string, unknown>> {
+  const [profile] = await sql`
+    select id, display_name, colour_blind, ads_removed, analytics_id,
+           imported_max_streak_classic, imported_max_streak_hard,
+           created_at, updated_at, deleted_at
+      from profiles where id = ${userId}
+  `;
+  const results = await sql`
+    select mode, puzzle_number, moves, bonus, revealed, verified, locale,
+           time_ms, country, completed_at, created_at
+      from puzzle_results where user_id = ${userId}
+     order by mode, puzzle_number
+  `;
+  const ownedLeagues = await sql`
+    select id, name, invite_code, created_at from leagues where owner_id = ${userId}
+  `;
+  const memberships = await sql`
+    select l.id, l.name, m.joined_at
+      from league_members m join leagues l on l.id = m.league_id
+     where m.user_id = ${userId}
+  `;
+  const devices = await sql`
+    select platform, tz_offset, created_at, updated_at
+      from device_tokens where user_id = ${userId}
+  `;
+  return {
+    exportedAt: new Date().toISOString(),
+    profile: profile ?? null,
+    puzzleResults: results,
+    leaguesOwned: ownedLeagues,
+    leagueMemberships: memberships,
+    deviceTokens: devices,
+  };
+}
+
 /** Hard-delete every account whose grace window has elapsed. Returns the count. */
 export async function purgeExpiredDeletions(sql: Sql): Promise<number> {
   const stale = await sql<{ id: string }[]>`
