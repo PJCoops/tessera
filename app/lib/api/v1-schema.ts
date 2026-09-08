@@ -45,8 +45,27 @@ export const puzzleResponseSchema = z.object({
 export type PuzzleQuery = z.infer<typeof puzzleQuerySchema>;
 export type PuzzleResponse = z.infer<typeof puzzleResponseSchema>;
 
+// ── GET /api/v1/app-config ───────────────────────────────────────────────
+
+export const appConfigResponseSchema = z.object({
+  // Lowest client version still allowed to talk to v1. The client hard-
+  // blocks below this and shows a store link; prefer letting the current
+  // version keep playing in a degraded mode (§16.2).
+  minSupportedVersion: z.string(),
+  // Optional one-shot "what's new" card, keyed so the client shows it once.
+  whatsNew: z
+    .object({ id: z.string(), title: z.string(), body: z.string() })
+    .nullable(),
+  // Dark-launch switches (ad placements, new-player grace, etc. — §21).
+  // Open map so flags can be added without a schema bump.
+  flags: z.record(z.string(), z.boolean()),
+});
+
+export type AppConfigResponse = z.infer<typeof appConfigResponseSchema>;
+
 // The map of every v1 response schema, keyed by route. The JSON Schema
 // generator and the contract tests both iterate this.
 export const v1ResponseSchemas = {
   "GET /api/v1/puzzle": puzzleResponseSchema,
+  "GET /api/v1/app-config": appConfigResponseSchema,
 } as const;

@@ -58,5 +58,56 @@
       "minSwaps"
     ],
     "additionalProperties": false
+  },
+  "GET /api/v1/app-config": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "minSupportedVersion": {
+        "type": "string"
+      },
+      "whatsNew": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "body"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "flags": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "boolean"
+        }
+      }
+    },
+    "required": [
+      "minSupportedVersion",
+      "whatsNew",
+      "flags"
+    ],
+    "additionalProperties": false
   }
 }
