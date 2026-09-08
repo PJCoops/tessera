@@ -104,6 +104,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip Next internals, the api routes, and any static asset request.
-  matcher: ["/((?!_next|api|ingest|.*\\.[\\w]+$).*)"],
+  // Skip Next internals, the api routes, .well-known handlers, and any
+  // static asset request.
+  matcher: ["/((?!_next|api|ingest|\\.well-known|.*\\.[\\w]+$).*)"],
 };
