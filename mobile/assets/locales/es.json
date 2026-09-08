@@ -1,0 +1,294 @@
+{
+  "meta": {
+    "title": "Tessera: Juego de palabras diario",
+    "description": "Un juego de palabras diario. Intercambia fichas en una cuadrícula de 4×4 hasta que cada fila forme una palabra, y también cada columna. La misma partida para todos, cada día.",
+    "titleHard": "Tessera (Difícil): Juego diario 5×5",
+    "descriptionHard": "La Tessera difícil. Intercambia fichas en una cuadrícula de 5×5 hasta que cada fila, y cada columna, formen palabra. La misma partida para todos, cada día."
+  },
+  "game": {
+    "kicker": "Tessera · #{num} · {date}",
+    "kickerHard": "Tessera Difícil · #{num} · {date}",
+    "kickerDemo": "Tessera · partida",
+    "movesStatus": "Movimientos {moves} · {valid}/{total} filas",
+    "demoTipL1": "Toca dos fichas para intercambiarlas",
+    "demoTipL2": "y formar una cuadrícula de palabras de {n} letras",
+    "revealedStatus": "Revelado",
+    "solvedShort": "Resuelto",
+    "solvedIn": "Resuelto en {moves} {moveWord} · {tier}",
+    "moveSingular": "movimiento",
+    "movePlural": "movimientos",
+    "swapSingular": "intercambio",
+    "swapPlural": "intercambios",
+    "share": "Reta a un amigo →",
+    "shareRevealed": "Compartir cuadrícula",
+    "copied": "Copiado",
+    "showHints": "Mostrar pistas",
+    "hideHints": "Ocultar pistas",
+    "howToPlay": "Cómo jugar",
+    "reveal": "Solución",
+    "seeWords": "Definiciones",
+    "nextPuzzle": "Próxima partida en {countdown}",
+    "loadError": "No se pudo cargar la partida de hoy. Revisa tu conexión.",
+    "loadRetry": "Reintentar",
+    "legend": {
+      "correctRow": "Fila correcta",
+      "correctWord": "Palabra correcta",
+      "puzzleComplete": "Resuelto"
+    },
+    "ariaHowToPlay": "Cómo jugar",
+    "ariaHistory": "Historial",
+    "switchToHard": "Probar Tessera (Difícil) →",
+    "switchToClassic": "← Volver a Clásico",
+    "revealConfirm": {
+      "kicker": "Ver solución",
+      "title": "¿Quieres rendirte por hoy?",
+      "body": "El tablero se completará con la solución. Hoy no contará para tu racha (tu racha actual se mantiene).",
+      "cancel": "Seguir intentando",
+      "confirm": "Revelar"
+    },
+    "replay": {
+      "kicker": "Repetición",
+      "subKicker": "Tessera · #{num} · {date}",
+      "backToToday": "← Volver a hoy",
+      "movesStatus": "Movimientos {moves} · {valid}/{total} filas · repetición"
+    }
+  },
+  "howto": {
+    "title": "Tessera Puzzle™",
+    "titleHard": "Tessera Puzzle™ Difícil",
+    "titleWords": "Palabras de hoy",
+    "ariaClose": "Cerrar",
+    "tabs": {
+      "how": "Cómo jugar",
+      "settings": "Ajustes",
+      "credits": "Créditos"
+    },
+    "play": "Jugar",
+    "step1": {
+      "title": "El objetivo.",
+      "body": "{wordCount} palabras ocultas: {n} en horizontal y {n} en vertical. Encuéntralas todas para resolver la partida de hoy."
+    },
+    "step2": {
+      "title": "Cómo se juega.",
+      "body": "Toca dos fichas para intercambiar sus letras. Cada intercambio cuenta como un movimiento. Menos movimientos te dan un nivel más alto."
+    },
+    "step3": {
+      "title": "Cómo leer el tablero.",
+      "dashed": "La ficha ya está en la fila correcta.",
+      "green": "La fila forma una palabra correcta.",
+      "complete": "Las {n} filas están bien y las columnas también forman palabras. Tessera resuelta."
+    },
+    "words": {
+      "from": "de",
+      "missing": "Definición no disponible.",
+      "attribution": "Definiciones de es.wiktionary.org."
+    },
+    "credits": {
+      "createdBy": "Creado por",
+      "soundEffects": "Efectos de sonido",
+      "contributors": "Colaboradores",
+      "soundLicensePrefix": "por"
+    }
+  },
+  "settings": {
+    "theme": {
+      "title": "Tema",
+      "description": "El sistema sigue tu dispositivo. Claro u oscuro se queda en este navegador.",
+      "system": "Sistema",
+      "light": "Claro",
+      "dark": "Oscuro"
+    },
+    "language": {
+      "title": "Idioma",
+      "description": "Cambia el idioma de la interfaz. Las palabras de la partida no cambian.",
+      "en": "English",
+      "es": "Español"
+    },
+    "hideHints": {
+      "title": "Ocultar pistas de fila",
+      "description": "Quita el borde punteado que marca las fichas que ya están en la fila correcta. Modo difícil."
+    },
+    "mute": {
+      "title": "Silenciar",
+      "description": "Silencia el sonido de victoria al completar la partida."
+    },
+    "reminder": {
+      "title": "Recordatorios diarios",
+      "description": "Avisar a este dispositivo cuando esté lista la partida de hoy (09:00 UTC). Solo en este dispositivo.",
+      "enable": "Activar",
+      "disable": "Desactivar",
+      "enabling": "Activando…",
+      "disabling": "Desactivando…",
+      "unsupported": "Este navegador no admite notificaciones push.",
+      "iosNotInstalled": "En iPhone, añade Tessera a la pantalla de inicio primero y vuelve aquí.",
+      "denied": "Las notificaciones están bloqueadas. Actívalas en los ajustes del navegador para volver a suscribirte."
+    }
+  },
+  "history": {
+    "kicker": "Historial",
+    "title": "Tu Tessera.",
+    "mode": {
+      "classic": "Clásico",
+      "hard": "Difícil"
+    },
+    "ariaClose": "Cerrar",
+    "stats": {
+      "solved": "Resueltos",
+      "avgMoves": "Promedio",
+      "streak": "Racha",
+      "best": "Mejor"
+    },
+    "byTier": "Por nivel",
+    "empty": "Aún no has resuelto ninguna partida. Hoy es tu día.",
+    "revealed": "revelado",
+    "tabs": {
+      "solves": "Tus partidas",
+      "all": "Repetir"
+    },
+    "allPuzzles": {
+      "empty": "Aún no hay partidas anteriores. Tessera #1 sale hoy.",
+      "notPlayed": "Sin jugar",
+      "replay": "Repetir",
+      "ariaPlay": "Repetir partida #{num}"
+    }
+  },
+  "tiers": {
+    "legendary": "Legendario",
+    "genius": "Genio",
+    "wordsmith": "Hábil",
+    "persistent": "Persistente",
+    "tenacious": "Tenaz"
+  },
+  "streakToast": {
+    "single": "Racha de {n} día 🔥 ¡{tier}!",
+    "plural": "Racha de {n} días 🔥 ¡{tier}!",
+    "noTier": "Racha de {n} días 🔥"
+  },
+  "email": {
+    "title": "Recordatorio diario",
+    "dismiss": "No, gracias",
+    "body": "Un correo a las 09:00 UTC con la partida de hoy. Cancela cuando quieras.",
+    "placeholder": "tu@ejemplo.com",
+    "submit": "Recuérdamelo",
+    "submitting": "Enviando…",
+    "success": "Suscrito. Te enviaremos la cuadrícula de mañana a las 09:00 UTC.",
+    "error": "Algo salió mal. Revisa la dirección e inténtalo de nuevo.",
+    "notConfigured": "Los recordatorios todavía no están activos. Vuelve pronto.",
+    "privacyLeader": "Usamos Loops para enviarlos.",
+    "privacyLink": "Consulta nuestra política de privacidad."
+  },
+  "account": {
+    "title": "Cuenta",
+    "description": "Sincroniza tu racha y tu historial entre dispositivos.",
+    "signIn": "Iniciar sesión",
+    "signOut": "Cerrar sesión",
+    "signedInAs": "Sesión iniciada como {email}",
+    "play": "Jugar a Tessera",
+    "welcomeTitle": "Listo",
+    "welcomeBody": "Sesión iniciada como {email}. Tu racha y tu historial se sincronizarán en todos tus dispositivos.",
+    "saveStreak": "Guarda tu racha",
+    "saveStreakLine": "Inicia sesión y guarda tu racha de {n} días →",
+    "modalTitle": "Inicia sesión o crea una cuenta",
+    "modalBody": "Te enviaremos un código de un solo uso. Tu racha y tu historial te seguirán a cualquier dispositivo.",
+    "placeholder": "tu@ejemplo.com",
+    "submit": "Enviar código",
+    "submitting": "Enviando…",
+    "codePrompt": "Introduce el código que enviamos a {email}.",
+    "codePlaceholder": "Introduce el código",
+    "verify": "Verificar",
+    "verifying": "Verificando…",
+    "codeError": "Ese código no funcionó. Revísalo e inténtalo de nuevo.",
+    "restart": "Usar otro correo",
+    "error": "Algo salió mal. Revisa la dirección e inténtalo de nuevo.",
+    "ariaClose": "Cerrar"
+  },
+  "handle": {
+    "title": "Elige un nombre",
+    "body": "Así apareces en las clasificaciones y en las ligas. Puedes cambiarlo después.",
+    "placeholder": "tunombre",
+    "submit": "Guardar",
+    "saving": "Guardando…",
+    "taken": "Ese nombre ya existe. Prueba con otro.",
+    "invalid": "De 3 a 20 letras, números, _ o -, no solo números.",
+    "ariaClose": "Cerrar"
+  },
+  "leaderboard": {
+    "title": "Clasificación",
+    "sub": "Tessera #{num}",
+    "subHard": "Tessera Difícil #{num}",
+    "tabGlobal": "Global",
+    "tabCountry": "País",
+    "tabLeagues": "Ligas",
+    "colRank": "#",
+    "colPlayer": "Jugador",
+    "colMoves": "Mov.",
+    "colTime": "Tiempo",
+    "empty": "Aún no hay partidas hoy. Sé el primero.",
+    "loading": "Cargando…",
+    "signInPrompt": "Inicia sesión y elige un nombre para entrar.",
+    "optInPrompt": "Elige un nombre para aparecer en la clasificación.",
+    "pickName": "Elegir nombre",
+    "yourRank": "Tu posición",
+    "cta": "Clasificación",
+    "ariaOpen": "Clasificación",
+    "ariaClose": "Cerrar"
+  },
+  "leagues": {
+    "signInPrompt": "Inicia sesión para jugar en ligas con amigos.",
+    "empty": "Aún no estás en ninguna liga. Crea una o únete con un código.",
+    "create": "Crear",
+    "join": "Unirse",
+    "back": "Atrás",
+    "namePlaceholder": "Nombre de la liga",
+    "codePlaceholder": "Código de invitación",
+    "notFound": "No hay ninguna liga con ese código.",
+    "members": "{n} miembros",
+    "shareInvite": "Comparte este enlace para invitar a tus amigos:",
+    "copyLink": "Copiar enlace",
+    "copied": "Copiado",
+    "done": "Listo",
+    "today": "Hoy",
+    "noneToday": "Nadie ha resuelto hoy todavía.",
+    "daysWon": "Días ganados",
+    "noHandlePrompt": "Elige un nombre para aparecer en la clasificación",
+    "joinedToast": "Te uniste a {name}"
+  },
+  "whatsNew": {
+    "label": "Nuevo",
+    "title": "Cuentas, clasificaciones y ligas",
+    "body": "Inicia sesión para guardar tu racha entre dispositivos, sube en la clasificación diaria y juega en ligas con amigos.",
+    "cta": "Crear cuenta",
+    "dismiss": "Cerrar"
+  },
+  "share": {
+    "headlineRevealed": "Tessera #{num} · revelado",
+    "headlineRevealedHard": "Tessera Difícil #{num} · revelado",
+    "headlineSolved": "Tessera #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
+    "headlineSolvedHard": "Tessera Difícil #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
+    "streakMeta": "🔥 racha de {streak} días",
+    "bonusMeta": "✨ bonus",
+    "challenge": "¿Puedes superarme? →"
+  },
+  "push": {
+    "dailyTitle": "La Tessera de hoy está lista",
+    "dailyBody": "Partida #{num}. Date un momento."
+  },
+  "start": {
+    "tagline": "Intercambia fichas hasta que cada fila forme la palabra correcta.",
+    "play": "Jugar",
+    "howToPlay": "Cómo jugar"
+  },
+  "pwa": {
+    "installIOS": {
+      "title": "Añade Tessera a tu pantalla de inicio",
+      "body": "Toca el icono de compartir y elige Añadir a pantalla de inicio. Se abre en un toque y puedes activar el recordatorio diario.",
+      "dismiss": "Quizá más tarde"
+    },
+    "installAndroid": {
+      "title": "Instalar Tessera",
+      "body": "Añádelo a tu pantalla de inicio para jugar a diario en un toque.",
+      "cta": "Instalar",
+      "dismiss": "Quizá más tarde"
+    }
+  }
+}

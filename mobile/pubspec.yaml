@@ -53,10 +53,25 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
 
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
   uses-material-design: true
+
+  # Vendored from the web app by tool/sync_shared_assets.dart (spec §4.4).
+  assets:
+    - assets/locales/
+    - assets/audio/
+    - assets/shared/
+
+  fonts:
+    - family: Fraunces
+      fonts:
+        - asset: assets/fonts/Fraunces-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Fraunces-Bold.ttf
+          weight: 700
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,0 +1,294 @@
+{
+  "meta": {
+    "title": "Tessera: Daily Word Puzzle",
+    "description": "A daily word puzzle. Swap tiles on a 4×4 grid until every row spells a word, and every column too. Same puzzle for everyone, every day.",
+    "titleHard": "Tessera (Hard): Daily 5×5 Word Puzzle",
+    "descriptionHard": "The harder daily Tessera. Swap tiles on a 5×5 grid until every row, and every column, spells a word. Same puzzle for everyone, every day."
+  },
+  "game": {
+    "kicker": "Tessera · #{num} · {date}",
+    "kickerHard": "Tessera Hard · #{num} · {date}",
+    "kickerDemo": "Tessera · puzzle",
+    "movesStatus": "Moves {moves} · {valid}/{total} rows",
+    "demoTipL1": "Tap two tiles to swap them",
+    "demoTipL2": "to make a grid of {n} letter words",
+    "revealedStatus": "Revealed",
+    "solvedShort": "Solved",
+    "solvedIn": "Solved in {moves} {moveWord} · {tier}",
+    "moveSingular": "move",
+    "movePlural": "moves",
+    "swapSingular": "swap",
+    "swapPlural": "swaps",
+    "share": "Challenge a friend →",
+    "shareRevealed": "Share grid",
+    "copied": "Copied",
+    "showHints": "Show hints",
+    "hideHints": "Hide hints",
+    "howToPlay": "How to play",
+    "reveal": "Solution",
+    "seeWords": "Definitions",
+    "nextPuzzle": "Next puzzle in {countdown}",
+    "loadError": "Couldn't load today's puzzle. Check your connection.",
+    "loadRetry": "Try again",
+    "legend": {
+      "correctRow": "Correct row",
+      "correctWord": "Correct word",
+      "puzzleComplete": "Solved"
+    },
+    "ariaHowToPlay": "How to play",
+    "ariaHistory": "History",
+    "switchToHard": "Try Tessera (Hard) →",
+    "switchToClassic": "← Back to Classic",
+    "revealConfirm": {
+      "kicker": "Reveal solution",
+      "title": "Give up for today?",
+      "body": "The board will snap to the solved grid. Today won’t count toward your streak (your current streak stays as it is).",
+      "cancel": "Keep trying",
+      "confirm": "Reveal"
+    },
+    "replay": {
+      "kicker": "Replay",
+      "subKicker": "Tessera · #{num} · {date}",
+      "backToToday": "← Back to today",
+      "movesStatus": "Moves {moves} · {valid}/{total} rows · replay"
+    }
+  },
+  "howto": {
+    "title": "Tessera Puzzle™",
+    "titleHard": "Tessera Puzzle™ Hard",
+    "titleWords": "Today’s words",
+    "ariaClose": "Close",
+    "tabs": {
+      "how": "How to play",
+      "settings": "Settings",
+      "credits": "Credits"
+    },
+    "play": "Play",
+    "step1": {
+      "title": "The goal.",
+      "body": "{wordCount} hidden words: {n} across and {n} down. Find them all to solve today’s puzzle."
+    },
+    "step2": {
+      "title": "How you play.",
+      "body": "Tap two tiles to swap their letters. Each swap counts as one move. Fewer moves earns a higher tier."
+    },
+    "step3": {
+      "title": "Reading the board.",
+      "dashed": "A tile is already on the right row.",
+      "green": "The row spells a correct word.",
+      "complete": "All {n} rows are right and the columns spell words too. Tessera solved."
+    },
+    "words": {
+      "from": "from",
+      "missing": "Definition unavailable.",
+      "attribution": "Definitions from dictionaryapi.dev (en_GB)."
+    },
+    "credits": {
+      "createdBy": "Created by",
+      "soundEffects": "Sound effects",
+      "contributors": "Contributors",
+      "soundLicensePrefix": "by"
+    }
+  },
+  "settings": {
+    "theme": {
+      "title": "Theme",
+      "description": "System follows your device. Light or dark stays on this browser.",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "language": {
+      "title": "Language",
+      "description": "Changes UI language. Puzzle words stay the same.",
+      "en": "English",
+      "es": "Español"
+    },
+    "hideHints": {
+      "title": "Hide row hints",
+      "description": "Removes the dotted outline that marks tiles already on the right row. Harder mode."
+    },
+    "mute": {
+      "title": "Mute",
+      "description": "Silences the win jingle when you solve the puzzle."
+    },
+    "reminder": {
+      "title": "Daily reminders",
+      "description": "Push this device when today's puzzle is ready (09:00 UTC). Stays on this device only.",
+      "enable": "Enable",
+      "disable": "Disable",
+      "enabling": "Enabling…",
+      "disabling": "Disabling…",
+      "unsupported": "This browser does not support push notifications.",
+      "iosNotInstalled": "On iPhone, add Tessera to your home screen first, then come back here.",
+      "denied": "Notifications are blocked. Enable them in browser settings to opt back in."
+    }
+  },
+  "history": {
+    "kicker": "History",
+    "title": "Your Tessera.",
+    "mode": {
+      "classic": "Classic",
+      "hard": "Hard"
+    },
+    "ariaClose": "Close",
+    "stats": {
+      "solved": "Solved",
+      "avgMoves": "Avg moves",
+      "streak": "Streak",
+      "best": "Best"
+    },
+    "byTier": "By tier",
+    "empty": "No puzzles solved yet. Today’s your day.",
+    "revealed": "revealed",
+    "tabs": {
+      "solves": "Your solves",
+      "all": "Replay"
+    },
+    "allPuzzles": {
+      "empty": "No past puzzles yet. Tessera #1 launched today.",
+      "notPlayed": "Not played",
+      "replay": "Replay",
+      "ariaPlay": "Replay puzzle #{num}"
+    }
+  },
+  "tiers": {
+    "legendary": "Legendary",
+    "genius": "Genius",
+    "wordsmith": "Wordsmith",
+    "persistent": "Persistent",
+    "tenacious": "Tenacious"
+  },
+  "streakToast": {
+    "single": "{n} day streak 🔥 {tier}!",
+    "plural": "{n} day streak 🔥 {tier}!",
+    "noTier": "{n} day streak 🔥"
+  },
+  "email": {
+    "title": "Daily reminder",
+    "dismiss": "No thanks",
+    "body": "One email at 09:00 UTC with today’s puzzle. Unsubscribe whenever.",
+    "placeholder": "you@example.com",
+    "submit": "Remind me",
+    "submitting": "Sending…",
+    "success": "Subscribed. We’ll send tomorrow’s grid at 09:00 UTC.",
+    "error": "Something went wrong. Check the address and try again.",
+    "notConfigured": "Reminders aren’t live yet. Come back soon.",
+    "privacyLeader": "We use Loops to send these.",
+    "privacyLink": "See our privacy policy."
+  },
+  "account": {
+    "title": "Account",
+    "description": "Sync your streak and history across devices.",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "signedInAs": "Signed in as {email}",
+    "play": "Play Tessera",
+    "welcomeTitle": "You're in",
+    "welcomeBody": "Signed in as {email}. Your streak and history will now sync across your devices.",
+    "saveStreak": "Save your streak",
+    "saveStreakLine": "Sign in to save your {n}-day streak →",
+    "modalTitle": "Sign in or create account",
+    "modalBody": "We'll email you a one-time code. Your streak and history then follow you to any device.",
+    "placeholder": "you@example.com",
+    "submit": "Send code",
+    "submitting": "Sending…",
+    "codePrompt": "Enter the code we sent to {email}.",
+    "codePlaceholder": "Enter code",
+    "verify": "Verify",
+    "verifying": "Verifying…",
+    "codeError": "That code didn't work. Check it and try again.",
+    "restart": "Use a different email",
+    "error": "Something went wrong. Check the address and try again.",
+    "ariaClose": "Close"
+  },
+  "handle": {
+    "title": "Pick a display name",
+    "body": "This is how you show up on leaderboards and in leagues. You can change it later.",
+    "placeholder": "yourname",
+    "submit": "Save",
+    "saving": "Saving…",
+    "taken": "That name is taken. Try another.",
+    "invalid": "3 to 20 letters, numbers, _ or -, not all numbers.",
+    "ariaClose": "Close"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "sub": "Tessera #{num}",
+    "subHard": "Tessera Hard #{num}",
+    "tabGlobal": "Global",
+    "tabCountry": "Country",
+    "tabLeagues": "Leagues",
+    "colRank": "#",
+    "colPlayer": "Player",
+    "colMoves": "Moves",
+    "colTime": "Time",
+    "empty": "No solves yet today. Be the first.",
+    "loading": "Loading…",
+    "signInPrompt": "Sign in and pick a name to join the board.",
+    "optInPrompt": "Pick a display name to appear on the board.",
+    "pickName": "Pick a name",
+    "yourRank": "Your rank",
+    "cta": "Leaderboard",
+    "ariaOpen": "Leaderboard",
+    "ariaClose": "Close"
+  },
+  "leagues": {
+    "signInPrompt": "Sign in to play in leagues with friends.",
+    "empty": "You're not in any leagues yet. Create one or join with a code.",
+    "create": "Create",
+    "join": "Join",
+    "back": "Back",
+    "namePlaceholder": "League name",
+    "codePlaceholder": "Invite code",
+    "notFound": "No league with that code.",
+    "members": "{n} members",
+    "shareInvite": "Share this link to invite friends:",
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "done": "Done",
+    "today": "Today",
+    "noneToday": "No one has solved today yet.",
+    "daysWon": "Days won",
+    "noHandlePrompt": "Pick a display name to appear in standings",
+    "joinedToast": "Joined {name}"
+  },
+  "whatsNew": {
+    "label": "New",
+    "title": "Accounts, leaderboards and leagues",
+    "body": "Sign in to save your streak across devices, climb the daily leaderboard, and play in leagues with friends.",
+    "cta": "Create account",
+    "dismiss": "Dismiss"
+  },
+  "share": {
+    "headlineRevealed": "Tessera #{num} · revealed",
+    "headlineRevealedHard": "Tessera Hard #{num} · revealed",
+    "headlineSolved": "Tessera #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
+    "headlineSolvedHard": "Tessera Hard #{num} · {moves} {swapWord} · {tierEmoji} {tier}",
+    "streakMeta": "🔥 {streak}-day streak",
+    "bonusMeta": "✨ bonus",
+    "challenge": "Beat me →"
+  },
+  "push": {
+    "dailyTitle": "Today's Tessera is ready",
+    "dailyBody": "Puzzle #{num}. Take a moment."
+  },
+  "start": {
+    "tagline": "Swap tiles until every row spells the correct word.",
+    "play": "Play",
+    "howToPlay": "How to play"
+  },
+  "pwa": {
+    "installIOS": {
+      "title": "Add Tessera to your home screen",
+      "body": "Tap the share icon, then choose Add to Home Screen. Opens in one tap, and you can turn on a daily reminder.",
+      "dismiss": "Maybe later"
+    },
+    "installAndroid": {
+      "title": "Install Tessera",
+      "body": "Add it to your home screen for one-tap daily play.",
+      "cta": "Install",
+      "dismiss": "Maybe later"
+    }
+  }
+}
