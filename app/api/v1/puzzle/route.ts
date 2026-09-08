@@ -17,7 +17,7 @@
 import { EPOCH } from "../../../lib/epoch";
 import { isLocale } from "../../../lib/i18n";
 import { modeById, type ModeId } from "../../../lib/mode";
-import { generateDailyPuzzleFor } from "../../../lib/puzzle";
+import { generateDailyPuzzleFor } from "../../../lib/server/puzzle-engine";
 import { puzzleNumber, seedFromDate, todayUtc } from "../../../lib/rng";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  generateDailyPuzzle,
-  generateDailyPuzzleFor,
-  scramble,
-  tilesFromRows,
-  type Tile,
-} from "./puzzle";
+import { scramble, tilesFromRows, type Tile } from "./puzzle";
+import { generateDailyPuzzle, generateDailyPuzzleFor } from "./server/puzzle-engine";
 import { mulberry32, seedFromDate } from "./rng";
 import type { Locale } from "./i18n";
 

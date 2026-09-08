@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { DEMO_GRID, computeMinSwaps, generateDailyPuzzleFor, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
-import { seedFromDate, todayUtc } from "./lib/rng";
+import { DEMO_GRID, computeMinSwaps, scrambleGoldRows, tilesFromRows, type Tile } from "./lib/puzzle";
+import { fetchDailyPuzzle } from "./lib/puzzle-client";
+import { todayUtc } from "./lib/rng";
 import { EPOCH } from "./lib/epoch";
 import { resolvePuzzleFromParams } from "./lib/replay";
 import { readStreak, recordWin, visibleCurrent, type Streak } from "./lib/streak";
@@ -142,6 +143,10 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   const { locale, dict, t } = useLocale();
   const N = mode.N;
   const [mounted, setMounted] = useState(false);
+  // Today's puzzle is fetched from /api/v1/puzzle on mount. `loadError`
+  // shows a blocking retry state; bumping `reloadKey` re-runs the fetch.
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   // Initial TILE matches the SSR-safe value (MAX_TILE) on both server
   // and first client paint, then updates to the measured size after
   // mount. Picking the actual viewport size on first client render
@@ -228,84 +233,109 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
   const [theme, setTheme] = useState<ThemePref>("system");
 
   // Initialise on client mount (avoids SSR/UTC drift hydration mismatch).
+  // The daily board comes from /api/v1/puzzle; ?demo uses the bundled
+  // DEMO_GRID and needs no network.
   useEffect(() => {
+    const ac = new AbortController();
+    let cancelled = false;
+
     const params = new URLSearchParams(window.location.search);
     const today = todayUtc();
     const resolved = resolvePuzzleFromParams(params, today, EPOCH);
     const { date, num, replay } = resolved;
-    const seed = seedFromDate(date);
     const forceSolved = params.get("solve") !== null;
     const demo = params.get("demo") !== null;
-
-    let goldRows: string[];
-    let startTiles: Tile[];
-    let minSwaps: number;
     // Demo mode is classic-only — DEMO_GRID is a 4×4 grid. On hard mode
     // the demo flag is treated as a no-op and we render the daily.
     const useDemo = demo && N === 4;
+
+    // Everything after the board is known: player state, analytics, prefs.
+    const finish = (goldRows: string[], startTiles: Tile[], minSwaps: number) => {
+      if (cancelled) return;
+      setPuzzle({ num, date, startTiles, goldRows, minSwaps, forceSolved, demo: useDemo, replay });
+
+      // Demo, force-solved, and replay modes are isolated from real player
+      // state — no stored result, no progress restore, no streak interaction,
+      // and no progress writes on tap. Replay also skips analytics events
+      // tied to the live daily flow (`puzzle_started`/`puzzle_solved` etc.).
+      const isolated = useDemo || forceSolved || replay;
+      const stored = isolated ? null : readResult(num, mode.resultPrefix);
+      setStoredResult(stored);
+      const streakNow = readStreak(mode.streakKey);
+      setStreak(streakNow);
+      const progress = !isolated && !stored ? readProgress(num, mode.progressPrefix) : null;
+      if (progress) {
+        setPositions(progress.positions);
+        setMoves(progress.moves);
+        // Progress saved before history capture existed has no swap chain;
+        // mark it broken so the eventual result syncs unverified.
+        setHistory(progress.history ?? null);
+        startedAtRef.current = progress.startedAt ?? null;
+      } else {
+        setPositions(startTiles);
+      }
+      if (!isolated && !stored && !progress) {
+        track("puzzle_started", { num, day: date, mode: mode.id, N, minSwaps });
+      }
+      if (replay) {
+        track("puzzle_replay_opened", { num, day: date, mode: mode.id, N, minSwaps });
+      }
+      // `pruneOldProgress(num)` would wipe today's saved progress while we're
+      // replaying #5 — only run it on the live daily puzzle.
+      if (!useDemo && !replay) pruneOldProgress(num, mode.progressPrefix);
+      if (!hasSeenStart() && !isolated) {
+        setShowStart(true);
+        track("start_screen_shown", { num, day: date, mode: mode.id });
+      }
+      try {
+        const hh = window.localStorage.getItem(HIDE_HINTS_KEY);
+        if (hh !== null) {
+          setHideHints(hh === "1");
+        }
+        // Legend strip: once the player has logged two or more solves
+        // for this mode, hide it. New players still get the swatch key.
+        if (countResults(mode.resultPrefix) >= 2) {
+          setShowLegend(false);
+        }
+        const m = window.localStorage.getItem(MUTED_KEY);
+        if (m !== null) setMuted(m === "1");
+        const t = window.localStorage.getItem(THEME_KEY);
+        if (isThemePref(t)) setTheme(t);
+      } catch {}
+      setLoadError(false);
+      setMounted(true);
+    };
+
     if (useDemo) {
-      goldRows = [...DEMO_GRID];
-      startTiles = forceSolved ? tilesFromRows(goldRows) : scrambleGoldRows(goldRows, 42);
-      minSwaps = forceSolved ? 0 : computeMinSwaps(startTiles, goldRows);
-    } else {
-      const generated = generateDailyPuzzleFor(locale, seed, mode.swaps, N);
-      goldRows = generated.goldRows;
-      startTiles = forceSolved ? tilesFromRows(goldRows) : generated.startTiles;
-      minSwaps = forceSolved ? 0 : generated.minSwaps;
+      const goldRows = [...DEMO_GRID];
+      const startTiles = forceSolved ? tilesFromRows(goldRows) : scrambleGoldRows(goldRows, 42);
+      const minSwaps = forceSolved ? 0 : computeMinSwaps(startTiles, goldRows);
+      finish(goldRows, startTiles, minSwaps);
+      return () => {
+        cancelled = true;
+        ac.abort();
+      };
     }
 
-    setPuzzle({ num, date, startTiles, goldRows, minSwaps, forceSolved, demo: useDemo, replay });
+    setLoadError(false);
+    fetchDailyPuzzle(date, locale, mode.id, { signal: ac.signal })
+      .then((p) => {
+        const startTiles = forceSolved ? tilesFromRows(p.goldRows) : p.startTiles;
+        const minSwaps = forceSolved ? 0 : p.minSwaps;
+        finish(p.goldRows, startTiles, minSwaps);
+      })
+      .catch((e) => {
+        if (cancelled || ac.signal.aborted) return;
+        console.error("puzzle load failed:", e);
+        setLoadError(true);
+      });
 
-    // Demo, force-solved, and replay modes are isolated from real player
-    // state — no stored result, no progress restore, no streak interaction,
-    // and no progress writes on tap. Replay also skips analytics events
-    // tied to the live daily flow (`puzzle_started`/`puzzle_solved` etc.).
-    const isolated = useDemo || forceSolved || replay;
-    const stored = isolated ? null : readResult(num, mode.resultPrefix);
-    setStoredResult(stored);
-    const streakNow = readStreak(mode.streakKey);
-    setStreak(streakNow);
-    const progress = !isolated && !stored ? readProgress(num, mode.progressPrefix) : null;
-    if (progress) {
-      setPositions(progress.positions);
-      setMoves(progress.moves);
-      // Progress saved before history capture existed has no swap chain;
-      // mark it broken so the eventual result syncs unverified.
-      setHistory(progress.history ?? null);
-      startedAtRef.current = progress.startedAt ?? null;
-    } else {
-      setPositions(startTiles);
-    }
-    if (!isolated && !stored && !progress) {
-      track("puzzle_started", { num, day: date, mode: mode.id, N, minSwaps });
-    }
-    if (replay) {
-      track("puzzle_replay_opened", { num, day: date, mode: mode.id, N, minSwaps });
-    }
-    // `pruneOldProgress(num)` would wipe today's saved progress while we're
-    // replaying #5 — only run it on the live daily puzzle.
-    if (!useDemo && !replay) pruneOldProgress(num, mode.progressPrefix);
-    if (!hasSeenStart() && !isolated) {
-      setShowStart(true);
-      track("start_screen_shown", { num, day: date, mode: mode.id });
-    }
-    try {
-      const hh = window.localStorage.getItem(HIDE_HINTS_KEY);
-      if (hh !== null) {
-        setHideHints(hh === "1");
-      }
-      // Legend strip: once the player has logged two or more solves
-      // for this mode, hide it. New players still get the swatch key.
-      if (countResults(mode.resultPrefix) >= 2) {
-        setShowLegend(false);
-      }
-      const m = window.localStorage.getItem(MUTED_KEY);
-      if (m !== null) setMuted(m === "1");
-      const t = window.localStorage.getItem(THEME_KEY);
-      if (isThemePref(t)) setTheme(t);
-    } catch {}
-    setMounted(true);
-  }, []);
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadKey]);
 
   const updateHideHints = useCallback((v: boolean) => {
     setHideHints(v);
@@ -389,6 +419,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
           moves,
           bonus: validity.isBonus,
           completedAt: Date.now(),
+          minSwaps: puzzle.minSwaps,
           history: history ?? undefined,
           timeMs: startedAtRef.current ? Date.now() - startedAtRef.current : undefined,
         };
@@ -612,6 +643,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
         bonus: false,
         completedAt: Date.now(),
         revealed: true,
+        minSwaps: puzzle.minSwaps,
         history: history ?? undefined,
       };
       writeResult(puzzle.num, r, mode.resultPrefix);
@@ -677,7 +709,26 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
     return (
       <div className="flex flex-col items-center select-none">
         <div className="mb-6 text-center h-[60px]" />
-        <div className="rounded-md" style={{ width: gridPx, height: gridPx, background: "var(--color-cream)" }} />
+        <div
+          className="rounded-md flex items-center justify-center"
+          style={{ width: gridPx, height: gridPx, background: "var(--color-cream)" }}
+        >
+          {loadError && (
+            <div className="flex flex-col items-center gap-3 px-6 text-center">
+              <p className="text-sm text-[color:var(--color-muted)]">{t("game.loadError")}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoadError(false);
+                  setReloadKey((k) => k + 1);
+                }}
+                className="px-4 py-2 text-sm rounded-md border border-[color:var(--color-rule)] hover:bg-[color:var(--color-paper)] transition-colors"
+              >
+                {t("game.loadRetry")}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -821,7 +872,7 @@ export function TesseraGame({ mode = CLASSIC }: { mode?: ModeConfig } = {}) {
 
   // Tapping the streak chip flashes the current streak + tier as a toast.
   const showStreakToast = () => {
-    const tierKey = dominantTier(mode, locale, EPOCH);
+    const tierKey = dominantTier(mode);
     const tierName = tierKey ? t(`tiers.${tierKey}`) : "";
     const key = liveStreak === 1 ? "streakToast.single" : "streakToast.plural";
     const msg = tierKey

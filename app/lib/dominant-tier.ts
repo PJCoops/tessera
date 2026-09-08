@@ -1,40 +1,17 @@
 // Reads all stored results for a mode and returns the player's most
 // frequent tier — used by the streak toast to flavour the message.
 //
-// Regenerating each historic puzzle to recover its minSwaps is the
-// same trick HistoryModal uses; we cache per (locale, mode, num) so
-// repeat clicks are cheap. Revealed results are skipped — they're
-// not real solves and shouldn't tilt the player's identity.
+// minSwaps is read from each stored result (written at solve time). Results
+// solved before minSwaps was persisted are skipped — this is a cosmetic
+// toast, so a partial count is fine and it never blocks on the network.
+// Revealed results are skipped too — they're not real solves.
 
-import { dateFromPuzzleNumber, seedFromDate } from "./rng";
-import { generateDailyPuzzleFor } from "./puzzle";
 import { getTier, type TierKey } from "./tier";
 import type { ModeConfig } from "./mode";
-import type { Locale } from "./i18n";
 
-type Result = { moves: number; bonus: boolean; completedAt: number; revealed?: boolean };
+type Result = { moves: number; revealed?: boolean; minSwaps?: number };
 
-const minSwapsCache = new Map<string, number>();
-
-function minSwapsFor(num: number, mode: ModeConfig, locale: Locale, epoch: string): number {
-  const key = `${locale}:${mode.id}:${num}`;
-  const cached = minSwapsCache.get(key);
-  if (cached !== undefined) return cached;
-  try {
-    const date = dateFromPuzzleNumber(num, epoch);
-    const { minSwaps } = generateDailyPuzzleFor(locale, seedFromDate(date), mode.swaps, mode.N);
-    minSwapsCache.set(key, minSwaps);
-    return minSwaps;
-  } catch {
-    return 1;
-  }
-}
-
-export function dominantTier(
-  mode: ModeConfig,
-  locale: Locale,
-  epoch: string
-): TierKey | null {
+export function dominantTier(mode: ModeConfig): TierKey | null {
   if (typeof window === "undefined") return null;
   const counts: Record<TierKey, number> = {
     legendary: 0,
@@ -53,9 +30,8 @@ export function dominantTier(
       const raw = window.localStorage.getItem(key);
       if (!raw) continue;
       const r = JSON.parse(raw) as Result;
-      if (r.revealed) continue;
-      const ms = minSwapsFor(num, mode, locale, epoch);
-      const tier = getTier(r.moves, ms);
+      if (r.revealed || typeof r.minSwaps !== "number") continue;
+      const tier = getTier(r.moves, r.minSwaps);
       counts[tier.key] += 1;
       total += 1;
     } catch {}

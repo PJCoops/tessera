@@ -3,7 +3,7 @@ import { parseShareSlug, buildShareSlug, type ShareSlug } from "./share";
 import { getTier } from "./tier";
 import { getDictionary, t, type Locale } from "./i18n";
 import { modeById, CLASSIC } from "./mode";
-import { generateDailyPuzzleFor } from "./puzzle";
+import { generateDailyPuzzleFor } from "./server/puzzle-engine";
 import { dateFromPuzzleNumber, seedFromDate } from "./rng";
 import { EPOCH } from "./epoch";
 

@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { EPOCH } from "../../../lib/epoch";
 import { modeById } from "../../../lib/mode";
-import { generateDailyPuzzleFor } from "../../../lib/puzzle";
+import { generateDailyPuzzleFor } from "../../../lib/server/puzzle-engine";
 import { dateFromPuzzleNumber, puzzleNumber, seedFromDate } from "../../../lib/rng";
 
 const ROUTE_PATH = fileURLToPath(new URL("./route.ts", import.meta.url));

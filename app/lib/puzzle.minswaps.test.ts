@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeMinSwaps, generateDailyPuzzleFor, scramble, tilesFromRows, type Tile } from "./puzzle";
+import { computeMinSwaps, scramble, tilesFromRows, type Tile } from "./puzzle";
+import { generateDailyPuzzleFor } from "./server/puzzle-engine";
 import { mulberry32, seedFromDate } from "./rng";
 
 // Hand-built scrambles whose optimal solve is known by inspection.

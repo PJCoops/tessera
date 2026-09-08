@@ -12,6 +12,10 @@ export type StoredResult = {
   revealed?: boolean;
   history?: SwapPair[];
   timeMs?: number;
+  // Min swaps for this puzzle, captured at solve time so history/tier
+  // views don't need to regenerate the puzzle (the generator is
+  // server-only now). Absent on results solved before this change.
+  minSwaps?: number;
 };
 
 export type StoredProgress = {

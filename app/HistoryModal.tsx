@@ -2,41 +2,27 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { dateFromPuzzleNumber, puzzleNumber, seedFromDate, todayUtc } from "./lib/rng";
+import { dateFromPuzzleNumber, puzzleNumber, todayUtc } from "./lib/rng";
 import { readStreak, type Streak } from "./lib/streak";
 import { TIERS, TIER_COLORS, getTier } from "./lib/tier";
-import { generateDailyPuzzleFor } from "./lib/puzzle";
+import { fetchDailyPuzzle } from "./lib/puzzle-client";
 import { useLocale } from "./lib/locale-context";
 import { CLASSIC, HARD, homePath, type ModeConfig, type ModeId } from "./lib/mode";
-import type { Locale } from "./lib/i18n";
 
-type Result = { moves: number; bonus: boolean; completedAt: number; revealed?: boolean };
+// minSwaps is persisted on results solved after the server-puzzle move; for
+// older solves it's fetched from /api/v1/puzzle when the modal opens and
+// filled into `extraMinSwaps`. `1` is the conservative fallback while a
+// fetch is in flight or if it fails — the row still renders a Tenacious
+// badge rather than nothing.
+type Result = {
+  moves: number;
+  bonus: boolean;
+  completedAt: number;
+  revealed?: boolean;
+  minSwaps?: number;
+};
 
 type Entry = { num: number; date: string; result: Result };
-
-// Cached minSwaps lookup keyed by `${locale}:${mode.id}:${num}`. Each
-// puzzle regeneration runs findGoldGrid + computeMinSwaps which is
-// cheap individually but adds up over a long history; cache so we
-// only pay once per (mode, num) per session.
-const minSwapsCache = new Map<string, number>();
-
-function minSwapsForPuzzle(num: number, mode: ModeConfig, locale: Locale, epoch: string): number {
-  const key = `${locale}:${mode.id}:${num}`;
-  const cached = minSwapsCache.get(key);
-  if (cached !== undefined) return cached;
-  try {
-    const date = dateFromPuzzleNumber(num, epoch);
-    const { minSwaps } = generateDailyPuzzleFor(locale, seedFromDate(date), mode.swaps, mode.N);
-    minSwapsCache.set(key, minSwaps);
-    return minSwaps;
-  } catch {
-    // Regeneration can fail for a puzzle whose words have been pruned
-    // since the player solved it. Fall back to a conservative tier
-    // (1) so the row still renders a Tenacious badge rather than
-    // crashing.
-    return 1;
-  }
-}
 
 function readAllResults(epoch: string, prefix: string): Entry[] {
   if (typeof window === "undefined") return [];
@@ -117,15 +103,48 @@ export function HistoryModal({
   const avgMoves = solvedCount > 0
     ? Math.round(solved.reduce((s, e) => s + e.result.moves, 0) / solvedCount)
     : 0;
+
+  // minSwaps for solves recorded before it was persisted on the result:
+  // fetch each missing puzzle from /api/v1/puzzle (edge-cached) and fill
+  // the map. Tiers render with the `1` fallback until each fetch lands.
+  const [extraMinSwaps, setExtraMinSwaps] = useState<Map<number, number>>(new Map());
+  useEffect(() => {
+    if (!open) return;
+    const missing = solved.filter(
+      (e) => typeof e.result.minSwaps !== "number" && !extraMinSwaps.has(e.num)
+    );
+    if (missing.length === 0) return;
+    let cancelled = false;
+    const ac = new AbortController();
+    (async () => {
+      for (const e of missing) {
+        try {
+          const p = await fetchDailyPuzzle(e.date, locale, activeMode.id, { signal: ac.signal });
+          if (cancelled) return;
+          setExtraMinSwaps((prev) => new Map(prev).set(e.num, p.minSwaps));
+        } catch {
+          // leave it on the fallback tier
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [open, solved, locale, activeMode.id, extraMinSwaps]);
+
+  const msFor = (e: Entry): number =>
+    e.result.minSwaps ?? extraMinSwaps.get(e.num) ?? 1;
+
   const tierCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const e of solved) {
-      const ms = minSwapsForPuzzle(e.num, activeMode, locale, epoch);
-      const k = getTier(e.result.moves, ms).key;
+      const k = getTier(e.result.moves, msFor(e)).key;
       counts.set(k, (counts.get(k) ?? 0) + 1);
     }
     return counts;
-  }, [solved, activeMode, locale, epoch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [solved, extraMinSwaps]);
 
   // The "All puzzles" tab lists every past puzzle (#1 → today − 1) so
   // players can replay anything they missed. Each row links to ?day=...
@@ -221,8 +240,7 @@ export function HistoryModal({
                   ) : (
                     <ul className="divide-y divide-[color:var(--color-rule)]">
                       {entries.map((e) => {
-                        const ms = minSwapsForPuzzle(e.num, activeMode, locale, epoch);
-                        const tierKey = e.result.revealed ? null : getTier(e.result.moves, ms).key;
+                        const tierKey = e.result.revealed ? null : getTier(e.result.moves, msFor(e)).key;
                         return (
                           <li key={e.num} className="flex items-center justify-between px-2 py-2 text-sm gap-3">
                             <span className="text-[color:var(--color-muted)] tabular-nums whitespace-nowrap">
@@ -263,7 +281,7 @@ export function HistoryModal({
                     {pastNums.map((num) => {
                       const date = dateFromPuzzleNumber(num, epoch);
                       const result = resultByNum.get(num);
-                      const ms = result && !result.revealed ? minSwapsForPuzzle(num, activeMode, locale, epoch) : 1;
+                      const ms = result?.minSwaps ?? extraMinSwaps.get(num) ?? 1;
                       const tierKey = result && !result.revealed ? getTier(result.moves, ms).key : null;
                       return (
                         <li key={num} className="text-sm">

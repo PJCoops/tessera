@@ -1,5 +1,5 @@
 import type { Sql } from "./db";
-import { generateDailyPuzzleFor } from "./puzzle";
+import { generateDailyPuzzleFor } from "./server/puzzle-engine";
 import { seedFromDate } from "./rng";
 import { modeById, type ModeId } from "./mode";
 import type { Locale } from "./i18n";

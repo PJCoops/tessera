@@ -20,7 +20,7 @@
 import { EPOCH } from "./epoch";
 import { getDictionary, type Locale } from "./i18n";
 import { CLASSIC, HARD, modeById, type ModeId } from "./mode";
-import { generateDailyPuzzleFor } from "./puzzle";
+import { generateDailyPuzzleFor } from "./server/puzzle-engine";
 import { dateFromPuzzleNumber, puzzleNumber, seedFromDate } from "./rng";
 import {
   buildGrid,

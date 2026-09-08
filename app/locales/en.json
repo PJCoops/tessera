@@ -28,6 +28,8 @@
     "reveal": "Solution",
     "seeWords": "Definitions",
     "nextPuzzle": "Next puzzle in {countdown}",
+    "loadError": "Couldn't load today's puzzle. Check your connection.",
+    "loadRetry": "Try again",
     "legend": {
       "correctRow": "Correct row",
       "correctWord": "Correct word",

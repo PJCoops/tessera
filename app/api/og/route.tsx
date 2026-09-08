@@ -17,7 +17,7 @@ import path from "path";
 import { getTier } from "../../lib/tier";
 import { getDictionary, t } from "../../lib/i18n";
 import { CLASSIC, HARD } from "../../lib/mode";
-import { generateDailyPuzzleFor } from "../../lib/puzzle";
+import { generateDailyPuzzleFor } from "../../lib/server/puzzle-engine";
 import { dateFromPuzzleNumber, puzzleNumber, seedFromDate } from "../../lib/rng";
 import { EPOCH } from "../../lib/epoch";
 

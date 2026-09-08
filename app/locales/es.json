@@ -28,6 +28,8 @@
     "reveal": "Solución",
     "seeWords": "Definiciones",
     "nextPuzzle": "Próxima partida en {countdown}",
+    "loadError": "No se pudo cargar la partida de hoy. Revisa tu conexión.",
+    "loadRetry": "Reintentar",
     "legend": {
       "correctRow": "Fila correcta",
       "correctWord": "Palabra correcta",

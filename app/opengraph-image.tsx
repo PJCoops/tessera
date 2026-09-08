@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { readFile } from "fs/promises";
 import path from "path";
-import { generateDailyPuzzleFor } from "./lib/puzzle";
+import { generateDailyPuzzleFor } from "./lib/server/puzzle-engine";
 import { puzzleNumber, seedFromDate, todayUtc } from "./lib/rng";
 import { EPOCH } from "./lib/epoch";
 import { CLASSIC } from "./lib/mode";

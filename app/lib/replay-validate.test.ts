@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { generateDailyPuzzleFor, type Tile } from "./puzzle";
+import { type Tile } from "./puzzle";
+import { generateDailyPuzzleFor } from "./server/puzzle-engine";
 import { seedFromDate } from "./rng";
 import {
   isSwapHistory,
