@@ -7,6 +7,7 @@
 // Required env: DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 import { NextResponse, type NextRequest } from "next/server";
+import { getAccountState } from "./account-store";
 import { getDb } from "./db";
 import { parseIncomingResult, verifyIncoming } from "./results-ingest";
 import { ensureProfile, importedMaxes, listResults, upsertResults } from "./results-store";
@@ -17,6 +18,8 @@ const notConfigured = () =>
   NextResponse.json({ ok: false, reason: "not_configured" }, { status: 503 });
 const unauthorized = () =>
   NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
+const accountDisabled = () =>
+  NextResponse.json({ ok: false, reason: "account_disabled" }, { status: 403 });
 
 export async function handleResultsGet(
   req: NextRequest,
@@ -27,6 +30,7 @@ export async function handleResultsGet(
   if (!sql) return notConfigured();
   const userId = knownUserId ?? (await getUserId());
   if (!userId) return unauthorized();
+  if ((await getAccountState(sql, userId)).deletedAt) return accountDisabled();
 
   try {
     const results = await listResults(sql, userId);
@@ -64,6 +68,7 @@ export async function handleResultsSubmit(
   if (!sql) return notConfigured();
   const userId = knownUserId ?? (await getUserId());
   if (!userId) return unauthorized();
+  if ((await getAccountState(sql, userId)).deletedAt) return accountDisabled();
 
   let body: unknown;
   try {
