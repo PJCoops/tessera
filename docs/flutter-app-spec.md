@@ -920,8 +920,8 @@ mobile phases that depend on them.
 
 | Phase | Work | Est. |
 | --- | --- | --- |
-| 0 | `/api/v1/puzzle` + wordlists off the client bundle; introduce the `v1` path prefix + frozen schema | 1 d |
-| B | **Backend workstream:** `DELETE /api/v1/account` (re-auth + grace + email + rate limit), per-user rate limit on results, `/api/v1/app-config`, RevenueCat webhook with API re-verify, `.well-known` handlers, new `profiles` columns (`ads_removed`, `colour_blind`, analytics id), `device_tokens` table, invite-code hardening, data-export path. Blocks mobile Phases 4/5/7. | 4–5 d |
+| 0 | ✅ **done** — `/api/v1/puzzle` + wordlists off the client bundle; `v1` path prefix + frozen zod schema | 1 d |
+| B | ✅ **done** (branch `phase-b-backend`) — `DELETE /api/v1/account` (fresh-reauth via `amr` claim + 48h grace + Loops email + per-user/IP limit) & `POST` restore; per-user rate limit + `GET`/`POST /api/v1/results`; `GET /api/v1/app-config`; `POST /api/v1/billing/revenuecat` (webhook → RC REST re-verify → `profiles.ads_removed`, logged to `entitlement_events`); `.well-known/{apple-app-site-association,assetlinks.json}` handlers; `schema.sql` +`ads_removed`/`colour_blind`/`analytics_id`/`deleted_at`, +`device_tokens`, +`entitlement_events`; `purge-deleted-accounts` cron; invite-code hardening (unbiased gen, charset check) + `POST /api/v1/leagues/join`; `GET /api/v1/account/export`. External config still needed: `APPLE_APP_ID`, `ANDROID_CERT_SHA256`, `REVENUECAT_*`, and the Loops `account_deletion_scheduled` event (see `.env.example`). | 4–5 d |
 | 1 | `flutter create mobile/`, `dev`/`prod` flavors, CI, port share + puzzle-number + streak math with parity fixtures | 2–3 d |
 | 2 | Game screen: grid, swap animation, win states, sound, haptics; **first-run interactive demo**; mobile visual-system one-pager | 4–6 d |
 | 3 | Surrounding flows: how-to, history/stats, settings, today's words (with es fallback state) | 2–3 d |
