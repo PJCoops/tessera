@@ -14,6 +14,7 @@
 //
 // No env required.
 
+import { puzzleResponseSchema } from "../../../lib/api/v1-schema";
 import { EPOCH } from "../../../lib/epoch";
 import { isLocale } from "../../../lib/i18n";
 import { modeById, type ModeId } from "../../../lib/mode";
@@ -67,13 +68,15 @@ export async function GET(req: Request): Promise<Response> {
   const mode = modeById((modeParam === "hard" ? "hard" : "classic") as ModeId);
 
   const g = generateDailyPuzzleFor(locale, seedFromDate(date), mode.swaps, mode.N);
-  const payload = {
+  // Validate against the frozen v1 contract before it leaves the server —
+  // a shape regression should fail here, not silently in a shipped client.
+  const payload = puzzleResponseSchema.parse({
     num,
     goldRows: g.goldRows,
     startLetters: g.startTiles.map((t) => t.letter).join(""),
     startTiles: g.startTiles.map((t) => ({ id: t.id, letter: t.letter })),
     minSwaps: g.minSwaps,
-  };
+  });
 
   const bodyText = JSON.stringify(payload);
   const etag = weakETag(bodyText);

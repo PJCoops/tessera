@@ -1,0 +1,62 @@
+{
+  "GET /api/v1/puzzle": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "num": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "goldRows": {
+        "minItems": 4,
+        "maxItems": 5,
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "startLetters": {
+        "type": "string"
+      },
+      "startTiles": {
+        "minItems": 16,
+        "maxItems": 25,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "letter": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1
+            }
+          },
+          "required": [
+            "id",
+            "letter"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "minSwaps": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "num",
+      "goldRows",
+      "startLetters",
+      "startTiles",
+      "minSwaps"
+    ],
+    "additionalProperties": false
+  }
+}
