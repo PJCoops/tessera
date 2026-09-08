@@ -27,9 +27,6 @@ ThemeData buildTesseraTheme({
 
   return base.copyWith(
     extensions: [c],
-    textTheme: base.textTheme.apply(
-      bodyColor: c.ink,
-      displayColor: c.ink,
-    ),
+    textTheme: base.textTheme.apply(bodyColor: c.ink, displayColor: c.ink),
   );
 }

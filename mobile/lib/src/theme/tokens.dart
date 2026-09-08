@@ -105,7 +105,10 @@ class TesseraColors extends ThemeExtension<TesseraColors> {
     onSolved: const Color(0xFF0A0A0A),
   );
 
-  static TesseraColors resolve({required bool dark, required bool colourBlind}) {
+  static TesseraColors resolve({
+    required bool dark,
+    required bool colourBlind,
+  }) {
     if (colourBlind) return dark ? cbDark : cbLight;
     return dark ? TesseraColors.dark : light;
   }

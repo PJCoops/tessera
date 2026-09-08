@@ -16,24 +16,31 @@ Puzzle _almostSolved() {
   final a = solved[0];
   solved[0] = solved[1];
   solved[1] = a;
-  return Puzzle(num: p.num, goldRows: p.goldRows, minSwaps: 1, startTiles: solved);
+  return Puzzle(
+    num: p.num,
+    goldRows: p.goldRows,
+    minSwaps: 1,
+    startTiles: solved,
+  );
 }
 
 Widget _harness({required bool reduceMotion}) => ProviderScope(
-      overrides: [puzzleProvider.overrideWith((ref) => _almostSolved())],
-      child: MaterialApp(
-        theme: buildTesseraTheme(brightness: Brightness.light),
-        home: MediaQuery(
-          data: MediaQueryData(disableAnimations: reduceMotion),
-          child: const GameScreen(),
-        ),
-      ),
-    );
+  overrides: [puzzleProvider.overrideWith((ref) => _almostSolved())],
+  child: MaterialApp(
+    theme: buildTesseraTheme(brightness: Brightness.light),
+    home: MediaQuery(
+      data: MediaQueryData(disableAnimations: reduceMotion),
+      child: const GameScreen(),
+    ),
+  ),
+);
 
 void main() {
-  testWidgets('reduce-motion: solving settles immediately (no cascade)',
-      (tester) async {
+  testWidgets('reduce-motion: solving settles immediately (no cascade)', (
+    tester,
+  ) async {
     await tester.pumpWidget(_harness(reduceMotion: true));
+    await tester.pump();
     final container = ProviderScope.containerOf(
       tester.element(find.byType(GameScreen)),
     );
@@ -49,6 +56,7 @@ void main() {
 
   testWidgets('normal motion: cascade runs after a solve', (tester) async {
     await tester.pumpWidget(_harness(reduceMotion: false));
+    await tester.pump();
     final container = ProviderScope.containerOf(
       tester.element(find.byType(GameScreen)),
     );

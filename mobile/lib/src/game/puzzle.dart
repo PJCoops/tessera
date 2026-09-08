@@ -31,20 +31,32 @@ class Puzzle {
   /// Puzzle #7 (en, classic) from the parity fixture — a real generated
   /// grid, used as the dev placeholder until the endpoint is wired.
   factory Puzzle.sample() => Puzzle(
-        num: 7,
-        goldRows: const ['turf', 'anal', 'sire', 'stew'],
-        minSwaps: 8,
-        startTiles: const [
-          Tile(13, 'T'), Tile(10, 'R'), Tile(4, 'A'), Tile(3, 'F'),
-          Tile(2, 'R'), Tile(0, 'T'), Tile(6, 'A'), Tile(8, 'S'),
-          Tile(5, 'N'), Tile(1, 'U'), Tile(12, 'S'), Tile(11, 'E'),
-          Tile(7, 'L'), Tile(15, 'W'), Tile(14, 'E'), Tile(9, 'I'),
-        ],
-      );
+    num: 7,
+    goldRows: const ['turf', 'anal', 'sire', 'stew'],
+    minSwaps: 8,
+    startTiles: const [
+      Tile(13, 'T'),
+      Tile(10, 'R'),
+      Tile(4, 'A'),
+      Tile(3, 'F'),
+      Tile(2, 'R'),
+      Tile(0, 'T'),
+      Tile(6, 'A'),
+      Tile(8, 'S'),
+      Tile(5, 'N'),
+      Tile(1, 'U'),
+      Tile(12, 'S'),
+      Tile(11, 'E'),
+      Tile(7, 'L'),
+      Tile(15, 'W'),
+      Tile(14, 'E'),
+      Tile(9, 'I'),
+    ],
+  );
 
   BoardState toBoardState() => BoardState.start(
-        goldRows: goldRows,
-        startTiles: startTiles,
-        minSwaps: minSwaps,
-      );
+    goldRows: goldRows,
+    startTiles: startTiles,
+    minSwaps: minSwaps,
+  );
 }

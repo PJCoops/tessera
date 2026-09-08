@@ -6,10 +6,10 @@ import 'package:tessera/src/game/board.dart';
 const _gold = ['abcd', 'efgh', 'ijkl', 'mnop'];
 
 BoardState _solvedStart() => BoardState.start(
-      goldRows: _gold,
-      startTiles: tilesFromRows(_gold),
-      minSwaps: 1,
-    );
+  goldRows: _gold,
+  startTiles: tilesFromRows(_gold),
+  minSwaps: 1,
+);
 
 /// A start position one swap from solved: tiles at index 0 and 5 exchanged.
 BoardState _oneSwapFromSolved() {
@@ -57,17 +57,24 @@ void main() {
     final s2 = s1.tap(2);
     expect(s2.moves, 1, reason: 'taps ignored once solved');
     expect(s2.selectedIndex, isNull);
-    expect(identical(s1.tap(7), s1), isTrue, reason: 'no-op returns same state');
+    expect(
+      identical(s1.tap(7), s1),
+      isTrue,
+      reason: 'no-op returns same state',
+    );
   });
 
-  test('isBonus tracks isSolved (a solved board == the gold grid, cols included)', () {
-    // Matches the web `validity` memo: rowValid/colValid both compare the
-    // board to the gold grid, so isSolved implies isBonus. The generator
-    // guarantees the gold grid has valid columns.
-    final s = _solvedStart();
-    expect(s.isSolved, isTrue);
-    expect(s.isBonus, isTrue);
-  });
+  test(
+    'isBonus tracks isSolved (a solved board == the gold grid, cols included)',
+    () {
+      // Matches the web `validity` memo: rowValid/colValid both compare the
+      // board to the gold grid, so isSolved implies isBonus. The generator
+      // guarantees the gold grid has valid columns.
+      final s = _solvedStart();
+      expect(s.isSolved, isTrue);
+      expect(s.isBonus, isTrue);
+    },
+  );
 
   test('rowValid reflects partial progress', () {
     // Swap two tiles within row 1 only (indices 4 and 5) -> rows 0,2,3 valid.

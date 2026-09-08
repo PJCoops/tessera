@@ -102,13 +102,17 @@ class _PositionedTile extends StatelessWidget {
     final state = (solved || rowValid)
         ? 'row complete'
         : selected
-            ? 'selected'
-            : null;
-    final label = ['Row ${row + 1}, column ${col + 1}', tile.letter, ?state]
-        .join(', ');
+        ? 'selected'
+        : null;
+    final label = [
+      'Row ${row + 1}, column ${col + 1}',
+      tile.letter,
+      ?state,
+    ].join(', ');
 
-    final swapDuration =
-        reduceMotion ? const Duration(milliseconds: 90) : const Duration(milliseconds: 200);
+    final swapDuration = reduceMotion
+        ? const Duration(milliseconds: 90)
+        : const Duration(milliseconds: 200);
     final swapCurve = reduceMotion ? Curves.linear : Curves.easeOut;
 
     return AnimatedPositioned(

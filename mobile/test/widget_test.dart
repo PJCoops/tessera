@@ -4,27 +4,30 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tessera/src/game/board_controller.dart';
 import 'package:tessera/src/game/board_view.dart';
 import 'package:tessera/src/game/game_screen.dart';
+import 'package:tessera/src/game/puzzle.dart';
 import 'package:tessera/src/theme/theme.dart';
 
 Widget _harness() => ProviderScope(
-      child: MaterialApp(
-        theme: buildTesseraTheme(brightness: Brightness.light),
-        home: const GameScreen(),
-      ),
-    );
+  overrides: [puzzleProvider.overrideWith((ref) => Puzzle.sample())],
+  child: MaterialApp(
+    theme: buildTesseraTheme(brightness: Brightness.light),
+    home: const GameScreen(),
+  ),
+);
 
 void main() {
   testWidgets('board renders 16 tiles and the kicker', (tester) async {
     await tester.pumpWidget(_harness());
+    await tester.pumpAndSettle();
     expect(find.text('TESSERA · #7'), findsOneWidget);
     expect(find.byType(BoardView), findsOneWidget);
-    // 16 tile letters (some repeat, so match the semantics buttons instead).
     final tiles = find.bySemanticsLabel(RegExp(r'^Row \d, column \d,'));
     expect(tiles, findsNWidgets(16));
   });
 
   testWidgets('tap-select then tap-swap bumps the move count', (tester) async {
     await tester.pumpWidget(_harness());
+    await tester.pumpAndSettle();
     final container = ProviderScope.containerOf(
       tester.element(find.byType(GameScreen)),
     );
@@ -36,5 +39,26 @@ void main() {
     await tester.pump();
     expect(container.read(boardProvider).moves, 1);
     expect(container.read(boardProvider).selectedIndex, isNull);
+  });
+
+  testWidgets('shows a retry state when the puzzle fails to load', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          puzzleProvider.overrideWith(
+            (ref) => Future<Puzzle>.error(Exception('offline')),
+          ),
+        ],
+        child: MaterialApp(
+          theme: buildTesseraTheme(brightness: Brightness.light),
+          home: const GameScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text("Connect to load today's puzzle"), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
   });
 }

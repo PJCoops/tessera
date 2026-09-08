@@ -12,13 +12,14 @@ class Settings {
   final bool colourBlind;
 
   Settings copyWith({ThemeMode? themeMode, bool? colourBlind}) => Settings(
-        themeMode: themeMode ?? this.themeMode,
-        colourBlind: colourBlind ?? this.colourBlind,
-      );
+    themeMode: themeMode ?? this.themeMode,
+    colourBlind: colourBlind ?? this.colourBlind,
+  );
 }
 
-final settingsProvider =
-    NotifierProvider<SettingsController, Settings>(SettingsController.new);
+final settingsProvider = NotifierProvider<SettingsController, Settings>(
+  SettingsController.new,
+);
 
 class SettingsController extends Notifier<Settings> {
   @override

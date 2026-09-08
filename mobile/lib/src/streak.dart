@@ -3,7 +3,11 @@
 // are not wins). Fixture-locked against test/fixtures/parity.json.
 
 class Streak {
-  const Streak({required this.current, required this.max, required this.lastWon});
+  const Streak({
+    required this.current,
+    required this.max,
+    required this.lastWon,
+  });
 
   final int current;
   final int max;
@@ -20,7 +24,8 @@ class Streak {
   int get hashCode => Object.hash(current, max, lastWon);
 
   @override
-  String toString() => 'Streak(current: $current, max: $max, lastWon: $lastWon)';
+  String toString() =>
+      'Streak(current: $current, max: $max, lastWon: $lastWon)';
 }
 
 /// Derives a streak from won puzzle numbers.

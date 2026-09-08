@@ -73,20 +73,42 @@ ShareSlug? parseShareSlug(String slug) {
   if (num == null || num <= 0) return null;
   final mode = isHard ? 'hard' : null;
   if (parts.length == 1) {
-    return ShareSlug(num: num, moves: null, bonus: false, revealed: false, mode: mode);
+    return ShareSlug(
+      num: num,
+      moves: null,
+      bonus: false,
+      revealed: false,
+      mode: mode,
+    );
   }
   if (parts[1] == 'r') {
-    return ShareSlug(num: num, moves: null, bonus: false, revealed: true, mode: mode);
+    return ShareSlug(
+      num: num,
+      moves: null,
+      bonus: false,
+      revealed: true,
+      mode: mode,
+    );
   }
   final moves = int.tryParse(parts[1]);
   if (moves == null || moves < 0) return null;
   final bonus = parts.length > 2 && parts[2] == 'b';
-  return ShareSlug(num: num, moves: moves, bonus: bonus, revealed: false, mode: mode);
+  return ShareSlug(
+    num: num,
+    moves: moves,
+    bonus: bonus,
+    revealed: false,
+    mode: mode,
+  );
 }
 
 /// N x N emoji grid encoding the result. Solved rows fill green; a bonus
 /// solve flips the four corners to orange; a reveal is all-white.
-String buildGrid({required bool revealed, required bool bonus, required int n}) {
+String buildGrid({
+  required bool revealed,
+  required bool bonus,
+  required int n,
+}) {
   if (revealed) {
     return List.generate(n, (_) => revealedTile * n).join('\n');
   }
@@ -97,12 +119,14 @@ String buildGrid({required bool revealed, required bool bonus, required int n}) 
   bool isCorner(int r, int c) => (r == 0 || r == last) && (c == 0 || c == last);
   return List.generate(
     n,
-    (r) => List.generate(n, (c) => isCorner(r, c) ? bonusTile : solvedTile).join(),
+    (r) =>
+        List.generate(n, (c) => isCorner(r, c) ? bonusTile : solvedTile).join(),
   ).join('\n');
 }
 
 /// The colour-blind text grid: green -> blue only (spec §17.2).
-String toColourBlindGrid(String grid) => grid.replaceAll(solvedTile, colourBlindSolvedTile);
+String toColourBlindGrid(String grid) =>
+    grid.replaceAll(solvedTile, colourBlindSolvedTile);
 
 class ShareInput {
   const ShareInput({
@@ -129,7 +153,11 @@ class ShareInput {
 }
 
 class SharePayload {
-  const SharePayload({required this.text, required this.url, required this.full});
+  const SharePayload({
+    required this.text,
+    required this.url,
+    required this.full,
+  });
   final String text;
   final String url;
   final String full;
@@ -144,12 +172,17 @@ SharePayload buildSharePayload(ShareInput input) {
   final tier = getTier(input.moves, input.minSwaps);
   final tierName = t(input.dict, 'tiers.${tier.key.name}');
   final emoji = tierEmoji[tier.key] ?? '';
-  final swapWord =
-      t(input.dict, input.moves == 1 ? 'game.swapSingular' : 'game.swapPlural');
+  final swapWord = t(
+    input.dict,
+    input.moves == 1 ? 'game.swapSingular' : 'game.swapPlural',
+  );
 
-  final headlineKey = isHard ? 'share.headlineSolvedHard' : 'share.headlineSolved';
-  final revealedKey =
-      isHard ? 'share.headlineRevealedHard' : 'share.headlineRevealed';
+  final headlineKey = isHard
+      ? 'share.headlineSolvedHard'
+      : 'share.headlineSolved';
+  final revealedKey = isHard
+      ? 'share.headlineRevealedHard'
+      : 'share.headlineRevealed';
   final headline = input.revealed
       ? t(input.dict, revealedKey, {'num': input.puzzleNumber})
       : t(input.dict, headlineKey, {
@@ -168,13 +201,15 @@ SharePayload buildSharePayload(ShareInput input) {
     meta.add(t(input.dict, 'share.bonusMeta'));
   }
 
-  final slug = buildShareSlug(ShareSlug(
-    num: input.puzzleNumber,
-    moves: input.moves,
-    bonus: input.bonus,
-    revealed: input.revealed,
-    mode: input.mode,
-  ));
+  final slug = buildShareSlug(
+    ShareSlug(
+      num: input.puzzleNumber,
+      moves: input.moves,
+      bonus: input.bonus,
+      revealed: input.revealed,
+      mode: input.mode,
+    ),
+  );
   final localePrefix = input.locale == 'en' ? '' : '/${input.locale}';
   final sharePath = isHard ? '/hard/s' : '/s';
   final url = 'https://tesserapuzzle.com$localePrefix$sharePath/$slug';

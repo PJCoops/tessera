@@ -113,7 +113,10 @@ class BoardState {
       minSwaps: minSwaps,
       selectedIndex: null,
       moves: nextMoves,
-      history: [...history, [from, index]],
+      history: [
+        ...history,
+        [from, index],
+      ],
       solvedAtMove: solvedAtMove,
     );
     // Latch the solve moment so justSolved is true for exactly one state.
@@ -132,7 +135,9 @@ class BoardState {
       positions: positions,
       goldRows: goldRows,
       minSwaps: minSwaps,
-      selectedIndex: clearSelection ? null : (selectedIndex ?? this.selectedIndex),
+      selectedIndex: clearSelection
+          ? null
+          : (selectedIndex ?? this.selectedIndex),
       moves: moves,
       history: history,
       solvedAtMove: solvedAtMove ?? this.solvedAtMove,

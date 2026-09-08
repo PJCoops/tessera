@@ -43,13 +43,15 @@ void main() {
       final input = row['input'] as Map<String, dynamic>;
       final slug = row['slug'] as String;
       test('$input -> $slug', () {
-        final built = buildShareSlug(ShareSlug(
-          num: input['num'] as int,
-          moves: input['moves'] as int?,
-          bonus: input['bonus'] as bool,
-          revealed: input['revealed'] as bool,
-          mode: input['mode'] as String?,
-        ));
+        final built = buildShareSlug(
+          ShareSlug(
+            num: input['num'] as int,
+            moves: input['moves'] as int?,
+            bonus: input['bonus'] as bool,
+            revealed: input['revealed'] as bool,
+            mode: input['mode'] as String?,
+          ),
+        );
         expect(built, slug);
 
         final parsed = parseShareSlug(slug)!;
@@ -84,17 +86,19 @@ void main() {
       final locale = input['locale'] as String;
       test('#${input['puzzleNumber']} ${input['mode']} $locale '
           'moves=${input['moves']} revealed=${input['revealed']}', () {
-        final payload = buildSharePayload(ShareInput(
-          puzzleNumber: input['puzzleNumber'] as int,
-          moves: input['moves'] as int,
-          minSwaps: input['minSwaps'] as int,
-          streak: input['streak'] as int,
-          bonus: input['bonus'] as bool,
-          revealed: input['revealed'] as bool,
-          locale: locale,
-          mode: input['mode'] as String,
-          dict: dicts[locale]!,
-        ));
+        final payload = buildSharePayload(
+          ShareInput(
+            puzzleNumber: input['puzzleNumber'] as int,
+            moves: input['moves'] as int,
+            minSwaps: input['minSwaps'] as int,
+            streak: input['streak'] as int,
+            bonus: input['bonus'] as bool,
+            revealed: input['revealed'] as bool,
+            locale: locale,
+            mode: input['mode'] as String,
+            dict: dicts[locale]!,
+          ),
+        );
         expect(payload.text, row['text']);
         expect(payload.url, row['url']);
         expect(payload.full, row['full']);

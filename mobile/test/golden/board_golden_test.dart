@@ -30,7 +30,12 @@ Puzzle _inProgress() {
 
   swap(4, 5);
   swap(12, 13);
-  return Puzzle(num: p.num, goldRows: p.goldRows, minSwaps: 4, startTiles: home);
+  return Puzzle(
+    num: p.num,
+    goldRows: p.goldRows,
+    minSwaps: 4,
+    startTiles: home,
+  );
 }
 
 Future<void> _pumpBoard(
@@ -43,18 +48,34 @@ Future<void> _pumpBoard(
       overrides: [puzzleProvider.overrideWith((ref) => _inProgress())],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: buildTesseraTheme(brightness: brightness, colourBlind: colourBlind),
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(width: 360, height: 360, child: BoardView()),
+        theme: buildTesseraTheme(
+          brightness: brightness,
+          colourBlind: colourBlind,
+        ),
+        home: Consumer(
+          builder: (context, ref, _) => Scaffold(
+            body: Center(
+              child: ref
+                  .watch(puzzleProvider)
+                  .maybeWhen(
+                    data: (_) => const SizedBox(
+                      width: 360,
+                      height: 360,
+                      child: BoardView(),
+                    ),
+                    orElse: () => const SizedBox.shrink(),
+                  ),
+            ),
           ),
         ),
       ),
     ),
   );
+  await tester.pump(); // resolve the puzzle future
   // Select a tile so the selection token shows.
-  final container =
-      ProviderScope.containerOf(tester.element(find.byType(BoardView)));
+  final container = ProviderScope.containerOf(
+    tester.element(find.byType(BoardView)),
+  );
   container.read(boardProvider.notifier).tap(6);
   await tester.pumpAndSettle();
 }
