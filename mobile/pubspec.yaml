@@ -45,6 +45,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_flavorizr: ^2.6.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -87,3 +88,34 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# dev / prod flavors (spec §19). Generated scaffolding via
+# `dart run flutter_flavorizr` with the instruction set below.
+# dev  -> com.tesserapuzzle.app.dev  ("Tessera Dev")
+# prod -> com.tesserapuzzle.app      ("Tessera")
+flavorizr:
+  flavors:
+    dev:
+      app:
+        name: "Tessera Dev"
+      android:
+        applicationId: "com.tesserapuzzle.app.dev"
+      ios:
+        bundleId: "com.tesserapuzzle.app.dev"
+    prod:
+      app:
+        name: "Tessera"
+      android:
+        applicationId: "com.tesserapuzzle.app"
+      ios:
+        bundleId: "com.tesserapuzzle.app"
+  instructions:
+    - android:flavorizrGradle
+    - android:buildGradle
+    - android:androidManifest
+    - flutter:flavors
+    - ios:podfile
+    - ios:xcconfig
+    - ios:buildTargets
+    - ios:schema
+    - ios:plist
