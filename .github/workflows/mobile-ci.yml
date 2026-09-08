@@ -1,0 +1,52 @@
+name: Mobile CI
+
+# Runs on any change under mobile/ or to the assets the mobile build
+# vendors from the web app (spec §21). Keeps the Flutter client honest:
+# analyze clean, tests green, and the vendored shared assets in sync.
+
+on:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - "app/locales/**"
+      - "app/_fonts/**"
+      - "public/win.mp3"
+      - "app/lib/epoch.ts"
+      - "app/lib/api/v1-schema.json"
+      - "app/lib/mobile-parity.fixture.json"
+      - ".github/workflows/mobile-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+
+concurrency:
+  group: mobile-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Pin exactly (spec §12.4 / §19). Must match the local toolchain —
+          # `flutter --version` — and be a real stable release tag.
+          flutter-version: "3.41.2"
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Shared assets are in sync with the web app
+        run: dart run tool/sync_shared_assets.dart --check
+
+      - run: flutter analyze
+
+      - run: flutter test

@@ -1,17 +1,45 @@
-# tessera
+# Tessera mobile (Flutter)
 
-Tessera - daily word puzzle
+Native iOS + Android client. Shares the Vercel/Supabase backend with the
+Next.js web app (`../app`). See `../docs/flutter-app-spec.md` for the full
+plan; this is Phase 1 (scaffold + flavors + shared-logic ports).
 
-## Getting Started
+## Toolchain
 
-This project is a starting point for a Flutter application.
+- Flutter **3.41.2** (pinned; keep local and CI in lockstep — spec §12.4).
+- iPhone-only for v1 (`TARGETED_DEVICE_FAMILY = 1`).
+- Android `minSdk 23`.
 
-A few resources to get you started if this is your first Flutter project:
+## Flavors
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+| Flavor | Bundle id / applicationId | Name |
+| --- | --- | --- |
+| `dev`  | `com.tesserapuzzle.app.dev` | Tessera Dev |
+| `prod` | `com.tesserapuzzle.app`     | Tessera |
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter run --flavor dev  -t lib/main_dev.dart
+flutter run --flavor prod -t lib/main_prod.dart
+```
+
+## Shared assets
+
+Locale JSON, fonts, `win.mp3`, `EPOCH`, the v1 schema, and the parity
+fixture are vendored from the web app. Re-sync after changing any of those
+sources:
+
+```sh
+dart run tool/sync_shared_assets.dart          # copy
+dart run tool/sync_shared_assets.dart --check   # CI: fail if stale
+```
+
+## Test
+
+```sh
+flutter analyze
+flutter test          # includes test/parity_test.dart (fixture-locked)
+```
+
+`test/fixtures/parity.json` is generated web-side (`npm run gen:parity` in
+the repo root) and copied here by the sync script. The Dart ports in
+`lib/src/` must reproduce every value in it.
