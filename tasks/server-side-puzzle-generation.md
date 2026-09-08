@@ -1,6 +1,11 @@
 # Server-side puzzle generation — plan
 
-Future work. Not started. Tracked here so we can come back to it without re-deriving the design.
+> **Done (Phase 0 of `docs/flutter-app-spec.md`).** Shipped as
+> `GET /api/v1/puzzle` (versioned path, not the bare `/api/puzzle` sketched
+> below), with the generator + wordlists in `app/lib/server/puzzle-engine.ts`
+> behind `server-only`, the client fetching via `app/lib/puzzle-client.ts`,
+> and the response frozen against `app/lib/api/v1-schema.ts`. Original design
+> notes retained below for context.
 
 ## Why
 

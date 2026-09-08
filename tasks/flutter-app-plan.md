@@ -1,5 +1,12 @@
 # Tessera Mobile (Flutter) — Plan
 
+> **Superseded by `docs/flutter-app-spec.md`.** That spec is authoritative
+> wherever the two disagree. In particular it reverses the "puzzle generated
+> on-device in Dart, no new endpoints" call below: puzzle generation and the
+> wordlists are now server-side behind `GET /api/v1/puzzle` (spec §4.3,
+> decision 2), shipped in Phase 0. This file is kept only for the
+> still-relevant repo-layout / state-key / phase notes.
+
 Living plan for porting Tessera to iOS and Android using Flutter. Web app stays in `app/`; mobile lives in `mobile/` in this repo so wordlists and locale dictionaries stay in lockstep.
 
 ## Decisions (locked)
