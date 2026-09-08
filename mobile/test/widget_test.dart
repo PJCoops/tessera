@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tessera/src/game/board_controller.dart';
 import 'package:tessera/src/game/board_view.dart';
 import 'package:tessera/src/game/game_screen.dart';
@@ -16,6 +17,12 @@ Widget _harness() => ProviderScope(
 );
 
 void main() {
+  setUp(
+    () => SharedPreferences.setMockInitialValues({
+      'tessera:first_run_demo_seen': true,
+    }),
+  );
+
   testWidgets('board renders 16 tiles and the kicker', (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pumpAndSettle();

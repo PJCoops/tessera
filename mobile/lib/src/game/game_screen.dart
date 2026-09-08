@@ -7,6 +7,7 @@ import 'board.dart';
 import 'board_controller.dart';
 import 'board_view.dart';
 import 'feedback.dart';
+import 'first_run.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
@@ -40,10 +41,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final c = context.colors;
     final settings = ref.watch(settingsProvider);
     final puzzle = ref.watch(puzzleProvider);
+    final showDemo = puzzle.hasValue && !ref.watch(firstRunSeenProvider);
 
     // Only wire sound/haptics once there's a board to react to.
     if (puzzle.hasValue) {
       ref.listen<BoardState>(boardProvider, _onBoardChanged);
+    }
+
+    if (showDemo) {
+      return Scaffold(
+        backgroundColor: c.paper,
+        body: SafeArea(child: FirstRunDemo(onDone: () => setState(() {}))),
+      );
     }
 
     return Scaffold(
