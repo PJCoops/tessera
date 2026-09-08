@@ -32,7 +32,6 @@ type Handler = (req: Request) => Promise<Response> | Response;
 let GET: Handler;
 
 beforeAll(async () => {
-  // @ts-expect-error ./route.ts is created in Phase 0; remove this directive then.
   if (routeExists) ({ GET } = (await import("./route")) as { GET: Handler });
 });
 
