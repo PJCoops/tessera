@@ -7,10 +7,13 @@ import 'board_controller.dart';
 
 const _gap = 8.0;
 const _radius = 10.0;
+const _cascadeStagger = Duration(milliseconds: 70);
 
 /// The tile grid. Tiles are positioned absolutely and animate to their
 /// slot on a swap (transform only — spec §13.2). Every tile carries a
-/// semantic label with its position, letter, and state (§17.1).
+/// semantic label with its position, letter, and state (§17.1). When the
+/// board is solved the tiles bounce in reading order; the reduce-motion
+/// path skips the bounce and just recolours (§17.3, §20.2).
 class BoardView extends ConsumerWidget {
   const BoardView({super.key, this.maxSize = 360});
 
@@ -19,6 +22,7 @@ class BoardView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final board = ref.watch(boardProvider);
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
     final n = board.n;
 
     return LayoutBuilder(
@@ -41,6 +45,7 @@ class BoardView extends ConsumerWidget {
                   selected: board.selectedIndex == index,
                   rowValid: board.rowValid[index ~/ n],
                   solved: board.isSolved,
+                  reduceMotion: reduceMotion,
                   onTap: () => ref.read(boardProvider.notifier).tap(index),
                 ),
             ],
@@ -61,6 +66,7 @@ class _PositionedTile extends StatelessWidget {
     required this.selected,
     required this.rowValid,
     required this.solved,
+    required this.reduceMotion,
     required this.onTap,
   });
 
@@ -71,6 +77,7 @@ class _PositionedTile extends StatelessWidget {
   final bool selected;
   final bool rowValid;
   final bool solved;
+  final bool reduceMotion;
   final VoidCallback onTap;
 
   @override
@@ -92,22 +99,21 @@ class _PositionedTile extends StatelessWidget {
       fg = c.ink;
     }
 
-    final state = solved
+    final state = (solved || rowValid)
         ? 'row complete'
-        : rowValid
-            ? 'row complete'
-            : selected
-                ? 'selected'
-                : null;
-    final label = [
-      'Row ${row + 1}, column ${col + 1}',
-      tile.letter,
-      ?state,
-    ].join(', ');
+        : selected
+            ? 'selected'
+            : null;
+    final label = ['Row ${row + 1}, column ${col + 1}', tile.letter, ?state]
+        .join(', ');
+
+    final swapDuration =
+        reduceMotion ? const Duration(milliseconds: 90) : const Duration(milliseconds: 200);
+    final swapCurve = reduceMotion ? Curves.linear : Curves.easeOut;
 
     return AnimatedPositioned(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
+      duration: swapDuration,
+      curve: swapCurve,
       left: col * (size + _gap),
       top: row * (size + _gap),
       width: size,
@@ -119,29 +125,33 @@ class _PositionedTile extends StatelessWidget {
           excludeSemantics: true,
           child: GestureDetector(
             onTap: onTap,
-            child: AnimatedScale(
-              scale: selected ? 1.04 : 1,
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOut,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
+            child: _CascadeScale(
+              active: solved && !reduceMotion,
+              delay: _cascadeStagger * slot,
+              child: AnimatedScale(
+                scale: selected ? 1.04 : 1,
+                duration: Duration(milliseconds: reduceMotion ? 0 : 120),
                 curve: Curves.easeOut,
-                decoration: BoxDecoration(
-                  color: bg,
-                  borderRadius: BorderRadius.circular(_radius),
-                  border: Border.all(
-                    color: selected ? c.tileSelected : c.rule,
-                    width: selected ? 2.5 : 1,
+                child: AnimatedContainer(
+                  duration: Duration(milliseconds: reduceMotion ? 120 : 180),
+                  curve: Curves.easeOut,
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: BorderRadius.circular(_radius),
+                    border: Border.all(
+                      color: selected ? c.tileSelected : c.rule,
+                      width: selected ? 2.5 : 1,
+                    ),
                   ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  tile.letter,
-                  style: TextStyle(
-                    fontFamily: 'Fraunces',
-                    fontSize: size * 0.42,
-                    fontWeight: FontWeight.w300,
-                    color: fg,
+                  alignment: Alignment.center,
+                  child: Text(
+                    tile.letter,
+                    style: TextStyle(
+                      fontFamily: 'Fraunces',
+                      fontSize: size * 0.42,
+                      fontWeight: FontWeight.w300,
+                      color: fg,
+                    ),
                   ),
                 ),
               ),
@@ -151,4 +161,54 @@ class _PositionedTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One-shot bounce (scale 1 -> 1.1 -> 1) that starts [delay] after
+/// [active] first becomes true. Used for the solved cascade so tiles pop
+/// in reading order.
+class _CascadeScale extends StatefulWidget {
+  const _CascadeScale({
+    required this.active,
+    required this.delay,
+    required this.child,
+  });
+
+  final bool active;
+  final Duration delay;
+  final Widget child;
+
+  @override
+  State<_CascadeScale> createState() => _CascadeScaleState();
+}
+
+class _CascadeScaleState extends State<_CascadeScale>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  );
+  late final Animation<double> _scale = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.1), weight: 1),
+    TweenSequenceItem(tween: Tween(begin: 1.1, end: 1.0), weight: 1),
+  ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+
+  @override
+  void didUpdateWidget(_CascadeScale old) {
+    super.didUpdateWidget(old);
+    if (widget.active && !old.active) {
+      Future.delayed(widget.delay, () {
+        if (mounted) _ctrl.forward(from: 0);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ScaleTransition(scale: _scale, child: widget.child);
 }

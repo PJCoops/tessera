@@ -2,14 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/tokens.dart';
+import 'board.dart';
 import 'board_controller.dart';
 import 'board_view.dart';
+import 'feedback.dart';
 
-class GameScreen extends ConsumerWidget {
+class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends ConsumerState<GameScreen> {
+  final _feedback = GameFeedback();
+
+  @override
+  void dispose() {
+    _feedback.dispose();
+    super.dispose();
+  }
+
+  void _onBoardChanged(BoardState? prev, BoardState next) {
+    if (prev == null) return;
+    if (next.justSolved) {
+      _feedback.solved();
+    } else if (next.moves > prev.moves) {
+      _feedback.swap();
+    } else if (next.selectedIndex != null && prev.selectedIndex == null) {
+      _feedback.select();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(boardProvider, _onBoardChanged);
+
     final c = context.colors;
     final board = ref.watch(boardProvider);
     final puzzle = ref.watch(puzzleProvider);
