@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'flavors.dart';
@@ -7,7 +8,7 @@ import 'flavors.dart';
 /// call this. Running `lib/main.dart` directly defaults to the dev flavor.
 void run(Flavor flavor) {
   F.appFlavor = flavor;
-  runApp(const TesseraApp());
+  runApp(const ProviderScope(child: TesseraApp()));
 }
 
 void main() => run(Flavor.dev);
