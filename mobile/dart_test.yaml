@@ -1,0 +1,4 @@
+tags:
+  golden:
+    # Golden images are macOS-baseline; regenerate with
+    # `flutter test --update-goldens test/golden`. CI (Linux) skips this tag.

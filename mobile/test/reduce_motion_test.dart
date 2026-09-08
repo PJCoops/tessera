@@ -8,27 +8,19 @@ import 'package:tessera/src/game/puzzle.dart';
 import 'package:tessera/src/theme/theme.dart';
 
 // A puzzle one swap from solved so a test can trigger the win path.
-final _almostProvider = Provider<Puzzle>((ref) {
+Puzzle _almostSolved() {
   final p = Puzzle.sample();
-  final tiles = List.of(p.startTiles);
-  // Put every tile home except two, which are exchanged -> solvable in 1.
   final solved = [
-    for (var i = 0; i < 16; i++)
-      tiles.firstWhere((t) => t.id == i),
+    for (var i = 0; i < 16; i++) p.startTiles.firstWhere((t) => t.id == i),
   ];
   final a = solved[0];
   solved[0] = solved[1];
   solved[1] = a;
-  return Puzzle(
-    num: p.num,
-    goldRows: p.goldRows,
-    minSwaps: 1,
-    startTiles: solved,
-  );
-});
+  return Puzzle(num: p.num, goldRows: p.goldRows, minSwaps: 1, startTiles: solved);
+}
 
 Widget _harness({required bool reduceMotion}) => ProviderScope(
-      overrides: [puzzleProvider.overrideWithProvider(_almostProvider)],
+      overrides: [puzzleProvider.overrideWith((ref) => _almostSolved())],
       child: MaterialApp(
         theme: buildTesseraTheme(brightness: Brightness.light),
         home: MediaQuery(
