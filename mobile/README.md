@@ -27,6 +27,21 @@ flutter run --flavor dev  -t lib/main_dev.dart
 flutter run --flavor prod -t lib/main_prod.dart
 ```
 
+### Pointing dev at a local backend
+
+`dev` defaults to `https://dev.tesserapuzzle.com`. Until that (or the
+`/api/v1/puzzle` route) is deployed, the app falls back to a bundled
+sample puzzle. To run against the Next.js app locally, start it
+(`npm run dev` in the repo root) and pass its origin:
+
+```sh
+flutter run --flavor dev -t lib/main_dev.dart \
+  --dart-define=API_BASE_URL=http://localhost:3000
+```
+
+The iOS simulator reaches the host on `localhost`; the `Info.plist`
+carries an `NSAllowsLocalNetworking` exception for the cleartext origin.
+
 ## Shared assets
 
 Locale JSON, fonts, `win.mp3`, `EPOCH`, the v1 schema, and the parity

@@ -41,7 +41,10 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           _SettingRow(
             title: t(dict, 'settings.theme.title'),
-            description: t(dict, 'settings.theme.description'),
+            // The shared locale string says "this browser"; on device the
+            // choice is just remembered. (Full mobile copy is Phase 6.)
+            description: 'System follows your device. Light or dark is '
+                'remembered here.',
             control: _Segmented<ThemeMode>(
               value: s.themeMode,
               onChanged: ctrl.setThemeMode,
@@ -86,7 +89,9 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             title: Text(t(dict, 'settings.reminder.title')),
             subtitle: Text(
-              t(dict, 'settings.reminder.description'),
+              // Scheduling lands in Phase 8; for now the time is only saved.
+              'A local reminder at this time each day. Turns on in a later '
+                  'update.',
               style: TextStyle(fontSize: 12, color: c.muted),
             ),
             trailing: Text(
