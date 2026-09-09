@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const ip = await rateLimit(req, "v1-results-get", 60, "1 m");
   if (!ip.ok) return limited(ip.retryAfter);
 
-  const userId = await getUserId();
+  const userId = await getUserId(req);
   if (!userId) {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const ip = await rateLimit(req, "v1-results-submit", 30, "1 m");
   if (!ip.ok) return limited(ip.retryAfter);
 
-  const userId = await getUserId();
+  const userId = await getUserId(req);
   if (!userId) {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }

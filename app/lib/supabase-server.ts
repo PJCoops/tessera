@@ -25,13 +25,26 @@ export async function createServerSupabase() {
   });
 }
 
+/** Extracts a `Bearer <jwt>` access token from a request's Authorization
+ *  header. Native clients (Flutter) send the Supabase access token this
+ *  way; the web sends nothing and auth falls back to the SSR cookies. */
+export function bearerToken(req?: Request): string | undefined {
+  const header = req?.headers.get("authorization") ?? "";
+  const m = header.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1] : undefined;
+}
+
 // Authenticated user id for API routes. getUser() validates the JWT with
-// the auth server rather than trusting the cookie payload.
-export async function getUserId(): Promise<string | null> {
+// the auth server rather than trusting the cookie payload. Pass `req` to
+// allow a `Bearer` access token (mobile) in addition to the SSR cookies.
+export async function getUserId(req?: Request): Promise<string | null> {
   const supabase = await createServerSupabase();
   if (!supabase) return null;
+  const token = bearerToken(req);
   try {
-    const { data, error } = await supabase.auth.getUser();
+    const { data, error } = token
+      ? await supabase.auth.getUser(token)
+      : await supabase.auth.getUser();
     if (error) return null;
     return data.user?.id ?? null;
   } catch {

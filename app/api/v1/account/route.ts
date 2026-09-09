@@ -33,7 +33,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "not_configured" }, { status: 503 });
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(req);
   if (!ctx) {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "not_configured" }, { status: 503 });
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(req);
   if (!ctx) {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }

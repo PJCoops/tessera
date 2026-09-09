@@ -6,7 +6,7 @@
 // actually authenticated (OTP verify, OAuth), which survives silent token
 // refreshes — unlike `iat`.
 
-import { createServerSupabase } from "./supabase-server";
+import { bearerToken, createServerSupabase } from "./supabase-server";
 
 export type AuthContext = {
   userId: string;
@@ -39,14 +39,20 @@ function authTimeFromClaims(claims: Record<string, unknown> | null): number | nu
   return typeof claims.iat === "number" ? claims.iat * 1000 : null;
 }
 
-export async function getAuthContext(): Promise<AuthContext | null> {
+export async function getAuthContext(req?: Request): Promise<AuthContext | null> {
   const supabase = await createServerSupabase();
   if (!supabase) return null;
+  const bearer = bearerToken(req);
   try {
-    const { data: userData, error } = await supabase.auth.getUser();
+    const { data: userData, error } = bearer
+      ? await supabase.auth.getUser(bearer)
+      : await supabase.auth.getUser();
     if (error || !userData.user) return null;
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
+    let token = bearer;
+    if (!token) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      token = sessionData.session?.access_token;
+    }
     return {
       userId: userData.user.id,
       email: userData.user.email ?? null,
