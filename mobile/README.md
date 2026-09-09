@@ -47,7 +47,9 @@ carries an `NSAllowsLocalNetworking` exception for the cleartext origin.
 
 ## Accounts (Phase 4)
 
-Sign-in and sync are wired but need config to work end to end.
+Sign-in and sync are wired but need config to work end to end. **Full
+step-by-step runbook: [`../docs/mobile-accounts-setup.md`](../docs/mobile-accounts-setup.md).**
+The summary below is the short version.
 
 **Build-time (`--dart-define`):**
 
