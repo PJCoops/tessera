@@ -5,7 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../auth/auth_controller.dart';
+import '../auth/second_method_prompt.dart';
 import '../auth/sign_in_sheet.dart';
+import '../auth/streak_decrease_screen.dart';
+import '../sync/sync_engine.dart';
+import '../sync/sync_providers.dart';
 import '../chrome/how_to_sheet.dart';
 import '../chrome/history_screen.dart';
 import '../chrome/legend.dart';
@@ -179,6 +183,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       settingsProvider.select((s) => s.muted),
       (_, muted) => _feedback.muted = muted,
     );
+
+    // Account plumbing: run the first-sign-in sync, surface the
+    // streak-decrease screen, and offer a second sign-in method once.
+    ref.watch(accountSyncProvider);
+    ref.listen<StreakDecrease?>(streakDecreaseProvider, (_, info) {
+      if (info != null && mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => StreakDecreaseScreen(info: info),
+          ),
+        );
+      }
+    });
+    ref.listen<AuthUser?>(authUserProvider, (prev, next) {
+      if (prev == null && next != null && mounted) {
+        maybeShowSecondMethodPrompt(context, ref);
+      }
+    });
 
     if (showDemo) {
       return Scaffold(

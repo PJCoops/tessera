@@ -323,5 +323,19 @@
       "cta": "Instalar",
       "dismiss": "Quizá más tarde"
     }
+  },
+  "streakSync": {
+    "title": "Racha sincronizada",
+    "wasNow": "Tu racha ahora es {current} (antes {previous}).",
+    "best": "Mejor racha conservada: {best}",
+    "transfer": "Enviados {pushed} · recibidos {pulled}",
+    "why": "Al iniciar sesión, el historial de tu cuenta manda.",
+    "dismiss": "Entendido"
+  },
+  "secondMethod": {
+    "title": "Añade un acceso de reserva",
+    "body": "Añade Apple o Google para no quedarte fuera si pierdes el acceso a tu correo.",
+    "add": "Añadir un método",
+    "later": "Ahora no"
   }
 }

@@ -323,5 +323,19 @@
       "cta": "Install",
       "dismiss": "Maybe later"
     }
+  },
+  "streakSync": {
+    "title": "Your streak synced",
+    "wasNow": "Your streak is now {current} (was {previous}).",
+    "best": "Best streak kept: {best}",
+    "transfer": "Sent {pushed} · received {pulled}",
+    "why": "Your account history is the source of truth once you sign in.",
+    "dismiss": "Got it"
+  },
+  "secondMethod": {
+    "title": "Add a backup sign-in",
+    "body": "Add Apple or Google so you don’t get locked out if you lose access to your email.",
+    "add": "Add a method",
+    "later": "Not now"
   }
 }
