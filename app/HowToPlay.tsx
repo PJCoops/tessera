@@ -271,28 +271,50 @@ function writeDefCache(word: string, c: DefCached) {
 }
 
 const LOOKUP_TIMEOUT_MS = 6000;
+const LOOKUP_MAX_ATTEMPTS = 3;
+const LOOKUP_RETRY_DELAY_MS = 400;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 async function lookupOne(word: string): Promise<{ definition: string | null; partOfSpeech: string | null }> {
-  // dictionaryapi.dev occasionally stalls without ever erroring out — abort
-  // so one slow word can't hold up the rest indefinitely.
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
-  try {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en_GB/${encodeURIComponent(word)}`, {
-      signal: controller.signal,
-    });
-    if (!res.ok) return { definition: null, partOfSpeech: null };
-    const data = await res.json();
-    const meaning = data?.[0]?.meanings?.[0];
-    return {
-      definition: meaning?.definitions?.[0]?.definition ?? null,
-      partOfSpeech: meaning?.partOfSpeech ?? null,
-    };
-  } catch {
-    return { definition: null, partOfSpeech: null };
-  } finally {
-    clearTimeout(timer);
+  for (let attempt = 0; attempt < LOOKUP_MAX_ATTEMPTS; attempt++) {
+    // dictionaryapi.dev occasionally stalls without ever erroring out — abort
+    // so one slow word can't hold up the rest indefinitely.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
+    try {
+      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en_GB/${encodeURIComponent(word)}`, {
+        signal: controller.signal,
+      });
+      // 404 is the API's genuine "no entry for this word" — final, don't retry.
+      if (res.status === 404) return { definition: null, partOfSpeech: null };
+      if (!res.ok) {
+        if (attempt < LOOKUP_MAX_ATTEMPTS - 1) {
+          await delay(LOOKUP_RETRY_DELAY_MS * (attempt + 1));
+          continue;
+        }
+        return { definition: null, partOfSpeech: null };
+      }
+      const data = await res.json();
+      const meaning = data?.[0]?.meanings?.[0];
+      return {
+        definition: meaning?.definitions?.[0]?.definition ?? null,
+        partOfSpeech: meaning?.partOfSpeech ?? null,
+      };
+    } catch {
+      // Network error, abort/timeout, or bad JSON — treat as transient and retry.
+      if (attempt < LOOKUP_MAX_ATTEMPTS - 1) {
+        await delay(LOOKUP_RETRY_DELAY_MS * (attempt + 1));
+        continue;
+      }
+      return { definition: null, partOfSpeech: null };
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  return { definition: null, partOfSpeech: null };
 }
 function lemmaCandidates(word: string): string[] {
   const out: string[] = [];
