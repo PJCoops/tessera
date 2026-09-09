@@ -270,9 +270,17 @@ function writeDefCache(word: string, c: DefCached) {
   } catch {}
 }
 
+const LOOKUP_TIMEOUT_MS = 6000;
+
 async function lookupOne(word: string): Promise<{ definition: string | null; partOfSpeech: string | null }> {
+  // dictionaryapi.dev occasionally stalls without ever erroring out — abort
+  // so one slow word can't hold up the rest indefinitely.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
   try {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en_GB/${encodeURIComponent(word)}`);
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en_GB/${encodeURIComponent(word)}`, {
+      signal: controller.signal,
+    });
     if (!res.ok) return { definition: null, partOfSpeech: null };
     const data = await res.json();
     const meaning = data?.[0]?.meanings?.[0];
@@ -282,6 +290,8 @@ async function lookupOne(word: string): Promise<{ definition: string | null; par
     };
   } catch {
     return { definition: null, partOfSpeech: null };
+  } finally {
+    clearTimeout(timer);
   }
 }
 function lemmaCandidates(word: string): string[] {
@@ -338,27 +348,27 @@ function WordsContent({ goldRows }: { goldRows: string[] }) {
     setEntries(initial);
     if (isStatic) return;
     const toFetch = initial.filter((e) => e.loading).map((e) => e.word);
-    Promise.all(
-      toFetch.map(async (w) => {
-        const c = await fetchDefinition(w);
+    // Resolve and render each word independently — waiting on a single
+    // Promise.all would let one slow/stuck lookup hold every other
+    // already-resolved word on the loading placeholder too.
+    toFetch.forEach((w) => {
+      fetchDefinition(w).then((c) => {
         writeDefCache(w, c);
-        return [w, c] as const;
-      })
-    ).then((pairs) => {
-      if (cancelled) return;
-      setEntries((prev) =>
-        prev.map((e) => {
-          const f = pairs.find(([w]) => w === e.word);
-          if (!f) return e;
-          return {
-            ...e,
-            loading: false,
-            definition: f[1].definition,
-            partOfSpeech: f[1].partOfSpeech,
-            resolvedFrom: f[1].resolvedFrom,
-          };
-        })
-      );
+        if (cancelled) return;
+        setEntries((prev) =>
+          prev.map((e) =>
+            e.word === w
+              ? {
+                  ...e,
+                  loading: false,
+                  definition: c.definition,
+                  partOfSpeech: c.partOfSpeech,
+                  resolvedFrom: c.resolvedFrom,
+                }
+              : e
+          )
+        );
+      });
     });
     return () => {
       cancelled = true;
