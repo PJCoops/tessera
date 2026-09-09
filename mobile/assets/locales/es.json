@@ -337,5 +337,20 @@
     "body": "Añade Apple o Google para no quedarte fuera si pierdes el acceso a tu correo.",
     "add": "Añadir un método",
     "later": "Ahora no"
+  },
+  "deleteAccount": {
+    "title": "Eliminar cuenta",
+    "confirmTitle": "¿Eliminar tu cuenta?",
+    "confirmBody": "Se eliminan tu racha, tu historial y tus ligas. Tienes 48 horas para cambiar de idea antes de que sea permanente.",
+    "confirm": "Eliminar",
+    "cancel": "Conservar cuenta",
+    "reauthTitle": "Confirma que eres tú",
+    "reauthBody": "Introduce el código de 6 dígitos que enviamos a {email}.",
+    "pendingTitle": "Eliminación programada",
+    "pendingBody": "Tu cuenta está desactivada y se eliminará de forma permanente el {date}. Puedes restaurarla antes de esa fecha.",
+    "restore": "Restaurar cuenta",
+    "restored": "Cuenta restaurada.",
+    "done": "Hecho",
+    "failed": "No funcionó. Inténtalo de nuevo."
   }
 }

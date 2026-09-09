@@ -337,5 +337,20 @@
     "body": "Add Apple or Google so you don’t get locked out if you lose access to your email.",
     "add": "Add a method",
     "later": "Not now"
+  },
+  "deleteAccount": {
+    "title": "Delete account",
+    "confirmTitle": "Delete your account?",
+    "confirmBody": "Your streak, history and leagues are removed. You have 48 hours to change your mind before it becomes permanent.",
+    "confirm": "Delete",
+    "cancel": "Keep account",
+    "reauthTitle": "Confirm it’s you",
+    "reauthBody": "Enter the 6-digit code we just emailed to {email}.",
+    "pendingTitle": "Deletion scheduled",
+    "pendingBody": "Your account is disabled and will be permanently deleted on {date}. Restore it any time before then.",
+    "restore": "Restore account",
+    "restored": "Account restored.",
+    "done": "Done",
+    "failed": "That didn’t work. Try again."
   }
 }
