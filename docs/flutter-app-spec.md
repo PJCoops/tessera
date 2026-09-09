@@ -925,7 +925,7 @@ mobile phases that depend on them.
 | 1 | `flutter create mobile/`, `dev`/`prod` flavors, CI, port share + puzzle-number + streak math with parity fixtures | 2–3 d |
 | 2 | Game screen: grid, swap animation, win states, sound, haptics; **first-run interactive demo**; mobile visual-system one-pager | 4–6 d |
 | 3 | Surrounding flows: how-to, history/stats, settings, today's words (with es fallback state) | 2–3 d |
-| 4 | Accounts: OTP + Apple + Google, sync, **streak-decrease screen**, account-deletion flow | 3–4 d |
+| 4 | ✅ **code done** — email OTP + Apple + Google (native id-token flow) sign-in sheet; secure-storage session; sync engine (push local → pull canonical, server wins on conflict, streak recomputed from the merged set, `imported_max` folded in) with an offline submit queue; **streak-decrease screen**; second-method prompt; in-app account deletion (fresh OTP re-auth → 48h grace → restore). Backend gained a `Bearer` auth path + `POST /api/v1/results/import`. Apple/Google are non-functional until the Supabase providers + `APPLE_APP_ID` / OAuth client IDs are set (see `mobile/README.md`); end-to-end OTP + sync unverified pending local Supabase env. | 3–4 d |
 | 5 | Leaderboards + leagues (read + join via deep link; "verified" affordance + report-score) | 2–3 d |
 | 6 | Localization (port `en.json` / `es.json`, `t()` helper); es store/legal/push copy commissioned | 1–2 d |
 | 7 | Monetization: AdMob + UMP + ATT sequencing, RevenueCat, entitlement re-verify webhook wiring, unfilled-slot collapse, new-player grace | 3–4 d |
