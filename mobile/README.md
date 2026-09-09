@@ -2,7 +2,12 @@
 
 Native iOS + Android client. Shares the Vercel/Supabase backend with the
 Next.js web app (`../app`). See `../docs/flutter-app-spec.md` for the full
-plan; this is Phase 1 (scaffold + flavors + shared-logic ports).
+plan. Landed so far: Phase 1 (scaffold + flavors + shared-logic ports),
+Phase 2 (playable board + first-run demo), Phase 3 (surrounding flows —
+how-to sheet, hints toggle + dashed hint, reveal, history/stats,
+today's words, settings, streak chip + countdown + legend, native share,
+classic/hard, past-puzzle replay). Settings persist via
+`shared_preferences`; everything wires through Riverpod providers.
 
 ## Toolchain
 
