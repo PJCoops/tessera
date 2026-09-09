@@ -167,9 +167,9 @@ class _PositionedTile extends StatelessWidget {
                     child: Text(
                       tile.letter,
                       style: TextStyle(
-                        fontFamily: 'Fraunces',
+                        fontFamily: 'Inter',
                         fontSize: size * 0.42,
-                        fontWeight: FontWeight.w300,
+                        fontWeight: FontWeight.w500,
                         color: fg,
                       ),
                     ),

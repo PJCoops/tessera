@@ -10,8 +10,9 @@ here is structured so those are token edits, not rewrites.
 
 | Role | Face | Notes |
 | --- | --- | --- |
-| Display (tile letters, headlines) | **Fraunces** | Light (300). Vendored `Fraunces-Light/Bold.ttf`. |
-| Text (status line, buttons, kicker) | **Inter** | SemiBold (600) for the kicker; regular elsewhere. |
+| Tile letters | **Inter** | Medium (500). Sans, matching the web app (`text-3xl font-medium`, system sans stack). Vendored `Inter-Medium.ttf`. |
+| Kicker, status line, buttons | **Inter** | SemiBold (600) for the kicker; regular elsewhere. Vendored `Inter-SemiBold.ttf`. |
+| Headlines (display) | **Fraunces** | Light (300). Vendored `Fraunces-Light/Bold.ttf`. |
 
 Tile letter size = `tileSize * 0.42`. Kicker: 11px, letter-spacing 2,
 uppercase, `muted`.
@@ -62,9 +63,9 @@ Daltonism; treat as a starting point for the joint web+mobile retune.
 
 ## Distinct from Wordle (§18, 4.3 defence)
 
-Serif (Fraunces) letters, cream tiles on warm paper, rounded 10px tiles
-with a hairline border, tap-to-select/tap-to-swap (not typing). No
-5×letter guess grid, no keyboard.
+Cream tiles on warm paper, rounded 10px tiles with a hairline border,
+tap-to-select/tap-to-swap (not typing). Fraunces sets the kicker and
+headlines. No 5×letter guess grid, no keyboard.
 
 ## Open
 
