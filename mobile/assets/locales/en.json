@@ -125,7 +125,9 @@
     "reminder": {
       "title": "Daily reminders",
       "description": "Push this device when today's puzzle is ready (09:00 UTC). Stays on this device only.",
-      "descriptionApp": "A local reminder at this time each day. Turns on in a later update.",
+      "descriptionApp": "A local reminder each day at a time you choose.",
+      "timeLabel": "Reminder time",
+      "deniedApp": "Notifications are off. Turn them on for Tessera in your device Settings, then try again.",
       "enable": "Enable",
       "disable": "Disable",
       "enabling": "Enabling…",
@@ -296,7 +298,8 @@
   },
   "push": {
     "dailyTitle": "Today's Tessera is ready",
-    "dailyBody": "Puzzle #{num}. Take a moment."
+    "dailyBody": "Puzzle #{num}. Take a moment.",
+    "reminderBody": "Today's grid is waiting. Take a moment."
   },
   "start": {
     "tagline": "Swap tiles until every row spells the correct word.",

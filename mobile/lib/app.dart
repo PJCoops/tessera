@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'flavors.dart';
 import 'src/game/game_screen.dart';
 import 'src/i18n/locale.dart';
+import 'src/notifications/reminder_controller.dart';
 import 'src/settings/settings.dart';
 import 'src/theme/theme.dart';
 
@@ -16,6 +17,8 @@ class TesseraApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
+    // Keep the OS daily reminder in step with the settings toggle/time.
+    ref.watch(reminderSyncProvider);
     return MaterialApp(
       title: F.title,
       debugShowCheckedModeBanner: false,

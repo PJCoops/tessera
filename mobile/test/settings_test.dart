@@ -94,4 +94,18 @@ void main() {
     c.read(settingsProvider.notifier).setLocale('fr');
     expect(c.read(settingsProvider).locale, 'en');
   });
+
+  test('reminderEnabled defaults off and persists', () async {
+    SharedPreferences.setMockInitialValues({});
+    final c1 = ProviderContainer();
+    final s1 = await _hydrated(c1);
+    expect(s1.reminderEnabled, isFalse);
+    c1.read(settingsProvider.notifier).setReminderEnabled(true);
+    await _settle();
+    c1.dispose();
+
+    final c2 = ProviderContainer();
+    addTearDown(c2.dispose);
+    expect((await _hydrated(c2)).reminderEnabled, isTrue);
+  });
 }

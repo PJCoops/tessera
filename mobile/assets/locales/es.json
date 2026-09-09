@@ -125,7 +125,9 @@
     "reminder": {
       "title": "Recordatorios diarios",
       "description": "Avisar a este dispositivo cuando esté lista la partida de hoy (09:00 UTC). Solo en este dispositivo.",
-      "descriptionApp": "Un recordatorio local a esta hora cada día. Se activará en una próxima actualización.",
+      "descriptionApp": "Un recordatorio local cada día a la hora que elijas.",
+      "timeLabel": "Hora del recordatorio",
+      "deniedApp": "Las notificaciones están desactivadas. Actívalas para Tessera en los ajustes del dispositivo e inténtalo de nuevo.",
       "enable": "Activar",
       "disable": "Desactivar",
       "enabling": "Activando…",
@@ -296,7 +298,8 @@
   },
   "push": {
     "dailyTitle": "La Tessera de hoy está lista",
-    "dailyBody": "Partida #{num}. Date un momento."
+    "dailyBody": "Partida #{num}. Date un momento.",
+    "reminderBody": "La partida de hoy te espera. Date un momento."
   },
   "start": {
     "tagline": "Intercambia fichas hasta que cada fila forme la palabra correcta.",

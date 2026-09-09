@@ -6,8 +6,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../i18n.dart';
 import '../i18n/dict.dart';
 import '../mode.dart';
+import '../notifications/reminder_controller.dart';
 import '../settings/settings.dart';
 import '../theme/tokens.dart';
+import 'email_signup.dart';
 import 'how_to_sheet.dart';
 
 const _privacyUrl = 'https://tesserapuzzle.com/privacy';
@@ -82,24 +84,8 @@ class SettingsScreen extends ConsumerWidget {
             control: Switch(value: s.muted, onChanged: ctrl.setMuted),
             inlineControl: true,
           ),
-          ListTile(
-            title: Text(t(dict, 'settings.reminder.title')),
-            subtitle: Text(
-              t(dict, 'settings.reminder.descriptionApp'),
-              style: TextStyle(fontSize: 12, color: c.muted),
-            ),
-            trailing: Text(
-              s.reminder.format(context),
-              style: TextStyle(color: c.inkSoft),
-            ),
-            onTap: () async {
-              final picked = await showTimePicker(
-                context: context,
-                initialTime: s.reminder,
-              );
-              if (picked != null) ctrl.setReminder(picked);
-            },
-          ),
+          const _ReminderRow(),
+          const EmailSignup(),
           ListTile(
             title: Text(t(dict, 'game.howToPlay')),
             trailing: Icon(Icons.chevron_right, color: c.muted),
@@ -170,6 +156,69 @@ Future<void> _launch(String url) async {
   final uri = Uri.parse(url);
   if (await canLaunchUrl(uri)) {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+/// Daily-reminder toggle + time. Turning it on asks for notification
+/// permission first; if that's refused the switch stays off and a hint
+/// points at device Settings. The actual scheduling is driven by
+/// [reminderSyncProvider] watching these settings.
+class _ReminderRow extends ConsumerWidget {
+  const _ReminderRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final dict = ref.watch(dictOrEmptyProvider);
+    final s = ref.watch(settingsProvider);
+    final ctrl = ref.read(settingsProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+
+    Future<void> onToggle(bool want) async {
+      if (want) {
+        final granted = await ref
+            .read(reminderServiceProvider)
+            .requestPermission();
+        if (!granted) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(t(dict, 'settings.reminder.deniedApp'))),
+          );
+          return;
+        }
+      }
+      ctrl.setReminderEnabled(want);
+    }
+
+    return Column(
+      children: [
+        _SettingRow(
+          title: t(dict, 'settings.reminder.title'),
+          description: t(dict, 'settings.reminder.descriptionApp'),
+          control: Switch(value: s.reminderEnabled, onChanged: onToggle),
+          inlineControl: true,
+        ),
+        if (s.reminderEnabled)
+          ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            title: Text(
+              t(dict, 'settings.reminder.timeLabel'),
+              style: TextStyle(fontSize: 13, color: c.inkSoft),
+            ),
+            trailing: Text(
+              s.reminder.format(context),
+              style: TextStyle(color: c.inkSoft),
+            ),
+            onTap: () async {
+              final picked = await showTimePicker(
+                context: context,
+                initialTime: s.reminder,
+              );
+              if (picked != null) ctrl.setReminder(picked);
+            },
+          ),
+      ],
+    );
   }
 }
 

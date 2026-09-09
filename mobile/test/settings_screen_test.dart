@@ -3,13 +3,42 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tessera/src/chrome/settings_screen.dart';
+import 'package:tessera/src/notifications/reminder_controller.dart';
+import 'package:tessera/src/notifications/reminder_service.dart';
 import 'package:tessera/src/settings/settings.dart';
 import 'package:tessera/src/theme/theme.dart';
 
 import 'support/test_dict.dart';
 
-Widget _harness([String locale = 'en']) => ProviderScope(
-  overrides: [dictOverride(locale)],
+class _FakeReminderService extends ReminderService {
+  _FakeReminderService({this.granted = true});
+  final bool granted;
+  int scheduled = 0;
+  int cancelled = 0;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<bool> requestPermission() async => granted;
+
+  @override
+  Future<void> scheduleDaily({
+    required TimeOfDay time,
+    required String title,
+    required String body,
+  }) async => scheduled++;
+
+  @override
+  Future<void> cancel() async => cancelled++;
+}
+
+Widget _harness([String locale = 'en', ReminderService? reminder]) => ProviderScope(
+  overrides: [
+    dictOverride(locale),
+    if (reminder != null)
+      reminderServiceProvider.overrideWithValue(reminder),
+  ],
   child: MaterialApp(
     theme: buildTesseraTheme(brightness: Brightness.light),
     darkTheme: buildTesseraTheme(brightness: Brightness.dark),
@@ -89,6 +118,43 @@ void main() {
     await tester.tap(find.byType(Switch).at(2));
     await tester.pump();
     expect(container.read(settingsProvider).muted, isFalse);
+  });
+
+  testWidgets('enabling the reminder needs permission, then reveals the time', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final svc = _FakeReminderService(granted: true);
+    await tester.pumpWidget(_harness('en', svc));
+    await _ready(tester);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(SettingsScreen)),
+    );
+
+    expect(find.text('Reminder time'), findsNothing);
+    await tester.tap(find.byType(Switch).at(3)); // reminder enable
+    await tester.pumpAndSettle();
+
+    expect(container.read(settingsProvider).reminderEnabled, isTrue);
+    expect(find.text('Reminder time'), findsOneWidget);
+  });
+
+  testWidgets('a denied permission leaves the reminder off with a hint', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final svc = _FakeReminderService(granted: false);
+    await tester.pumpWidget(_harness('en', svc));
+    await _ready(tester);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(SettingsScreen)),
+    );
+
+    await tester.tap(find.byType(Switch).at(3));
+    await tester.pumpAndSettle();
+
+    expect(container.read(settingsProvider).reminderEnabled, isFalse);
+    expect(find.textContaining('Notifications are off'), findsOneWidget);
   });
 
   testWidgets('choosing a theme segment updates the setting', (tester) async {

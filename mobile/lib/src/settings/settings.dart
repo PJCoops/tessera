@@ -18,6 +18,7 @@ class Settings {
     this.colourBlind = false,
     this.hideHints = false,
     this.muted = true,
+    this.reminderEnabled = false,
     this.reminder = const TimeOfDay(hour: 9, minute: 0),
     this.modeId = ModeId.classic,
   });
@@ -34,8 +35,10 @@ class Settings {
   /// Silences the win jingle. Defaults on, matching the web app.
   final bool muted;
 
-  /// Local daily-reminder time. Scheduling lands in Phase 8; for now this
-  /// is persisted only.
+  /// Whether the daily local reminder is scheduled.
+  final bool reminderEnabled;
+
+  /// Local time the daily reminder fires.
   final TimeOfDay reminder;
 
   /// The mode the game screen is currently showing.
@@ -47,6 +50,7 @@ class Settings {
     bool? colourBlind,
     bool? hideHints,
     bool? muted,
+    bool? reminderEnabled,
     TimeOfDay? reminder,
     ModeId? modeId,
   }) => Settings(
@@ -55,6 +59,7 @@ class Settings {
     colourBlind: colourBlind ?? this.colourBlind,
     hideHints: hideHints ?? this.hideHints,
     muted: muted ?? this.muted,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
     reminder: reminder ?? this.reminder,
     modeId: modeId ?? this.modeId,
   );
@@ -69,6 +74,7 @@ const _kLocale = 'tessera:locale';
 const _kColourBlind = 'tessera:colour-blind';
 const _kHideHints = 'tessera:hide-hints';
 const _kMuted = 'tessera:muted';
+const _kReminderEnabled = 'tessera:reminder-enabled';
 const _kReminder = 'tessera:reminder';
 const _kMode = 'tessera:mode';
 
@@ -97,6 +103,7 @@ class SettingsController extends Notifier<Settings> {
       colourBlind: p.getBool(_kColourBlind) ?? false,
       hideHints: p.getBool(_kHideHints) ?? false,
       muted: p.getBool(_kMuted) ?? true,
+      reminderEnabled: p.getBool(_kReminderEnabled) ?? false,
       reminder: _timeFromString(p.getString(_kReminder)),
       modeId: p.getString(_kMode) == 'hard' ? ModeId.hard : ModeId.classic,
     );
@@ -130,6 +137,11 @@ class SettingsController extends Notifier<Settings> {
   void setMuted(bool value) {
     state = state.copyWith(muted: value);
     _prefs().then((p) => p.setBool(_kMuted, value));
+  }
+
+  void setReminderEnabled(bool value) {
+    state = state.copyWith(reminderEnabled: value);
+    _prefs().then((p) => p.setBool(_kReminderEnabled, value));
   }
 
   void setReminder(TimeOfDay time) {
