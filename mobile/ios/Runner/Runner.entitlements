@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Sign in with Apple (spec §6.1). This file is NOT wired into the build
+  yet: adding the entitlement before the App ID carries the capability in
+  the Apple Developer portal would break code-signing for every debug run.
+
+  To turn it on: open ios/Runner.xcworkspace in Xcode, select the Runner
+  target → Signing & Capabilities → + Capability → Sign in with Apple.
+  Xcode adds CODE_SIGN_ENTITLEMENTS to the project and syncs the portal.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+</dict>
+</plist>

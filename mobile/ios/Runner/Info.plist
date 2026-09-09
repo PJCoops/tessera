@@ -52,6 +52,20 @@
       <string>https</string>
       <string>mailto</string>
     </array>
+    <!-- Google Sign-In callback. Set GOOGLE_REVERSED_CLIENT_ID in the
+         flavor xcconfigs (from GoogleService-Info.plist / the OAuth iOS
+         client). Empty until then — the scheme is simply inert. -->
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+        </array>
+      </dict>
+    </array>
     <!-- Allows http://localhost / *.local for `--dart-define=API_BASE_URL`
          against a locally-run Next.js app. Real domains still require TLS. -->
     <key>NSAppTransportSecurity</key>

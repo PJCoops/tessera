@@ -6,8 +6,11 @@ plan. Landed so far: Phase 1 (scaffold + flavors + shared-logic ports),
 Phase 2 (playable board + first-run demo), Phase 3 (surrounding flows —
 how-to sheet, hints toggle + dashed hint, reveal, history/stats,
 today's words, settings, streak chip + countdown + legend, native share,
-classic/hard, past-puzzle replay). Settings persist via
-`shared_preferences`; everything wires through Riverpod providers.
+classic/hard, past-puzzle replay), Phase 4 (accounts — email OTP + Apple +
+Google sign-in, cross-device sync, streak-decrease screen, in-app account
+deletion), localization (en/es) and daily local-notification reminders.
+Settings persist via `shared_preferences`; everything wires through
+Riverpod providers.
 
 ## Toolchain
 
@@ -41,6 +44,41 @@ flutter run --flavor dev -t lib/main_dev.dart \
 
 The iOS simulator reaches the host on `localhost`; the `Info.plist`
 carries an `NSAllowsLocalNetworking` exception for the cleartext origin.
+
+## Accounts (Phase 4)
+
+Sign-in and sync are wired but need config to work end to end.
+
+**Build-time (`--dart-define`):**
+
+```sh
+flutter run --flavor dev -t lib/main_dev.dart \
+  --dart-define=API_BASE_URL=http://localhost:3000 \
+  --dart-define=SUPABASE_URL=<project url> \
+  --dart-define=SUPABASE_ANON_KEY=<anon / publishable key> \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=<web OAuth client id>   # Google only
+```
+
+Without `SUPABASE_URL` / `SUPABASE_ANON_KEY` the app runs signed-out only
+and the sign-in sheet shows "not set up yet". The Next.js app it talks to
+needs `DATABASE_URL` + the Supabase vars in `.env.local` for the authed
+`/api/v1/*` routes to answer.
+
+**Still needed for Apple / Google (dashboards):**
+
+- **Supabase:** enable the Apple and Google auth providers; confirm OTP
+  send rate-limit, ≤10-min code expiry, and a verify-attempt cap (§6.1).
+- **Apple:** an App ID with the *Sign in with Apple* capability + your Team
+  ID. Enable it in Xcode (Runner target → Signing & Capabilities → +
+  Capability → Sign in with Apple) — that wires `Runner.entitlements`
+  (already in the repo) into the build. Android additionally needs an
+  Apple *Services ID* + the commented callback `<activity>` in
+  `AndroidManifest.xml`.
+- **Google:** OAuth clients (iOS + web) in Google Cloud. Put the iOS
+  reversed client id in `GOOGLE_REVERSED_CLIENT_ID` (flavor xcconfigs;
+  `Info.plist` already references it) and the web client id in the
+  `GOOGLE_SERVER_CLIENT_ID` dart-define. Android needs the release
+  signing SHA-1 registered.
 
 ## Shared assets
 
