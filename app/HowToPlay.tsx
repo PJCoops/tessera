@@ -278,43 +278,74 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function lookupOne(word: string): Promise<{ definition: string | null; partOfSpeech: string | null }> {
+// Fetches JSON with a timeout + retry on anything that looks transient
+// (network error, abort, non-404 failure response). A 404 is treated as a
+// genuine "no entry for this word" and returned immediately, unretried.
+async function fetchJsonWithRetry(url: string): Promise<unknown | null> {
   for (let attempt = 0; attempt < LOOKUP_MAX_ATTEMPTS; attempt++) {
-    // dictionaryapi.dev occasionally stalls without ever erroring out — abort
-    // so one slow word can't hold up the rest indefinitely.
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
     try {
-      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en_GB/${encodeURIComponent(word)}`, {
-        signal: controller.signal,
-      });
-      // 404 is the API's genuine "no entry for this word" — final, don't retry.
-      if (res.status === 404) return { definition: null, partOfSpeech: null };
+      const res = await fetch(url, { signal: controller.signal });
+      if (res.status === 404) return null;
       if (!res.ok) {
         if (attempt < LOOKUP_MAX_ATTEMPTS - 1) {
           await delay(LOOKUP_RETRY_DELAY_MS * (attempt + 1));
           continue;
         }
-        return { definition: null, partOfSpeech: null };
+        return null;
       }
-      const data = await res.json();
-      const meaning = data?.[0]?.meanings?.[0];
-      return {
-        definition: meaning?.definitions?.[0]?.definition ?? null,
-        partOfSpeech: meaning?.partOfSpeech ?? null,
-      };
+      return await res.json();
     } catch {
-      // Network error, abort/timeout, or bad JSON — treat as transient and retry.
       if (attempt < LOOKUP_MAX_ATTEMPTS - 1) {
         await delay(LOOKUP_RETRY_DELAY_MS * (attempt + 1));
         continue;
       }
-      return { definition: null, partOfSpeech: null };
+      return null;
     } finally {
       clearTimeout(timer);
     }
   }
-  return { definition: null, partOfSpeech: null };
+  return null;
+}
+
+async function lookupOne(word: string): Promise<{ definition: string | null; partOfSpeech: string | null }> {
+  const data = (await fetchJsonWithRetry(
+    `https://api.dictionaryapi.dev/api/v2/entries/en_GB/${encodeURIComponent(word)}`
+  )) as { meanings?: { partOfSpeech?: string; definitions?: { definition?: string }[] }[] }[] | null;
+  const meaning = data?.[0]?.meanings?.[0];
+  return {
+    definition: meaning?.definitions?.[0]?.definition ?? null,
+    partOfSpeech: meaning?.partOfSpeech ?? null,
+  };
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
+// Second, independent source (Wikimedia infrastructure — no API key, and
+// far more reliable than the single-maintainer dictionaryapi.dev). Consulted
+// only when dictionaryapi.dev has nothing, so it doesn't change behavior
+// for the common case where the primary lookup already succeeds.
+async function lookupWiktionary(word: string): Promise<{ definition: string | null; partOfSpeech: string | null }> {
+  const data = (await fetchJsonWithRetry(
+    `https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(word)}`
+  )) as { en?: { partOfSpeech?: string; definitions?: { definition?: string }[] }[] } | null;
+  const entry = data?.en?.[0];
+  const rawDef = entry?.definitions?.[0]?.definition;
+  if (!rawDef) return { definition: null, partOfSpeech: null };
+  return {
+    definition: stripHtml(rawDef),
+    partOfSpeech: entry?.partOfSpeech ? entry.partOfSpeech.toLowerCase() : null,
+  };
 }
 function lemmaCandidates(word: string): string[] {
   const out: string[] = [];
@@ -334,8 +365,17 @@ async function fetchDefinition(word: string): Promise<DefCached> {
     const r = await lookupOne(cand);
     if (r.definition) return { ...r, resolvedFrom: cand, ts: Date.now() };
   }
+  // dictionaryapi.dev had nothing for the word or its lemma forms — try
+  // Wiktionary directly as an independent second source before giving up,
+  // so one provider's outage or coverage gap doesn't sink the feature.
+  const wiktPrimary = await lookupWiktionary(word);
+  if (wiktPrimary.definition) return { ...wiktPrimary, resolvedFrom: null, ts: Date.now() };
+  for (const cand of lemmaCandidates(word)) {
+    const r = await lookupWiktionary(cand);
+    if (r.definition) return { ...r, resolvedFrom: cand, ts: Date.now() };
+  }
   // Last-resort fallback: hand-maintained map of niche English words
-  // the API doesn't cover (e.g. architectural / archaic terms).
+  // neither API covers (e.g. architectural / archaic terms).
   const staticDef = STATIC_DEFS_EN[word.toLowerCase()];
   if (staticDef) {
     return { definition: staticDef, partOfSpeech: null, resolvedFrom: null, ts: Date.now() };
