@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../auth/auth_controller.dart';
+import '../auth/delete_account_flow.dart';
+import '../auth/sign_in_sheet.dart';
 import '../i18n.dart';
 import '../i18n/dict.dart';
 import '../mode.dart';
@@ -95,12 +98,11 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(height: 32),
           _SectionLabel(label: t(dict, 'account.title')),
+          const _AccountRow(),
           for (final key in const [
-            'settings.account.signIn',
             'settings.account.restorePurchases',
             'settings.account.removeAds',
             'settings.account.privacyChoices',
-            'settings.account.deleteAccount',
           ])
             ListTile(
               enabled: false,
@@ -110,6 +112,7 @@ class SettingsScreen extends ConsumerWidget {
                 style: TextStyle(fontSize: 12, color: c.muted),
               ),
             ),
+          const _DeleteAccountRow(),
 
           const Divider(height: 32),
           ListTile(
@@ -156,6 +159,69 @@ Future<void> _launch(String url) async {
   final uri = Uri.parse(url);
   if (await canLaunchUrl(uri)) {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+/// Sign in (opens the OTP / Apple / Google sheet) or, when signed in, the
+/// account email with a Sign out action.
+class _AccountRow extends ConsumerWidget {
+  const _AccountRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final dict = ref.watch(dictOrEmptyProvider);
+    final user = ref.watch(authUserProvider);
+
+    if (user == null) {
+      return ListTile(
+        title: Text(t(dict, 'settings.account.signIn')),
+        subtitle: Text(
+          t(dict, 'account.description'),
+          style: TextStyle(fontSize: 12, color: c.muted),
+        ),
+        trailing: Icon(Icons.chevron_right, color: c.muted),
+        onTap: () => showSignInSheet(context),
+      );
+    }
+    return ListTile(
+      title: Text(
+        t(dict, 'account.signedInAs', {'email': user.email ?? ''}),
+        style: const TextStyle(fontSize: 14),
+      ),
+      trailing: TextButton(
+        onPressed: () => ref.read(authControllerProvider).signOut(),
+        child: Text(t(dict, 'account.signOut')),
+      ),
+    );
+  }
+}
+
+/// Delete account — disabled until signed in, then opens the in-app
+/// deletion flow (§6.3).
+class _DeleteAccountRow extends ConsumerWidget {
+  const _DeleteAccountRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final dict = ref.watch(dictOrEmptyProvider);
+    final signedIn = ref.watch(authUserProvider) != null;
+
+    return ListTile(
+      enabled: signedIn,
+      title: Text(
+        t(dict, 'settings.account.deleteAccount'),
+        style: TextStyle(color: signedIn ? c.error : null),
+      ),
+      trailing: signedIn
+          ? Icon(Icons.chevron_right, color: c.muted)
+          : Text(
+              t(dict, 'settings.soon'),
+              style: TextStyle(fontSize: 12, color: c.muted),
+            ),
+      onTap: signedIn ? () => showDeleteAccountFlow(context) : null,
+    );
   }
 }
 

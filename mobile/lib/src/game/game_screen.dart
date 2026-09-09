@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../auth/auth_controller.dart';
+import '../auth/sign_in_sheet.dart';
 import '../chrome/how_to_sheet.dart';
 import '../chrome/history_screen.dart';
 import '../chrome/legend.dart';
@@ -415,6 +417,8 @@ class _Playing extends ConsumerWidget {
           ),
         ],
 
+        if (finished) const _AccountNudge(),
+
         if (wonCount < 2) ...[
           const SizedBox(height: 16),
           Wrap(
@@ -600,6 +604,33 @@ class _PillButton extends StatelessWidget {
       ),
       onPressed: onPressed,
       child: Text(label, style: const TextStyle(fontSize: 12)),
+    );
+  }
+}
+
+/// "Sign in to save your N-day streak →" — only for signed-out players
+/// with a live streak (port of app/components/AccountCta.tsx).
+class _AccountNudge extends ConsumerWidget {
+  const _AccountNudge();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(activeModeProvider);
+    final todayNum = puzzleNumber(todayUtcDate(), kEpoch);
+    final streak = visibleCurrent(ref.watch(streakProvider(mode.id)), todayNum);
+    if (streak < 1 || ref.watch(authUserProvider) != null) {
+      return const SizedBox.shrink();
+    }
+    final dict = ref.watch(dictOrEmptyProvider);
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: TextButton(
+        onPressed: () => showSignInSheet(context),
+        child: Text(
+          t(dict, 'account.saveStreakLine', {'n': streak}),
+          style: TextStyle(fontSize: 12, color: context.colors.muted),
+        ),
+      ),
     );
   }
 }

@@ -227,7 +227,12 @@
     "codeError": "That code didn't work. Check it and try again.",
     "restart": "Use a different email",
     "error": "Something went wrong. Check the address and try again.",
-    "ariaClose": "Close"
+    "ariaClose": "Close",
+    "appleButton": "Continue with Apple",
+    "googleButton": "Continue with Google",
+    "emailDivider": "or email a code",
+    "unavailable": "Sign-in isn’t set up yet.",
+    "oauthFailed": "That didn’t work. Try another way."
   },
   "handle": {
     "title": "Pick a display name",

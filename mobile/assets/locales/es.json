@@ -227,7 +227,12 @@
     "codeError": "Ese código no funcionó. Revísalo e inténtalo de nuevo.",
     "restart": "Usar otro correo",
     "error": "Algo salió mal. Revisa la dirección e inténtalo de nuevo.",
-    "ariaClose": "Cerrar"
+    "ariaClose": "Cerrar",
+    "appleButton": "Continuar con Apple",
+    "googleButton": "Continuar con Google",
+    "emailDivider": "o recibe un código por correo",
+    "unavailable": "El inicio de sesión aún no está disponible.",
+    "oauthFailed": "No funcionó. Prueba de otra forma."
   },
   "handle": {
     "title": "Elige un nombre",

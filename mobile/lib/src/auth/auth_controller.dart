@@ -57,6 +57,30 @@ final authUserProvider = Provider<AuthUser?>(
   (ref) => ref.watch(authProvider).valueOrNull,
 );
 
+final authControllerProvider = Provider<AuthController>(
+  (ref) => AuthController(ref),
+);
+
+/// Thin facade over [AuthBackend] used by the sign-in / delete / settings
+/// UI, plus the once-only "add a second method" prompt flag.
+class AuthController {
+  AuthController(this._ref);
+  final Ref _ref;
+
+  AuthBackend get _b => _ref.read(authBackendProvider);
+
+  AuthUser? get user => _ref.read(authUserProvider);
+  String? get accessToken => _b.accessToken;
+  int? get authTimeMs => _b.authTimeMs;
+
+  Future<void> sendOtp(String email) => _b.sendOtp(email);
+  Future<void> verifyOtp(String email, String token) =>
+      _b.verifyOtp(email, token);
+  Future<void> signInWithApple() => _b.signInWithApple();
+  Future<void> signInWithGoogle() => _b.signInWithGoogle();
+  Future<void> signOut() => _b.signOut();
+}
+
 // ── Real backend ─────────────────────────────────────────────────────
 
 class SupabaseAuthBackend implements AuthBackend {

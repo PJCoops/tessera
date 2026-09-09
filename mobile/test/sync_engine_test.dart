@@ -8,7 +8,6 @@ import 'package:tessera/src/game/results.dart';
 import 'package:tessera/src/mode.dart';
 import 'package:tessera/src/puzzle_number.dart';
 import 'package:tessera/src/streak.dart';
-import 'package:tessera/src/sync/sync_engine.dart';
 import 'package:tessera/src/sync/sync_providers.dart';
 
 final _today = puzzleNumber(todayUtcDate(), kEpoch);
