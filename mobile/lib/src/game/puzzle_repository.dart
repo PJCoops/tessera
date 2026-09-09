@@ -70,6 +70,25 @@ class PuzzleRepository {
     }
   }
 
+  /// A specific past date's puzzle (the history "Replay" list). Same
+  /// per-day cache as [daily]; no dev fallback — a replay that can't be
+  /// fetched surfaces the error state.
+  Future<Puzzle> forDate(
+    String date, {
+    String locale = 'en',
+    String mode = 'classic',
+  }) async {
+    final key = _key(date, locale, mode);
+    final store = await _store;
+    final cached = store.getString(key);
+    if (cached != null) {
+      return Puzzle.fromJson(jsonDecode(cached) as Map<String, dynamic>);
+    }
+    final body = await _fetch(date: date, locale: locale, mode: mode);
+    await store.setString(key, jsonEncode(body));
+    return Puzzle.fromJson(body);
+  }
+
   Future<Map<String, dynamic>> _fetch({
     required String date,
     required String locale,
