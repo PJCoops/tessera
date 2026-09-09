@@ -81,6 +81,38 @@ class BoardState {
     return true;
   });
 
+  /// Per-tile "this tile's letter belongs in this row" hint, multiset
+  /// aware — ported from the `homeHintByIdx` block in app/TesseraGame.tsx.
+  /// A tile in row r is hinted iff its letter is still needed by row r's
+  /// gold word after crediting tiles already sitting on their home row
+  /// first. That priority handles duplicate letters: a home tile claims
+  /// its letter before any visual spillover does.
+  late final List<bool> homeHint = _computeHomeHint();
+
+  List<bool> _computeHomeHint() {
+    final out = List<bool>.filled(positions.length, false);
+    for (var r = 0; r < n; r++) {
+      final remaining = <String, int>{};
+      for (final ch in goldRows[r].toUpperCase().split('')) {
+        remaining[ch] = (remaining[ch] ?? 0) + 1;
+      }
+      final order = [for (var c = 0; c < n; c++) r * n + c]..sort((a, b) {
+        final aHome = positions[a].id ~/ n == r ? 0 : 1;
+        final bHome = positions[b].id ~/ n == r ? 0 : 1;
+        return aHome - bHome;
+      });
+      for (final idx in order) {
+        final ch = positions[idx].letter;
+        final left = remaining[ch] ?? 0;
+        if (left > 0) {
+          out[idx] = true;
+          remaining[ch] = left - 1;
+        }
+      }
+    }
+    return out;
+  }
+
   int get validRowCount => rowValid.where((v) => v).length;
 
   bool get isSolved => rowValid.every((v) => v);
