@@ -170,11 +170,24 @@ class ReauthRequired extends AccountApiException {
   ReauthRequired() : super('reauth_required', 401);
 }
 
-final accountClientProvider = Provider<AccountClient>(
-  (ref) => AccountClient(ref),
-);
+/// The account/results endpoints the app calls. An interface so the sync
+/// engine and its tests can swap in a fake without a live backend.
+abstract interface class AccountApi {
+  Future<GetResultsResponse> getResults();
+  Future<bool> submitResult(SubmitArgs a);
+  Future<ImportResult> importResults(
+    List<SubmitArgs> results, {
+    int classicMax,
+    int hardMax,
+  });
+  Future<AccountDeleteResult> deleteAccount();
+  Future<bool> restoreAccount();
+  Future<AppConfigResponse> appConfig();
+}
 
-class AccountClient {
+final accountClientProvider = Provider<AccountApi>((ref) => AccountClient(ref));
+
+class AccountClient implements AccountApi {
   AccountClient(this._ref, {Dio? dio})
     : _dio =
           dio ??
@@ -213,17 +226,20 @@ class AccountClient {
     return body;
   }
 
+  @override
   Future<GetResultsResponse> getResults() async {
     final res = await _dio.get<dynamic>('/api/v1/results');
     return GetResultsResponse.fromJson(_ok(res));
   }
 
   /// Returns whether the server verified the submitted replay.
+  @override
   Future<bool> submitResult(SubmitArgs a) async {
     final res = await _dio.post<dynamic>('/api/v1/results', data: a.toJson());
     return _ok(res)['verified'] as bool? ?? false;
   }
 
+  @override
   Future<ImportResult> importResults(
     List<SubmitArgs> results, {
     int classicMax = 0,
@@ -246,6 +262,7 @@ class AccountClient {
     );
   }
 
+  @override
   Future<AccountDeleteResult> deleteAccount() async {
     final res = await _dio.delete<dynamic>('/api/v1/account');
     final body = _ok(res);
@@ -257,6 +274,7 @@ class AccountClient {
     );
   }
 
+  @override
   Future<bool> restoreAccount() async {
     final res = await _dio.post<dynamic>(
       '/api/v1/account',
@@ -265,6 +283,7 @@ class AccountClient {
     return _ok(res)['restored'] as bool? ?? false;
   }
 
+  @override
   Future<AppConfigResponse> appConfig() async {
     final res = await _dio.get<dynamic>('/api/v1/app-config');
     final body = res.data;

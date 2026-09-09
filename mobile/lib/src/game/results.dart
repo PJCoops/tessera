@@ -18,6 +18,8 @@ class StoredResult {
     required this.completedAt,
     this.revealed = false,
     this.minSwaps,
+    this.timeMs,
+    this.history,
   });
 
   final int moves;
@@ -31,12 +33,21 @@ class StoredResult {
   /// views don't need the generator. Absent on very old entries.
   final int? minSwaps;
 
+  /// Solve duration in ms (accounts sync). Absent on older / offline solves.
+  final int? timeMs;
+
+  /// Ordered [from, to] swap pairs — lets the server verify the solve on
+  /// sync. Absent when the chain wasn't captured.
+  final List<List<int>>? history;
+
   Map<String, dynamic> toJson() => {
     'moves': moves,
     'bonus': bonus,
     'completedAt': completedAt,
     if (revealed) 'revealed': true,
     if (minSwaps != null) 'minSwaps': minSwaps,
+    if (timeMs != null) 'timeMs': timeMs,
+    if (history != null) 'history': history,
   };
 
   factory StoredResult.fromJson(Map<String, dynamic> j) => StoredResult(
@@ -45,6 +56,10 @@ class StoredResult {
     completedAt: (j['completedAt'] as num?)?.toInt() ?? 0,
     revealed: j['revealed'] as bool? ?? false,
     minSwaps: (j['minSwaps'] as num?)?.toInt(),
+    timeMs: (j['timeMs'] as num?)?.toInt(),
+    history: (j['history'] as List?)
+        ?.map((p) => (p as List).map((n) => (n as num).toInt()).toList())
+        .toList(),
   );
 }
 
@@ -94,7 +109,26 @@ class ResultsController
       (p) => p.setString('$_prefix$num', jsonEncode(result.toJson())),
     );
   }
+
+  /// Fold canonical server rows into the local set on sign-in sync. The
+  /// server row wins on `(mode, num)` (spec §6.2) — local unverified rows
+  /// for the same puzzle are overwritten.
+  void mergeServerRows(Map<int, StoredResult> rows) {
+    if (rows.isEmpty) return;
+    state = {...state, ...rows};
+    SharedPreferences.getInstance().then((p) {
+      for (final e in rows.entries) {
+        p.setString('$_prefix${e.key}', jsonEncode(e.value.toJson()));
+      }
+    });
+  }
 }
+
+/// Historical streak maximum imported from a signed-in account
+/// (`imported_max_streak_*`), fed into [computeStreak] so a pre-account
+/// best isn't lost when the streak is recomputed from result rows.
+/// Set by the sync engine; 0 until then.
+final importedMaxProvider = StateProvider.family<int, ModeId>((ref, mode) => 0);
 
 /// Won puzzle numbers for a mode (revealed results don't count), sorted.
 final wonNumbersProvider = Provider.family<List<int>, ModeId>((ref, mode) {
@@ -106,9 +140,13 @@ final wonNumbersProvider = Provider.family<List<int>, ModeId>((ref, mode) {
   return nums;
 });
 
-/// Streak for a mode, derived from stored wins via [computeStreak].
+/// Streak for a mode, recomputed from stored wins (spec §6.2 — never
+/// merged numerically) plus any account-imported historical max.
 final streakProvider = Provider.family<Streak, ModeId>((ref, mode) {
-  return computeStreak(ref.watch(wonNumbersProvider(mode)));
+  return computeStreak(
+    ref.watch(wonNumbersProvider(mode)),
+    ref.watch(importedMaxProvider(mode)),
+  );
 });
 
 /// The player's most frequent tier for a mode, used to flavour the streak
