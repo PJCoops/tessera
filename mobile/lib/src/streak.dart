@@ -49,6 +49,14 @@ Streak computeStreak(List<int> nums, [int importedMax = 0]) {
   );
 }
 
+/// A streak is "live" only if its last win was today or yesterday;
+/// otherwise the visible current count is 0. Port of `visibleCurrent`
+/// in app/lib/streak.ts. [today] is today's puzzle number.
+int visibleCurrent(Streak s, int today) {
+  if (s.lastWon == today || s.lastWon == today - 1) return s.current;
+  return 0;
+}
+
 /// Merge a local and a server streak: the fresher lastWon decides `current`,
 /// maxima combine.
 Streak mergeStreaks(Streak a, Streak b) {
