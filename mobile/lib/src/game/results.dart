@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../mode.dart';
 import '../streak.dart';
+import '../tier.dart';
 
 /// A stored daily result, keyed by puzzle number under
 /// `<mode.resultPrefix><num>` in shared_preferences. Mirrors the web's
@@ -108,4 +109,29 @@ final wonNumbersProvider = Provider.family<List<int>, ModeId>((ref, mode) {
 /// Streak for a mode, derived from stored wins via [computeStreak].
 final streakProvider = Provider.family<Streak, ModeId>((ref, mode) {
   return computeStreak(ref.watch(wonNumbersProvider(mode)));
+});
+
+/// The player's most frequent tier for a mode, used to flavour the streak
+/// toast. Revealed results and results without a stored minSwaps are
+/// skipped (it's cosmetic). Ties favour the higher tier — [TierKey.values]
+/// is ordered legendary..tenacious. Null until there's at least one
+/// qualifying solve. Port of app/lib/dominant-tier.ts.
+final dominantTierProvider = Provider.family<TierKey?, ModeId>((ref, mode) {
+  final counts = <TierKey, int>{};
+  for (final r in ref.watch(resultsProvider(mode)).values) {
+    if (r.revealed || r.minSwaps == null) continue;
+    final k = getTier(r.moves, r.minSwaps!).key;
+    counts[k] = (counts[k] ?? 0) + 1;
+  }
+  if (counts.isEmpty) return null;
+  var best = TierKey.tenacious;
+  var bestCount = -1;
+  for (final k in TierKey.values) {
+    final c = counts[k] ?? 0;
+    if (c > bestCount) {
+      bestCount = c;
+      best = k;
+    }
+  }
+  return best;
 });

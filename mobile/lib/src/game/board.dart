@@ -158,6 +158,18 @@ class BoardState {
     return result;
   }
 
+  /// Snap to the solved grid for the "Solution" reveal. [isSolved] becomes
+  /// true but [justSolved] stays false (solvedAtMove is set to a sentinel
+  /// that never equals moves), so the win cascade and jingle don't fire.
+  BoardState revealed() => BoardState(
+    positions: tilesFromRows(goldRows),
+    goldRows: goldRows,
+    minSwaps: minSwaps,
+    moves: moves,
+    history: history,
+    solvedAtMove: -1,
+  );
+
   BoardState _copyWith({
     int? selectedIndex,
     bool clearSelection = false,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../chrome/dashed_rect.dart';
+import '../settings/settings.dart';
 import '../theme/tokens.dart';
 import 'board.dart';
 import 'board_controller.dart';
@@ -22,6 +24,7 @@ class BoardView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final board = ref.watch(boardProvider);
+    final hideHints = ref.watch(settingsProvider.select((s) => s.hideHints));
     final reduceMotion = MediaQuery.of(context).disableAnimations;
     final n = board.n;
 
@@ -45,6 +48,11 @@ class BoardView extends ConsumerWidget {
                   selected: board.selectedIndex == index,
                   rowValid: board.rowValid[index ~/ n],
                   solved: board.isSolved,
+                  hint:
+                      !hideHints &&
+                      board.homeHint[index] &&
+                      !board.rowValid[index ~/ n] &&
+                      !board.isSolved,
                   reduceMotion: reduceMotion,
                   onTap: () => ref.read(boardProvider.notifier).tap(index),
                 ),
@@ -66,6 +74,7 @@ class _PositionedTile extends StatelessWidget {
     required this.selected,
     required this.rowValid,
     required this.solved,
+    required this.hint,
     required this.reduceMotion,
     required this.onTap,
   });
@@ -77,6 +86,9 @@ class _PositionedTile extends StatelessWidget {
   final bool selected;
   final bool rowValid;
   final bool solved;
+
+  /// Draw the dashed home-position outline (tile is on its home row).
+  final bool hint;
   final bool reduceMotion;
   final VoidCallback onTap;
 
@@ -136,25 +148,30 @@ class _PositionedTile extends StatelessWidget {
                 scale: selected ? 1.04 : 1,
                 duration: Duration(milliseconds: reduceMotion ? 0 : 120),
                 curve: Curves.easeOut,
-                child: AnimatedContainer(
-                  duration: Duration(milliseconds: reduceMotion ? 120 : 180),
-                  curve: Curves.easeOut,
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(_radius),
-                    border: Border.all(
-                      color: selected ? c.tileSelected : c.rule,
-                      width: selected ? 2.5 : 1,
+                child: CustomPaint(
+                  foregroundPainter: hint && !selected
+                      ? DashedRectPainter(color: c.hint, radius: _radius)
+                      : null,
+                  child: AnimatedContainer(
+                    duration: Duration(milliseconds: reduceMotion ? 120 : 180),
+                    curve: Curves.easeOut,
+                    decoration: BoxDecoration(
+                      color: bg,
+                      borderRadius: BorderRadius.circular(_radius),
+                      border: Border.all(
+                        color: selected ? c.tileSelected : c.rule,
+                        width: selected ? 2.5 : 1,
+                      ),
                     ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    tile.letter,
-                    style: TextStyle(
-                      fontFamily: 'Fraunces',
-                      fontSize: size * 0.42,
-                      fontWeight: FontWeight.w300,
-                      color: fg,
+                    alignment: Alignment.center,
+                    child: Text(
+                      tile.letter,
+                      style: TextStyle(
+                        fontFamily: 'Fraunces',
+                        fontSize: size * 0.42,
+                        fontWeight: FontWeight.w300,
+                        color: fg,
+                      ),
                     ),
                   ),
                 ),

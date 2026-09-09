@@ -57,8 +57,11 @@ void main() {
     expect(container.read(boardProvider).isSolved, isTrue);
 
     // With animations disabled there is no staggered cascade to wait on.
-    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    // (Bounded pump, not pumpAndSettle: the finished screen mounts a
+    //  1s countdown timer that would keep pumpAndSettle from settling.)
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(BoardView), findsOneWidget);
+    await tester.pumpWidget(const SizedBox()); // cancel the countdown timer
   });
 
   testWidgets('normal motion: cascade runs after a solve', (tester) async {
@@ -71,7 +74,12 @@ void main() {
     container.read(boardProvider.notifier).tap(1);
     await tester.pump();
     expect(container.read(boardProvider).justSolved, isTrue);
-    // Let the staggered cascade play out without throwing.
-    await tester.pumpAndSettle(const Duration(seconds: 2));
+    // Let the staggered cascade play out without throwing. Bounded pumps
+    // rather than pumpAndSettle — the finished screen's 1s countdown
+    // timer never lets the tree go idle.
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    await tester.pumpWidget(const SizedBox()); // cancel the countdown timer
   });
 }

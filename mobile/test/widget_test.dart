@@ -26,7 +26,10 @@ void main() {
   testWidgets('board renders 16 tiles and the kicker', (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pumpAndSettle();
-    expect(find.text('TESSERA · #7'), findsOneWidget);
+    expect(
+      find.textContaining(RegExp(r'TESSERA · #7\b')),
+      findsOneWidget,
+    );
     expect(find.byType(BoardView), findsOneWidget);
     final tiles = find.bySemanticsLabel(RegExp(r'^Row \d, column \d,'));
     expect(tiles, findsNWidgets(16));
