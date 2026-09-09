@@ -270,9 +270,9 @@ function writeDefCache(word: string, c: DefCached) {
   } catch {}
 }
 
-const LOOKUP_TIMEOUT_MS = 6000;
-const LOOKUP_MAX_ATTEMPTS = 3;
-const LOOKUP_RETRY_DELAY_MS = 400;
+const LOOKUP_TIMEOUT_MS = 4000;
+const LOOKUP_MAX_ATTEMPTS = 2;
+const LOOKUP_RETRY_DELAY_MS = 300;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -358,22 +358,30 @@ function lemmaCandidates(word: string): string[] {
   }
   return Array.from(new Set(out));
 }
+async function fetchFromProvider(
+  word: string,
+  lookup: (w: string) => Promise<{ definition: string | null; partOfSpeech: string | null }>
+): Promise<{ definition: string | null; partOfSpeech: string | null; resolvedFrom: string | null }> {
+  const primary = await lookup(word);
+  if (primary.definition) return { ...primary, resolvedFrom: null };
+  for (const cand of lemmaCandidates(word)) {
+    const r = await lookup(cand);
+    if (r.definition) return { ...r, resolvedFrom: cand };
+  }
+  return { definition: null, partOfSpeech: null, resolvedFrom: null };
+}
+
 async function fetchDefinition(word: string): Promise<DefCached> {
-  const primary = await lookupOne(word);
-  if (primary.definition) return { ...primary, resolvedFrom: null, ts: Date.now() };
-  for (const cand of lemmaCandidates(word)) {
-    const r = await lookupOne(cand);
-    if (r.definition) return { ...r, resolvedFrom: cand, ts: Date.now() };
-  }
-  // dictionaryapi.dev had nothing for the word or its lemma forms — try
-  // Wiktionary directly as an independent second source before giving up,
-  // so one provider's outage or coverage gap doesn't sink the feature.
-  const wiktPrimary = await lookupWiktionary(word);
-  if (wiktPrimary.definition) return { ...wiktPrimary, resolvedFrom: null, ts: Date.now() };
-  for (const cand of lemmaCandidates(word)) {
-    const r = await lookupWiktionary(cand);
-    if (r.definition) return { ...r, resolvedFrom: cand, ts: Date.now() };
-  }
+  // Query both independent sources at once. Running Wiktionary only after
+  // dictionaryapi.dev's full retry+lemma chain exhausts would double the
+  // worst-case wait on a word neither provider is happy with right now —
+  // in parallel it's bounded by the slower of the two, not their sum.
+  const [primarySource, secondarySource] = await Promise.all([
+    fetchFromProvider(word, lookupOne),
+    fetchFromProvider(word, lookupWiktionary),
+  ]);
+  const chosen = primarySource.definition ? primarySource : secondarySource;
+  if (chosen.definition) return { ...chosen, ts: Date.now() };
   // Last-resort fallback: hand-maintained map of niche English words
   // neither API covers (e.g. architectural / archaic terms).
   const staticDef = STATIC_DEFS_EN[word.toLowerCase()];
@@ -381,6 +389,23 @@ async function fetchDefinition(word: string): Promise<DefCached> {
     return { definition: staticDef, partOfSpeech: null, resolvedFrom: null, ts: Date.now() };
   }
   return { definition: null, partOfSpeech: null, resolvedFrom: null, ts: Date.now() };
+}
+
+const DEF_FETCH_CONCURRENCY = 3;
+
+// Runs `fn` over `items` with at most `limit` in flight at once. Both
+// dictionaryapi.dev and Wiktionary are free/unofficial services — bursting
+// every word's lookup (×2 providers each) at them simultaneously makes
+// rate-limit-driven failures more likely, not less.
+function runWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void[]> {
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const item = items[next++];
+      await fn(item);
+    }
+  };
+  return Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
 }
 
 function WordsContent({ goldRows }: { goldRows: string[] }) {
@@ -412,25 +437,25 @@ function WordsContent({ goldRows }: { goldRows: string[] }) {
     const toFetch = initial.filter((e) => e.loading).map((e) => e.word);
     // Resolve and render each word independently — waiting on a single
     // Promise.all would let one slow/stuck lookup hold every other
-    // already-resolved word on the loading placeholder too.
-    toFetch.forEach((w) => {
-      fetchDefinition(w).then((c) => {
-        writeDefCache(w, c);
-        if (cancelled) return;
-        setEntries((prev) =>
-          prev.map((e) =>
-            e.word === w
-              ? {
-                  ...e,
-                  loading: false,
-                  definition: c.definition,
-                  partOfSpeech: c.partOfSpeech,
-                  resolvedFrom: c.resolvedFrom,
-                }
-              : e
-          )
-        );
-      });
+    // already-resolved word on the loading placeholder too. A small
+    // concurrency cap keeps the initial burst polite to both providers.
+    runWithConcurrency(toFetch, DEF_FETCH_CONCURRENCY, async (w) => {
+      const c = await fetchDefinition(w);
+      writeDefCache(w, c);
+      if (cancelled) return;
+      setEntries((prev) =>
+        prev.map((e) =>
+          e.word === w
+            ? {
+                ...e,
+                loading: false,
+                definition: c.definition,
+                partOfSpeech: c.partOfSpeech,
+                resolvedFrom: c.resolvedFrom,
+              }
+            : e
+        )
+      );
     });
     return () => {
       cancelled = true;
