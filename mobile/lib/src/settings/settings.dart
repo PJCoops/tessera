@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../i18n/locale.dart';
 import '../mode.dart';
 
 /// App settings, persisted to shared_preferences (spec §16.4). Follows the
@@ -80,9 +81,19 @@ class SettingsController extends Notifier<Settings> {
 
   Future<void> _load() async {
     final p = await SharedPreferences.getInstance();
+    final storedLocale = p.getString(_kLocale);
+    final locale = resolveInitialLocale(
+      storedLocale,
+      WidgetsBinding.instance.platformDispatcher.locales,
+    );
+    // Pin the first-launch pick so a later device-language change doesn't
+    // silently move the UI out from under the player.
+    if (storedLocale != 'en' && storedLocale != 'es') {
+      p.setString(_kLocale, locale);
+    }
     state = Settings(
       themeMode: _themeFromString(p.getString(_kTheme)),
-      locale: p.getString(_kLocale) == 'es' ? 'es' : 'en',
+      locale: locale,
       colourBlind: p.getBool(_kColourBlind) ?? false,
       hideHints: p.getBool(_kHideHints) ?? false,
       muted: p.getBool(_kMuted) ?? true,

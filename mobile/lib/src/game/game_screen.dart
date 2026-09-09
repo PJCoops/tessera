@@ -646,23 +646,28 @@ class _BoardSkeleton extends StatelessWidget {
   }
 }
 
-class _PuzzleError extends StatelessWidget {
+class _PuzzleError extends ConsumerWidget {
   const _PuzzleError({required this.onRetry});
 
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
+    final dict = ref.watch(dictOrEmptyProvider);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          "Connect to load today's puzzle",
+          t(dict, 'game.loadError'),
+          textAlign: TextAlign.center,
           style: TextStyle(fontSize: 15, color: c.inkSoft),
         ),
         const SizedBox(height: 16),
-        OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
+        OutlinedButton(
+          onPressed: onRetry,
+          child: Text(t(dict, 'game.loadRetry')),
+        ),
       ],
     );
   }

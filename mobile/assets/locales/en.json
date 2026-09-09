@@ -35,6 +35,11 @@
       "correctWord": "Correct word",
       "puzzleComplete": "Solved"
     },
+    "tile": {
+      "label": "Row {row}, column {col}",
+      "rowComplete": "row complete",
+      "selected": "selected"
+    },
     "ariaHowToPlay": "How to play",
     "ariaHistory": "History",
     "switchToHard": "Try Tessera (Hard) →",

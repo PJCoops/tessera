@@ -8,8 +8,13 @@ import 'package:tessera/src/game/game_screen.dart';
 import 'package:tessera/src/game/puzzle.dart';
 import 'package:tessera/src/theme/theme.dart';
 
+import 'support/test_dict.dart';
+
 Widget _harness() => ProviderScope(
-  overrides: [puzzleProvider.overrideWith((ref) => Puzzle.sample())],
+  overrides: [
+    puzzleProvider.overrideWith((ref) => Puzzle.sample()),
+    dictOverride(),
+  ],
   child: MaterialApp(
     theme: buildTesseraTheme(brightness: Brightness.light),
     home: const GameScreen(),
@@ -60,6 +65,7 @@ void main() {
           puzzleProvider.overrideWith(
             (ref) => Future<Puzzle>.error(Exception('offline')),
           ),
+          dictOverride(),
         ],
         child: MaterialApp(
           theme: buildTesseraTheme(brightness: Brightness.light),
@@ -68,7 +74,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text("Connect to load today's puzzle"), findsOneWidget);
+    expect(
+      find.text("Couldn't load today's puzzle. Check your connection."),
+      findsOneWidget,
+    );
     expect(find.text('Try again'), findsOneWidget);
   });
 }

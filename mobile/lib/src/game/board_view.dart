@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../chrome/dashed_rect.dart';
+import '../i18n.dart';
+import '../i18n/dict.dart';
 import '../settings/settings.dart';
 import '../theme/tokens.dart';
 import 'board.dart';
@@ -25,6 +27,7 @@ class BoardView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final board = ref.watch(boardProvider);
     final hideHints = ref.watch(settingsProvider.select((s) => s.hideHints));
+    final dict = ref.watch(dictOrEmptyProvider);
     final reduceMotion = MediaQuery.of(context).disableAnimations;
     final n = board.n;
 
@@ -53,6 +56,7 @@ class BoardView extends ConsumerWidget {
                       board.homeHint[index] &&
                       !board.rowValid[index ~/ n] &&
                       !board.isSolved,
+                  dict: dict,
                   reduceMotion: reduceMotion,
                   onTap: () => ref.read(boardProvider.notifier).tap(index),
                 ),
@@ -75,6 +79,7 @@ class _PositionedTile extends StatelessWidget {
     required this.rowValid,
     required this.solved,
     required this.hint,
+    required this.dict,
     required this.reduceMotion,
     required this.onTap,
   });
@@ -89,6 +94,9 @@ class _PositionedTile extends StatelessWidget {
 
   /// Draw the dashed home-position outline (tile is on its home row).
   final bool hint;
+
+  /// Active locale dictionary, for the semantic label (§17.1).
+  final Map<String, dynamic> dict;
   final bool reduceMotion;
   final VoidCallback onTap;
 
@@ -112,12 +120,12 @@ class _PositionedTile extends StatelessWidget {
     }
 
     final state = (solved || rowValid)
-        ? 'row complete'
+        ? t(dict, 'game.tile.rowComplete')
         : selected
-        ? 'selected'
+        ? t(dict, 'game.tile.selected')
         : null;
     final label = [
-      'Row ${row + 1}, column ${col + 1}',
+      t(dict, 'game.tile.label', {'row': row + 1, 'col': col + 1}),
       tile.letter,
       ?state,
     ].join(', ');

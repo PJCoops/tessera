@@ -35,6 +35,11 @@
       "correctWord": "Palabra correcta",
       "puzzleComplete": "Resuelto"
     },
+    "tile": {
+      "label": "Fila {row}, columna {col}",
+      "rowComplete": "fila completa",
+      "selected": "seleccionada"
+    },
     "ariaHowToPlay": "Cómo jugar",
     "ariaHistory": "Historial",
     "switchToHard": "Probar Tessera (Difícil) →",

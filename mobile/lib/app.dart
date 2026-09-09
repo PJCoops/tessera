@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'flavors.dart';
 import 'src/game/game_screen.dart';
+import 'src/i18n/locale.dart';
 import 'src/settings/settings.dart';
 import 'src/theme/theme.dart';
 
@@ -17,6 +19,13 @@ class TesseraApp extends ConsumerWidget {
     return MaterialApp(
       title: F.title,
       debugShowCheckedModeBanner: false,
+      locale: Locale(settings.locale),
+      supportedLocales: kSupportedLocales.map(Locale.new),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       themeMode: settings.themeMode,
       theme: buildTesseraTheme(
         brightness: Brightness.light,
