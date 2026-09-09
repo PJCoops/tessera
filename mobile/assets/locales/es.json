@@ -99,6 +99,7 @@
     "theme": {
       "title": "Tema",
       "description": "El sistema sigue tu dispositivo. Claro u oscuro se queda en este navegador.",
+      "descriptionApp": "El sistema sigue tu dispositivo. Claro u oscuro se recuerda aquí.",
       "system": "Sistema",
       "light": "Claro",
       "dark": "Oscuro"
@@ -108,6 +109,10 @@
       "description": "Cambia el idioma de la interfaz. Las palabras de la partida no cambian.",
       "en": "English",
       "es": "Español"
+    },
+    "colourBlind": {
+      "title": "Paleta para daltónicos",
+      "description": "Cambia los colores de fila y resuelto por una pareja de azul y naranja."
     },
     "hideHints": {
       "title": "Ocultar pistas de fila",
@@ -120,6 +125,7 @@
     "reminder": {
       "title": "Recordatorios diarios",
       "description": "Avisar a este dispositivo cuando esté lista la partida de hoy (09:00 UTC). Solo en este dispositivo.",
+      "descriptionApp": "Un recordatorio local a esta hora cada día. Se activará en una próxima actualización.",
       "enable": "Activar",
       "disable": "Desactivar",
       "enabling": "Activando…",
@@ -127,6 +133,20 @@
       "unsupported": "Este navegador no admite notificaciones push.",
       "iosNotInstalled": "En iPhone, añade Tessera a la pantalla de inicio primero y vuelve aquí.",
       "denied": "Las notificaciones están bloqueadas. Actívalas en los ajustes del navegador para volver a suscribirte."
+    },
+    "soon": "Pronto",
+    "account": {
+      "signIn": "Iniciar sesión",
+      "restorePurchases": "Restaurar compras",
+      "removeAds": "Quitar anuncios",
+      "privacyChoices": "No vender ni compartir mi información personal",
+      "deleteAccount": "Eliminar cuenta"
+    },
+    "legal": {
+      "privacy": "Política de privacidad",
+      "terms": "Términos",
+      "licenses": "Licencias de código abierto",
+      "support": "Contactar con soporte"
     }
   },
   "history": {

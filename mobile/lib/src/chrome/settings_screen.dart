@@ -41,10 +41,7 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           _SettingRow(
             title: t(dict, 'settings.theme.title'),
-            // The shared locale string says "this browser"; on device the
-            // choice is just remembered. (Full mobile copy is Phase 6.)
-            description: 'System follows your device. Light or dark is '
-                'remembered here.',
+            description: t(dict, 'settings.theme.descriptionApp'),
             control: _Segmented<ThemeMode>(
               value: s.themeMode,
               onChanged: ctrl.setThemeMode,
@@ -65,9 +62,8 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           _SettingRow(
-            title: 'Colour-blind palette',
-            description:
-                'Swaps the row/solved colours for a blue + orange pair.',
+            title: t(dict, 'settings.colourBlind.title'),
+            description: t(dict, 'settings.colourBlind.description'),
             control: Switch(
               value: s.colourBlind,
               onChanged: ctrl.setColourBlind,
@@ -89,9 +85,7 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             title: Text(t(dict, 'settings.reminder.title')),
             subtitle: Text(
-              // Scheduling lands in Phase 8; for now the time is only saved.
-              'A local reminder at this time each day. Turns on in a later '
-                  'update.',
+              t(dict, 'settings.reminder.descriptionApp'),
               style: TextStyle(fontSize: 12, color: c.muted),
             ),
             trailing: Text(
@@ -115,40 +109,40 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(height: 32),
           _SectionLabel(label: t(dict, 'account.title')),
-          for (final row in const [
-            'Sign in',
-            'Restore purchases',
-            'Remove ads',
-            'Do not sell or share my personal information',
-            'Delete account',
+          for (final key in const [
+            'settings.account.signIn',
+            'settings.account.restorePurchases',
+            'settings.account.removeAds',
+            'settings.account.privacyChoices',
+            'settings.account.deleteAccount',
           ])
             ListTile(
               enabled: false,
-              title: Text(row),
+              title: Text(t(dict, key)),
               trailing: Text(
-                'Soon',
+                t(dict, 'settings.soon'),
                 style: TextStyle(fontSize: 12, color: c.muted),
               ),
             ),
 
           const Divider(height: 32),
           ListTile(
-            title: const Text('Privacy policy'),
+            title: Text(t(dict, 'settings.legal.privacy')),
             trailing: Icon(Icons.open_in_new, size: 18, color: c.muted),
             onTap: () => _launch(_privacyUrl),
           ),
           ListTile(
-            title: const Text('Terms'),
+            title: Text(t(dict, 'settings.legal.terms')),
             trailing: Icon(Icons.open_in_new, size: 18, color: c.muted),
             onTap: () => _launch(_termsUrl),
           ),
           ListTile(
-            title: const Text('Open-source licenses'),
+            title: Text(t(dict, 'settings.legal.licenses')),
             trailing: Icon(Icons.chevron_right, color: c.muted),
             onTap: () => showLicensePage(context: context),
           ),
           ListTile(
-            title: const Text('Contact support'),
+            title: Text(t(dict, 'settings.legal.support')),
             trailing: Icon(Icons.open_in_new, size: 18, color: c.muted),
             onTap: () => _launch(_supportUrl),
           ),

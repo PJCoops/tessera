@@ -99,6 +99,7 @@
     "theme": {
       "title": "Theme",
       "description": "System follows your device. Light or dark stays on this browser.",
+      "descriptionApp": "System follows your device. Light or dark is remembered here.",
       "system": "System",
       "light": "Light",
       "dark": "Dark"
@@ -108,6 +109,10 @@
       "description": "Changes UI language. Puzzle words stay the same.",
       "en": "English",
       "es": "Español"
+    },
+    "colourBlind": {
+      "title": "Colour-blind palette",
+      "description": "Swaps the row and solved colours for a blue and orange pair."
     },
     "hideHints": {
       "title": "Hide row hints",
@@ -120,6 +125,7 @@
     "reminder": {
       "title": "Daily reminders",
       "description": "Push this device when today's puzzle is ready (09:00 UTC). Stays on this device only.",
+      "descriptionApp": "A local reminder at this time each day. Turns on in a later update.",
       "enable": "Enable",
       "disable": "Disable",
       "enabling": "Enabling…",
@@ -127,6 +133,20 @@
       "unsupported": "This browser does not support push notifications.",
       "iosNotInstalled": "On iPhone, add Tessera to your home screen first, then come back here.",
       "denied": "Notifications are blocked. Enable them in browser settings to opt back in."
+    },
+    "soon": "Soon",
+    "account": {
+      "signIn": "Sign in",
+      "restorePurchases": "Restore purchases",
+      "removeAds": "Remove ads",
+      "privacyChoices": "Do not sell or share my personal information",
+      "deleteAccount": "Delete account"
+    },
+    "legal": {
+      "privacy": "Privacy policy",
+      "terms": "Terms",
+      "licenses": "Open-source licenses",
+      "support": "Contact support"
     }
   },
   "history": {

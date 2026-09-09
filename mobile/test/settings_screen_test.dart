@@ -8,8 +8,8 @@ import 'package:tessera/src/theme/theme.dart';
 
 import 'support/test_dict.dart';
 
-Widget _harness() => ProviderScope(
-  overrides: [dictOverride()],
+Widget _harness([String locale = 'en']) => ProviderScope(
+  overrides: [dictOverride(locale)],
   child: MaterialApp(
     theme: buildTesseraTheme(brightness: Brightness.light),
     darkTheme: buildTesseraTheme(brightness: Brightness.dark),
@@ -49,6 +49,31 @@ void main() {
     expect(find.text('Delete account'), findsOneWidget);
     await _scrollTo(tester, find.text('Open-source licenses'));
     expect(find.text('Open-source licenses'), findsOneWidget);
+  });
+
+  testWidgets('every row is translated under es', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(_harness('es'));
+    await _ready(tester);
+
+    // Rows that used to be hardcoded English.
+    expect(find.text('Paleta para daltónicos'), findsOneWidget);
+    expect(
+      find.text('El sistema sigue tu dispositivo. Claro u oscuro se recuerda aquí.'),
+      findsOneWidget,
+    );
+    await _scrollTo(tester, find.text('Eliminar cuenta'));
+    expect(find.text('Eliminar cuenta'), findsOneWidget);
+    expect(find.text('Pronto'), findsWidgets);
+    await _scrollTo(tester, find.text('Licencias de código abierto'));
+    expect(find.text('Licencias de código abierto'), findsOneWidget);
+    await _scrollTo(tester, find.text('Contactar con soporte'));
+    expect(find.text('Contactar con soporte'), findsOneWidget);
+
+    // No English leaked through.
+    expect(find.text('Colour-blind palette'), findsNothing);
+    expect(find.text('Delete account'), findsNothing);
+    expect(find.text('Soon'), findsNothing);
   });
 
   testWidgets('toggling Mute updates the settings provider', (tester) async {
