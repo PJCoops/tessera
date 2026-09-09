@@ -5,9 +5,12 @@
 // the request through rather than break the user-facing flow. The goal
 // is to put a ceiling on abuse, not to harden a payments API.
 //
-// Identifier: first IP in x-forwarded-for, falling back to x-real-ip.
-// On Vercel both are set by the edge; locally everything maps to one
-// bucket which is fine for dev.
+// Identifier: by default the first IP in x-forwarded-for, falling back
+// to x-real-ip. On Vercel both are set by the edge; locally everything
+// maps to one bucket which is fine for dev. Pass an explicit `identifier`
+// (e.g. a user id) to bucket by that instead — carrier-grade NAT makes
+// the IP bucket useless for mobile, so authenticated write endpoints
+// should also apply a per-user limit under a distinct `name`.
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
@@ -57,12 +60,13 @@ export async function rateLimit(
   req: NextRequest,
   name: string,
   limit: number,
-  window: Window
+  window: Window,
+  identifier?: string
 ): Promise<RateLimitResult> {
   const l = getLimiter(name, limit, window);
   if (!l) return { ok: true };
   try {
-    const res = await l.limit(clientIp(req));
+    const res = await l.limit(identifier ?? clientIp(req));
     if (res.success) return { ok: true };
     const retryAfter = Math.max(1, Math.ceil((res.reset - Date.now()) / 1000));
     return { ok: false, retryAfter };

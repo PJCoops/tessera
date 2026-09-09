@@ -45,8 +45,67 @@ export const puzzleResponseSchema = z.object({
 export type PuzzleQuery = z.infer<typeof puzzleQuerySchema>;
 export type PuzzleResponse = z.infer<typeof puzzleResponseSchema>;
 
+// ── GET /api/v1/app-config ───────────────────────────────────────────────
+
+export const appConfigResponseSchema = z.object({
+  // Lowest client version still allowed to talk to v1. The client hard-
+  // blocks below this and shows a store link; prefer letting the current
+  // version keep playing in a degraded mode (§16.2).
+  minSupportedVersion: z.string(),
+  // Optional one-shot "what's new" card, keyed so the client shows it once.
+  whatsNew: z
+    .object({ id: z.string(), title: z.string(), body: z.string() })
+    .nullable(),
+  // Dark-launch switches (ad placements, new-player grace, etc. — §21).
+  // Open map so flags can be added without a schema bump.
+  flags: z.record(z.string(), z.boolean()),
+});
+
+export type AppConfigResponse = z.infer<typeof appConfigResponseSchema>;
+
+// ── GET /api/v1/results ──────────────────────────────────────────────────
+
+export const streakSchema = z.object({
+  current: z.int().min(0),
+  max: z.int().min(0),
+  lastWon: z.int().min(0),
+});
+
+export const resultRowSchema = z.object({
+  num: z.int().positive(),
+  mode: z.enum(MODES),
+  moves: z.int().min(0),
+  bonus: z.boolean(),
+  revealed: z.boolean(),
+  verified: z.boolean(),
+  timeMs: z.int().nullable(),
+  completedAt: z.number(),
+});
+
+export const resultsResponseSchema = z.object({
+  ok: z.literal(true),
+  results: z.array(resultRowSchema),
+  streaks: z.object({ classic: streakSchema, hard: streakSchema }),
+});
+
+export type ResultsResponse = z.infer<typeof resultsResponseSchema>;
+
+// ── DELETE /api/v1/account ───────────────────────────────────────────────
+
+export const accountDeleteResponseSchema = z.object({
+  ok: z.literal(true),
+  status: z.literal("pending_deletion"),
+  permanentAt: z.string(),
+  alreadyPending: z.boolean(),
+});
+
+export type AccountDeleteResponse = z.infer<typeof accountDeleteResponseSchema>;
+
 // The map of every v1 response schema, keyed by route. The JSON Schema
 // generator and the contract tests both iterate this.
 export const v1ResponseSchemas = {
   "GET /api/v1/puzzle": puzzleResponseSchema,
+  "GET /api/v1/app-config": appConfigResponseSchema,
+  "GET /api/v1/results": resultsResponseSchema,
+  "DELETE /api/v1/account": accountDeleteResponseSchema,
 } as const;
