@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../auth/account_client.dart';
 import '../auth/auth_controller.dart';
 import '../auth/second_method_prompt.dart';
 import '../auth/sign_in_sheet.dart';
@@ -66,6 +67,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (puzzle == null) return;
     final mode = ref.read(activeModeProvider);
     if (ref.read(resultsProvider(mode.id)).containsKey(puzzle.num)) return;
+    final completedAt = DateTime.now().millisecondsSinceEpoch;
     ref
         .read(resultsProvider(mode.id).notifier)
         .record(
@@ -73,10 +75,28 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           StoredResult(
             moves: board.moves,
             bonus: board.isBonus,
-            completedAt: DateTime.now().millisecondsSinceEpoch,
+            completedAt: completedAt,
             minSwaps: puzzle.minSwaps,
           ),
         );
+    _push(
+      SubmitArgs(
+        number: puzzle.num,
+        mode: mode.id,
+        locale: ref.read(settingsProvider).locale,
+        moves: board.moves,
+        bonus: board.isBonus,
+        completedAt: completedAt,
+      ),
+    );
+  }
+
+  /// Fire-and-forget push of a just-recorded result. No-op when signed
+  /// out — those rows reach the server through [SyncEngine.syncOnSignIn]
+  /// on the next sign-in.
+  void _push(SubmitArgs a) {
+    if (ref.read(authUserProvider) == null) return;
+    unawaited(ref.read(syncEngineProvider).submitOne(a));
   }
 
   Future<void> _confirmReveal() async {
@@ -111,6 +131,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     ref.read(boardProvider.notifier).reveal();
     if (puzzle != null &&
         !ref.read(resultsProvider(mode.id)).containsKey(puzzle.num)) {
+      final completedAt = DateTime.now().millisecondsSinceEpoch;
       ref
           .read(resultsProvider(mode.id).notifier)
           .record(
@@ -118,11 +139,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             StoredResult(
               moves: board.moves,
               bonus: false,
-              completedAt: DateTime.now().millisecondsSinceEpoch,
+              completedAt: completedAt,
               revealed: true,
               minSwaps: puzzle.minSwaps,
             ),
           );
+      _push(
+        SubmitArgs(
+          number: puzzle.num,
+          mode: mode.id,
+          locale: ref.read(settingsProvider).locale,
+          moves: board.moves,
+          bonus: false,
+          completedAt: completedAt,
+          revealed: true,
+        ),
+      );
     }
   }
 

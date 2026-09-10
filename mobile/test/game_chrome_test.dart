@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tessera/src/auth/account_client.dart';
+import 'package:tessera/src/auth/auth_controller.dart';
 import 'package:tessera/src/chrome/legend.dart';
 import 'package:tessera/src/game/board_controller.dart';
 import 'package:tessera/src/game/game_screen.dart';
 import 'package:tessera/src/game/puzzle.dart';
+import 'package:tessera/src/streak.dart';
 import 'package:tessera/src/theme/theme.dart';
 
 import 'support/test_dict.dart';
@@ -21,16 +24,70 @@ Puzzle _oneFromSolved() {
   return Puzzle(num: p.num, goldRows: p.goldRows, minSwaps: 1, startTiles: home);
 }
 
-Widget _harness() => ProviderScope(
+Widget _harness({List<Override> extra = const []}) => ProviderScope(
   overrides: [
     puzzleProvider.overrideWith((ref) => _oneFromSolved()),
     dictOverride(),
+    ...extra,
   ],
   child: MaterialApp(
     theme: buildTesseraTheme(brightness: Brightness.light),
     home: const GameScreen(),
   ),
 );
+
+class _SignedInBackend implements AuthBackend {
+  @override
+  Stream<AuthUser?> authChanges() =>
+      Stream.value(const AuthUser(id: 'u1', email: 'a@b.com'));
+  @override
+  AuthUser? get currentUser => const AuthUser(id: 'u1', email: 'a@b.com');
+  @override
+  String? get accessToken => 'tok';
+  @override
+  int? get authTimeMs => null;
+  @override
+  Future<void> sendOtp(String email) async {}
+  @override
+  Future<void> verifyOtp(String email, String token) async {}
+  @override
+  Future<void> signInWithApple() async {}
+  @override
+  Future<void> signInWithGoogle() async {}
+  @override
+  Future<void> signOut() async {}
+}
+
+class _RecordingApi implements AccountApi {
+  int submitCalls = 0;
+  final List<SubmitArgs> submitted = [];
+
+  @override
+  Future<bool> submitResult(SubmitArgs a) async {
+    submitCalls++;
+    submitted.add(a);
+    return true;
+  }
+
+  @override
+  Future<GetResultsResponse> getResults() async => GetResultsResponse(
+    results: const [],
+    classicStreak: const Streak(current: 0, max: 0, lastWon: 0),
+    hardStreak: const Streak(current: 0, max: 0, lastWon: 0),
+  );
+  @override
+  Future<ImportResult> importResults(
+    List<SubmitArgs> results, {
+    int classicMax = 0,
+    int hardMax = 0,
+  }) async => ImportResult(imported: 0, verified: 0);
+  @override
+  Future<AccountDeleteResult> deleteAccount() => throw UnimplementedError();
+  @override
+  Future<bool> restoreAccount() => throw UnimplementedError();
+  @override
+  Future<AppConfigResponse> appConfig() => throw UnimplementedError();
+}
 
 void main() {
   setUp(
@@ -83,6 +140,36 @@ void main() {
 
     // Unmount so the countdown's periodic timer is cancelled before the
     // framework's pending-timer check.
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('solving while signed in pushes the result to the server', (
+    tester,
+  ) async {
+    final api = _RecordingApi();
+    await tester.pumpWidget(
+      _harness(
+        extra: [
+          authBackendProvider.overrideWithValue(_SignedInBackend()),
+          accountClientProvider.overrideWithValue(api),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(GameScreen)),
+    );
+    container.read(boardProvider.notifier).tap(0);
+    container.read(boardProvider.notifier).tap(1);
+    expect(container.read(boardProvider).isSolved, isTrue);
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    expect(api.submitCalls, 1);
+    expect(api.submitted.single.number, _oneFromSolved().num);
+    expect(api.submitted.single.revealed, isFalse);
+
     await tester.pumpWidget(const SizedBox());
   });
 }
