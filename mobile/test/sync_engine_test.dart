@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tessera/src/auth/account_client.dart';
+import 'package:tessera/src/auth/auth_controller.dart';
 import 'package:tessera/src/clock.dart';
 import 'package:tessera/src/epoch.dart';
 import 'package:tessera/src/game/results.dart';
@@ -198,4 +200,63 @@ void main() {
     expect(p.getStringList('tessera:sync-queue'), isEmpty);
     expect(api.submitCalls, 2);
   });
+
+  test('signing out clears the per-user guard so the next sign-in re-syncs',
+      () async {
+    final api = _FakeApi(() => _resp([]));
+    SharedPreferences.setMockInitialValues({'tessera:synced:u1': true});
+    final auth = _MutableAuth(const AuthUser(id: 'u1', email: 'a@b.com'));
+    final c = ProviderContainer(
+      overrides: [
+        accountClientProvider.overrideWithValue(api),
+        authBackendProvider.overrideWithValue(auth),
+      ],
+    );
+    addTearDown(c.dispose);
+
+    c.listen(accountSyncProvider, (_, _) {}, fireImmediately: true);
+    await _settle();
+
+    auth.emit(null); // sign out
+    await _settle();
+
+    final p = await SharedPreferences.getInstance();
+    expect(p.getBool('tessera:synced:u1'), isNull,
+        reason: 'reset() must clear the guard on sign-out');
+    expect(await c.read(syncEngineProvider).alreadySynced('u1'), isFalse);
+  });
+}
+
+class _MutableAuth implements AuthBackend {
+  _MutableAuth(this._user);
+  AuthUser? _user;
+  final _ctrl = StreamController<AuthUser?>.broadcast();
+
+  void emit(AuthUser? u) {
+    _user = u;
+    _ctrl.add(u);
+  }
+
+  @override
+  Stream<AuthUser?> authChanges() async* {
+    yield _user;
+    yield* _ctrl.stream;
+  }
+
+  @override
+  AuthUser? get currentUser => _user;
+  @override
+  String? get accessToken => _user == null ? null : 'tok';
+  @override
+  int? get authTimeMs => null;
+  @override
+  Future<void> sendOtp(String email) async {}
+  @override
+  Future<void> verifyOtp(String email, String token) async {}
+  @override
+  Future<void> signInWithApple() async {}
+  @override
+  Future<void> signInWithGoogle() async {}
+  @override
+  Future<void> signOut() async => emit(null);
 }

@@ -14,18 +14,32 @@ final streakDecreaseProvider = StateProvider<StreakDecrease?>((ref) => null);
 
 final syncStatusProvider = StateProvider<SyncStatus>((ref) => SyncStatus.idle);
 
-/// Watched high in the tree (see app.dart). When a user is signed in it
-/// runs the first-sign-in reconciliation once per user per launch, and
-/// otherwise just drains the offline submit queue. Also resets the guard
-/// on sign-out so a re-sign-in re-syncs.
+/// Remembers the last signed-in user so [accountSyncProvider] can clear
+/// that user's sync guard + queue when they sign out.
+final _lastSyncedUserProvider = StateProvider<String?>((ref) => null);
+
+/// Watched high in the tree (see app.dart). On sign-in it runs the
+/// first-sign-in reconciliation once per user (guard in prefs), otherwise
+/// just drains the offline submit queue. On sign-out it resets that guard
+/// so the next sign-in reconciles again.
 final accountSyncProvider = Provider<void>((ref) {
   final user = ref.watch(authUserProvider);
   final engine = ref.watch(syncEngineProvider);
 
-  if (user == null) return;
-
   // Defer: providers can't be mutated during build.
   Future(() async {
+    final last = ref.read(_lastSyncedUserProvider);
+
+    if (user == null) {
+      if (last != null) {
+        await engine.reset(last);
+        ref.read(_lastSyncedUserProvider.notifier).state = null;
+      }
+      return;
+    }
+
+    ref.read(_lastSyncedUserProvider.notifier).state = user.id;
+
     if (await engine.alreadySynced(user.id)) {
       await engine.flushQueue();
       return;
