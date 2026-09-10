@@ -244,11 +244,11 @@ and the RevenueCat keys (Phase 7). Apply the Phase B schema block in
 - [x] Phase B schema block applied to the DB (step 2b)
 - [x] Email OTP sign-in + sync verified on one device (step 3) — sign in
       → pull history → solve → `POST /api/v1/results`
-- [ ] Second-device pull verified
+- [x] Second-device pull verified (fresh install → sign in → history back)
 - [ ] Google: Cloud OAuth clients created, Supabase provider on, reversed
       id in xcconfigs, `GOOGLE_SERVER_CLIENT_ID` dart-define, button works
 - [ ] Apple: App ID capability on, Supabase provider on, Xcode capability
       added, button works
-- [ ] Streak-decrease screen seen once (step 7)
-- [ ] Delete → grace → restore verified (step 7)
+- [x] Streak-decrease screen seen once (step 7)
+- [x] Delete → grace → restore verified (step 7)
 - [ ] `APPLE_APP_ID`, `ANDROID_CERT_SHA256` recorded for the backend
