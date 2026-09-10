@@ -110,11 +110,17 @@ class SupabaseAuthBackend implements AuthBackend {
   );
 
   @override
-  Future<void> verifyOtp(String email, String token) => _auth.verifyOTP(
-    email: email.trim().toLowerCase(),
-    token: token.trim(),
-    type: OtpType.email,
-  );
+  Future<void> verifyOtp(String email, String token) async {
+    final e = email.trim().toLowerCase();
+    final t = token.trim();
+    try {
+      await _auth.verifyOTP(email: e, token: t, type: OtpType.email);
+    } on AuthException {
+      // New, unconfirmed users need the `signup` type when "Confirm email"
+      // is on. Mirrors the web (app/components/AccountModal.tsx).
+      await _auth.verifyOTP(email: e, token: t, type: OtpType.signup);
+    }
+  }
 
   @override
   Future<void> signInWithApple() async {
