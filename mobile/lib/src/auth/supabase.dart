@@ -23,8 +23,11 @@ Future<void> initSupabase() async {
     // The Supabase "anon" key is a publishable key; the dart-define name
     // mirrors the web's NEXT_PUBLIC_SUPABASE_ANON_KEY.
     publishableKey: _anonKey,
+    // Implicit, not PKCE: we only ever use the 6-digit `verifyOTP` code
+    // and native `signInWithIdToken` (Apple/Google) — never a browser
+    // redirect. PKCE would also require a separate pkceAsyncStorage.
     authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.pkce,
+      authFlowType: AuthFlowType.implicit,
       localStorage: _SecureSessionStorage(),
     ),
   );

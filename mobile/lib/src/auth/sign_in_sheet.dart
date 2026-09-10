@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../i18n.dart';
 import '../i18n/dict.dart';
 import '../theme/tokens.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+
 import 'auth_controller.dart';
 
 /// Sign-in / create-account sheet (spec §6.1): Sign in with Apple (iOS,
@@ -66,6 +68,12 @@ class _SignInBodyState extends ConsumerState<_SignInBody> {
       await action();
       if (mounted && ref.read(authUserProvider) != null) {
         Navigator.of(context).pop();
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() => _error = e.message.isNotEmpty
+            ? e.message
+            : _t(errorKey ?? 'account.error'));
       }
     } catch (_) {
       if (mounted) setState(() => _error = _t(errorKey ?? 'account.error'));
