@@ -53,12 +53,21 @@ The summary below is the short version.
 
 **Build-time (`--dart-define`):**
 
+`mobile/dart_defines.dev.json` (gitignored) holds the values — long
+keys break if pasted on the command line, so use a file:
+
+```json
+{
+  "API_BASE_URL": "http://localhost:3000",
+  "SUPABASE_URL": "https://<ref>.supabase.co",
+  "SUPABASE_ANON_KEY": "<anon / publishable key>",
+  "GOOGLE_SERVER_CLIENT_ID": "<web OAuth client id, Google only>"
+}
+```
+
 ```sh
 flutter run --flavor dev -t lib/main_dev.dart \
-  --dart-define=API_BASE_URL=http://localhost:3000 \
-  --dart-define=SUPABASE_URL=<project url> \
-  --dart-define=SUPABASE_ANON_KEY=<anon / publishable key> \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=<web OAuth client id>   # Google only
+  --dart-define-from-file=dart_defines.dev.json
 ```
 
 Without `SUPABASE_URL` / `SUPABASE_ANON_KEY` the app runs signed-out only

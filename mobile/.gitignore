@@ -46,3 +46,6 @@ app.*.map.json
 
 # Golden-test mismatch artifacts
 test/golden/failures/
+
+# Local --dart-define-from-file (secrets)
+dart_defines*.json

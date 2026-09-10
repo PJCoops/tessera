@@ -60,12 +60,21 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/api/v1/results
 
 ## 3. First end-to-end run (email OTP only)
 
+Put the values in `mobile/dart_defines.dev.json` (gitignored — long keys
+break when pasted on a command line):
+
+```json
+{
+  "API_BASE_URL": "http://localhost:3000",
+  "SUPABASE_URL": "https://<ref>.supabase.co",
+  "SUPABASE_ANON_KEY": "<anon key>"
+}
+```
+
 ```sh
 cd mobile
 flutter run --flavor dev -t lib/main_dev.dart \
-  --dart-define=API_BASE_URL=http://localhost:3000 \
-  --dart-define=SUPABASE_URL=<project url> \
-  --dart-define=SUPABASE_ANON_KEY=<anon key>
+  --dart-define-from-file=dart_defines.dev.json
 ```
 
 Then:
