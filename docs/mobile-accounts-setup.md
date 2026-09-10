@@ -16,9 +16,11 @@ Legend: 🔑 = produces a value you paste somewhere later.
 Project: the existing EU Tessera project (same one the web app uses).
 
 1. **Auth → Providers → Email**
-   - Enable **Email OTP** (the 6-digit code flow), disable "Confirm email"
-     if it forces a link.
-   - Set **OTP expiry ≤ 600 s** (10 min — spec §6.1).
+   - Enable **Email OTP** (the 6-digit code flow). "Confirm email" can stay
+     on — the app verifies `type: email` then falls back to `type: signup`.
+   - **Email OTP expiration**: leave at the 3600 s default (a short value
+     like 60 s expires the code before you can read the email and type it).
+   - **Email OTP length**: 6.
 2. **Auth → Email Templates → Magic Link**
    - The body must contain `{{ .Token }}` so the email carries the code,
      not just a link. (Same requirement as web — `docs/accounts-spec.md`.)
@@ -55,6 +57,18 @@ curl -s http://localhost:3000/api/v1/app-config
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/api/v1/results
 # -> 401  (not 503 — 503 means DATABASE_URL still missing)
 ```
+
+### 2b. Apply the Phase B schema to the DB
+
+There's only one database (the EU Supabase project), so the Phase B
+columns/tables (`profiles.deleted_at`, `device_tokens`,
+`entitlement_events`, …) must exist before any authed `/api/v1/*` route
+works — otherwise `GET /api/v1/results` 500s with
+`column "deleted_at" does not exist`. Run the Phase B block from
+`schema.sql` (everything under "Phase B: mobile backend workstream") once
+against the live DB. It's all `add column / create table if not exists`,
+so re-running is safe and the live web app is unaffected. `psql` or a
+one-off `postgres`-client script both work.
 
 ---
 
@@ -225,9 +239,11 @@ and the RevenueCat keys (Phase 7). Apply the Phase B schema block in
 
 ## Checklist
 
-- [ ] Supabase Email OTP on, expiry ≤ 10 min, `{{ .Token }}` in template
-- [ ] `.env.local` with URL / anon key / `DATABASE_URL`; `curl` checks pass
-- [ ] Email OTP sign-in + sync verified on one device (step 3)
+- [x] Supabase Email OTP on, expiry 3600 s, `{{ .Token }}` in template
+- [x] `.env.local` with URL / anon key / `DATABASE_URL`; `curl` checks pass
+- [x] Phase B schema block applied to the DB (step 2b)
+- [x] Email OTP sign-in + sync verified on one device (step 3) — sign in
+      → pull history → solve → `POST /api/v1/results`
 - [ ] Second-device pull verified
 - [ ] Google: Cloud OAuth clients created, Supabase provider on, reversed
       id in xcconfigs, `GOOGLE_SERVER_CLIENT_ID` dart-define, button works
