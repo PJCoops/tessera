@@ -60,13 +60,19 @@ class _SignInBodyState extends ConsumerState<_SignInBody> {
   bool get _configured => ref.read(authBackendProvider) is! NullAuthBackend;
 
   Future<void> _guard(Future<void> Function() action, {String? errorKey}) async {
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
       await action();
-      if (mounted && ref.read(authUserProvider) != null) {
+      // Check the backend directly — the stream-backed [authUserProvider]
+      // may not have emitted yet the instant verifyOtp / signInWithIdToken
+      // returns, which would leave the sheet open on a spent code.
+      final signedIn = ref.read(authBackendProvider).currentUser != null ||
+          ref.read(authUserProvider) != null;
+      if (mounted && signedIn) {
         Navigator.of(context).pop();
       }
     } on AuthException catch (e) {
@@ -229,9 +235,6 @@ class _SignInBodyState extends ConsumerState<_SignInBody> {
           isDense: true,
           counterText: '',
         ),
-        onChanged: (v) {
-          if (v.trim().length >= 6) _verify();
-        },
         onSubmitted: (_) => _verify(),
       ),
       const SizedBox(height: 10),

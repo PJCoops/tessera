@@ -85,8 +85,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(backend.calls, contains('sendOtp:a@b.com'));
 
-    // Code step.
+    // Code step: enter the code and tap Verify (no auto-submit).
     await tester.enterText(find.byType(TextField).first, '123456');
+    await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
 
     expect(backend.calls, contains('verifyOtp:123456'));
