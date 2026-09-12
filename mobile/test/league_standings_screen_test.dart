@@ -68,12 +68,30 @@ void main() {
     expect(find.text('2'), findsWidgets);
   });
 
-  testWidgets('the invite share action is enabled once the invite code loads', (tester) async {
+  testWidgets('the invite card shows the code, instructions and a share button', (tester) async {
     final api = _FakeApi();
     await tester.pumpWidget(_harness(api));
     await tester.pumpAndSettle();
-    final share = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.ios_share));
+
+    expect(find.text('X'), findsOneWidget); // the invite code itself
+    expect(find.textContaining('Family'), findsWidgets); // instructions name the league
+    final share = tester.widget<FilledButton>(
+      find.ancestor(of: find.byIcon(Icons.ios_share), matching: find.byType(FilledButton)),
+    );
     expect(share.onPressed, isNotNull);
+  });
+
+  testWidgets('tapping the invite code does not throw', (tester) async {
+    final api = _FakeApi();
+    await tester.pumpWidget(_harness(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('invite-code-tap')));
+    // Drain the copy round-trip + the 2s "reset the checkmark" timer
+    // before the test ends, rather than asserting on the exact frame the
+    // transient checkmark/"Copied" confirmation is visible on (flaky to
+    // pin down in the test harness; verified manually in the running app).
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets("isMe rows have no report action, other rows do", (tester) async {

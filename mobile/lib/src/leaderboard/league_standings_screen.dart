@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -50,19 +51,7 @@ class LeagueStandingsScreen extends ConsumerWidget {
     final inviteCode = async.valueOrNull?.league.inviteCode;
     return Scaffold(
       backgroundColor: c.paper,
-      appBar: AppBar(
-        backgroundColor: c.paper,
-        title: Text(name),
-        actions: [
-          IconButton(
-            tooltip: t(dict, 'leagues.shareInvite'),
-            icon: const Icon(Icons.ios_share),
-            onPressed: inviteCode == null
-                ? null
-                : () => shareInvite(context, name, inviteCode),
-          ),
-        ],
-      ),
+      appBar: AppBar(backgroundColor: c.paper, title: Text(name)),
       body: async.when(
         loading: () => Center(
           child: Text(t(dict, 'leaderboard.loading'), style: TextStyle(color: c.muted)),
@@ -73,6 +62,10 @@ class LeagueStandingsScreen extends ConsumerWidget {
         data: (standings) => ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            if (inviteCode != null) ...[
+              _InviteCard(dict: dict, name: name, code: inviteCode),
+              const SizedBox(height: 24),
+            ],
             if (!standings.hasHandle)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -167,6 +160,119 @@ class LeagueStandingsScreen extends ConsumerWidget {
         SnackBar(content: Text(t(dict, 'leaderboard.reportError'))),
       );
     }
+  }
+}
+
+/// A hard-to-miss invite affordance: the code itself (tap to copy) plus a
+/// share button — replaces the earlier app-bar icon, which had no visible
+/// code and no instructions (PJ feedback: "easy to miss and doesn't
+/// reveal the league invite code").
+class _InviteCard extends StatefulWidget {
+  const _InviteCard({required this.dict, required this.name, required this.code});
+
+  final Map<String, dynamic> dict;
+  final String name;
+  final String code;
+
+  @override
+  State<_InviteCard> createState() => _InviteCardState();
+}
+
+class _InviteCardState extends State<_InviteCard> {
+  bool _copied = false;
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.code));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final dict = widget.dict;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: c.cream,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: c.rule),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t(dict, 'leagues.inviteFriends').toUpperCase(),
+            style: TextStyle(fontSize: 10, letterSpacing: 1, color: c.muted),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            t(dict, 'leagues.inviteInstructions', {'name': widget.name}),
+            style: TextStyle(fontSize: 12, color: c.inkSoft),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  key: const Key('invite-code-tap'),
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: _copy,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: c.paper,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: c.rule),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          widget.code,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2,
+                            color: c.ink,
+                          ),
+                        ),
+                        Icon(
+                          _copied ? Icons.check : Icons.copy,
+                          size: 16,
+                          color: _copied ? c.solved : c.muted,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_copied) ...[
+            const SizedBox(height: 4),
+            Text(
+              t(dict, 'leagues.copied'),
+              style: TextStyle(fontSize: 11, color: c.solved),
+            ),
+          ],
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: c.ink,
+              foregroundColor: c.paper,
+              minimumSize: const Size.fromHeight(44),
+            ),
+            onPressed: () => shareInvite(context, widget.name, widget.code),
+            icon: const Icon(Icons.ios_share, size: 16),
+            label: Text(t(dict, 'leagues.shareInvite')),
+          ),
+        ],
+      ),
+    );
   }
 }
 

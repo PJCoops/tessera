@@ -293,7 +293,9 @@
     "createButton": "Create a league",
     "joinButton": "Join a league",
     "joinConfirmTitle": "Join {name}?",
-    "joinConfirmBody": "You'll be added as a member and appear on its board."
+    "joinConfirmBody": "You'll be added as a member and appear on its board.",
+    "inviteFriends": "Invite friends",
+    "inviteInstructions": "Share this code so friends can join {name}."
   },
   "whatsNew": {
     "label": "New",

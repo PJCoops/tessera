@@ -293,7 +293,9 @@
     "createButton": "Crear una liga",
     "joinButton": "Unirse a una liga",
     "joinConfirmTitle": "¿Unirte a {name}?",
-    "joinConfirmBody": "Se te añadirá como miembro y aparecerás en su tabla."
+    "joinConfirmBody": "Se te añadirá como miembro y aparecerás en su tabla.",
+    "inviteFriends": "Invitar a amigos",
+    "inviteInstructions": "Comparte este código para que tus amigos se unan a {name}."
   },
   "whatsNew": {
     "label": "Nuevo",
