@@ -13,6 +13,7 @@ import '../sync/sync_engine.dart';
 import '../sync/sync_providers.dart';
 import '../chrome/how_to_sheet.dart';
 import '../chrome/history_screen.dart';
+import '../deep_links/deep_links.dart';
 import '../leaderboard/leaderboard_screen.dart';
 import '../chrome/legend.dart';
 import '../chrome/settings_screen.dart';
@@ -234,6 +235,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (prev == null && next != null && mounted) {
         maybeShowSecondMethodPrompt(context, ref);
       }
+    });
+    ref.listen<AsyncValue<String>>(joinLinkProvider, (_, next) {
+      final code = next.valueOrNull;
+      if (code != null && mounted) handleJoinLinkCode(context, ref, code);
     });
 
     if (showDemo) {

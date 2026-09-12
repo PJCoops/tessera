@@ -92,6 +92,36 @@ needs `DATABASE_URL` + the Supabase vars in `.env.local` for the authed
   `GOOGLE_SERVER_CLIENT_ID` dart-define. Android needs the release
   signing SHA-1 registered.
 
+## Deep links (Phase 5)
+
+`deep_links/deep_links.dart` handles a tapped league-invite link
+(`https://tesserapuzzle.com/?join=<code>` — what the web app generates —
+or `/join/<code>`, both declared in `app/.well-known/`) end to end: sign
+in if needed, confirm, join, open standings. Nothing else in the app
+handles a deep link yet — a shared-result link (`/s/*`) matches the
+platform filters below but there's no "recreate this result" screen on
+mobile, so it just opens the app to today's puzzle.
+
+Still needed for the OS to actually hand the app a tapped link (until
+then the code path above is unreachable, same as Apple/Google sign-in
+being wired but non-functional pre-config):
+
+- **iOS:** Associated Domains capability on both App IDs (Apple Developer
+  → Identifiers → edit each → capabilities), then in Xcode: Runner target
+  → Signing & Capabilities → + Capability → Associated Domains → add
+  `applinks:tesserapuzzle.com` (same "don't hand-edit the entitlements
+  file first" rule as Sign in with Apple — see `Runner.entitlements`).
+  Also needs `APPLE_APP_ID` set on the deployed backend so
+  `/.well-known/apple-app-site-association` serves the real Team ID
+  instead of the `TEAMID.com.tesserapuzzle.app` placeholder.
+- **Android:** the intent filter is already in `AndroidManifest.xml`
+  (`android:autoVerify="true"` on `https://tesserapuzzle.com`), but it
+  can't self-verify until `ANDROID_CERT_SHA256` (the same signing SHA
+  needed for Google Sign-In) is set on the deployed backend so
+  `/.well-known/assetlinks.json` lists real fingerprints. Unverified, a
+  tapped link shows Android's app-picker sheet instead of opening Tessera
+  directly.
+
 ## Shared assets
 
 Locale JSON, fonts, `win.mp3`, `EPOCH`, the v1 schema, and the parity

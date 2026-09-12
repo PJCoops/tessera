@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/account_client.dart' show AccountApiException;
+import '../auth/auth_controller.dart';
+import '../auth/sign_in_sheet.dart';
 import '../clock.dart';
 import '../epoch.dart';
 import '../i18n.dart';
@@ -503,6 +505,68 @@ class _LeagueRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Handles a tapped league-invite link (`deep_links/deep_links.dart`
+/// parsed the code out already). Signs the player in first if needed
+/// (mirrors the web's app/TesseraGame.tsx — open the sign-in sheet, finish
+/// once signed in), then a confirmation dialog before actually joining —
+/// unlike the web, which joins silently (§12.2 requires this on mobile).
+/// No preview endpoint exists to show the league's name up front, so the
+/// confirmation is code-only; the toast after joining shows the name.
+Future<void> handleJoinLinkCode(BuildContext context, WidgetRef ref, String code) async {
+  final dict = ref.read(dictOrEmptyProvider);
+
+  if (ref.read(authUserProvider) == null) {
+    await showSignInSheet(context);
+    if (!context.mounted || ref.read(authUserProvider) == null) return;
+  }
+  if (!context.mounted) return;
+
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(t(dict, 'leagues.joinConfirmTitle', {'name': code})),
+      content: Text(t(dict, 'leagues.joinConfirmBody')),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: Text(t(dict, 'leagues.back')),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(t(dict, 'leagues.joinButton')),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+
+  final mode = ref.read(settingsProvider).modeId;
+  final today = puzzleNumber(todayUtcDate(), kEpoch);
+  try {
+    final league = await ref.read(leaderboardClientProvider).joinLeague(code);
+    ref.invalidate(myLeaguesProvider);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(t(dict, 'leagues.joinedToast', {'name': league.name}))),
+    );
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LeagueStandingsScreen(
+          leagueId: league.id,
+          name: league.name,
+          mode: mode,
+          num: today,
+        ),
+      ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(t(dict, 'leagues.notFound'))),
     );
   }
 }

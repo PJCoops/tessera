@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Sign in with Apple (spec §6.1). This file is NOT wired into the build
-  yet: adding the entitlement before the App ID carries the capability in
-  the Apple Developer portal would break code-signing for every debug run.
+  Sign in with Apple (spec §6.1) + Associated Domains / Universal Links
+  for league-invite + shared-result deep links (spec §14.1, §16.2). This
+  file is NOT wired into the build yet: adding an entitlement before the
+  App ID carries the matching capability in the Apple Developer portal
+  would break code-signing for every debug run.
 
-  To turn it on: open ios/Runner.xcworkspace in Xcode, select the Runner
-  target → Signing & Capabilities → + Capability → Sign in with Apple.
-  Xcode adds CODE_SIGN_ENTITLEMENTS to the project and syncs the portal.
+  To turn either on: open ios/Runner.xcworkspace in Xcode, select the
+  Runner target → Signing & Capabilities → + Capability → pick "Sign in
+  with Apple" and/or "Associated Domains" (adding
+  "applinks:tesserapuzzle.com" as its one domain). Xcode adds
+  CODE_SIGN_ENTITLEMENTS to the project and syncs the portal for
+  whichever capability you add.
 -->
 <plist version="1.0">
 <dict>
