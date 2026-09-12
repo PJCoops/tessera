@@ -263,7 +263,13 @@
     "yourRank": "Your rank",
     "cta": "Leaderboard",
     "ariaOpen": "Leaderboard",
-    "ariaClose": "Close"
+    "ariaClose": "Close",
+    "verifiedTooltip": "Server-verified replay",
+    "reportScore": "Report score",
+    "reportConfirmTitle": "Report this score?",
+    "reportConfirmBody": "Let us know if a result looks implausible. This won't remove it from the board.",
+    "reportSent": "Reported. Thanks for flagging it.",
+    "reportError": "Something went wrong. Try again."
   },
   "leagues": {
     "signInPrompt": "Sign in to play in leagues with friends.",
@@ -283,7 +289,11 @@
     "noneToday": "No one has solved today yet.",
     "daysWon": "Days won",
     "noHandlePrompt": "Pick a display name to appear in standings",
-    "joinedToast": "Joined {name}"
+    "joinedToast": "Joined {name}",
+    "createButton": "Create a league",
+    "joinButton": "Join a league",
+    "joinConfirmTitle": "Join {name}?",
+    "joinConfirmBody": "You'll be added as a member and appear on its board."
   },
   "whatsNew": {
     "label": "New",

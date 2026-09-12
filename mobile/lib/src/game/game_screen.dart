@@ -13,6 +13,7 @@ import '../sync/sync_engine.dart';
 import '../sync/sync_providers.dart';
 import '../chrome/how_to_sheet.dart';
 import '../chrome/history_screen.dart';
+import '../leaderboard/leaderboard_screen.dart';
 import '../chrome/legend.dart';
 import '../chrome/settings_screen.dart';
 import '../chrome/words_screen.dart';
@@ -302,6 +303,13 @@ class _TopBar extends ConsumerWidget {
               MaterialPageRoute<void>(builder: (_) => const HistoryScreen()),
             ),
             icon: Icon(Icons.bar_chart, color: c.muted),
+          ),
+          IconButton(
+            tooltip: t(dict, 'leaderboard.title'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const LeaderboardScreen()),
+            ),
+            icon: Icon(Icons.emoji_events_outlined, color: c.muted),
           ),
           IconButton(
             tooltip: t(dict, 'howto.tabs.settings'),

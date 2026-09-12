@@ -96,11 +96,12 @@ void main() {
     }),
   );
 
-  testWidgets('top bar exposes how-to, history and settings', (tester) async {
+  testWidgets('top bar exposes how-to, history, leaderboard and settings', (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.help_outline), findsOneWidget);
     expect(find.byIcon(Icons.bar_chart), findsOneWidget);
+    expect(find.byIcon(Icons.emoji_events_outlined), findsOneWidget);
     expect(find.byIcon(Icons.tune), findsOneWidget);
   });
 

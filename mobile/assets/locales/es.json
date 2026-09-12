@@ -263,7 +263,13 @@
     "yourRank": "Tu posición",
     "cta": "Clasificación",
     "ariaOpen": "Clasificación",
-    "ariaClose": "Cerrar"
+    "ariaClose": "Cerrar",
+    "verifiedTooltip": "Repetición verificada por el servidor",
+    "reportScore": "Reportar resultado",
+    "reportConfirmTitle": "¿Reportar este resultado?",
+    "reportConfirmBody": "Avísanos si un resultado parece poco creíble. No se eliminará de la tabla.",
+    "reportSent": "Reportado. Gracias por avisar.",
+    "reportError": "Algo salió mal. Inténtalo de nuevo."
   },
   "leagues": {
     "signInPrompt": "Inicia sesión para jugar en ligas con amigos.",
@@ -283,7 +289,11 @@
     "noneToday": "Nadie ha resuelto hoy todavía.",
     "daysWon": "Días ganados",
     "noHandlePrompt": "Elige un nombre para aparecer en la clasificación",
-    "joinedToast": "Te uniste a {name}"
+    "joinedToast": "Te uniste a {name}",
+    "createButton": "Crear una liga",
+    "joinButton": "Unirse a una liga",
+    "joinConfirmTitle": "¿Unirte a {name}?",
+    "joinConfirmBody": "Se te añadirá como miembro y aparecerás en su tabla."
   },
   "whatsNew": {
     "label": "Nuevo",
