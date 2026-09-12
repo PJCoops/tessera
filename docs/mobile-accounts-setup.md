@@ -127,8 +127,16 @@ Also grab the Web client's **client secret** for Supabase.
 
 - Enable it.
 - **Client ID (for OAuth)** = the Web client ID; **Secret** = its secret.
-- **Authorized Client IDs** = the **iOS** and **Web** client IDs,
-  comma-separated (this is what lets native `signInWithIdToken` through).
+  (Supabase's UI merges "Client ID" and "Authorized Client IDs" into one
+  **Client IDs** box — put the Web + both iOS client IDs there,
+  comma-separated, no spaces. This is what lets native
+  `signInWithIdToken` through.)
+- **Skip nonce checks: ON.** The `google_sign_in` Flutter package has no
+  way to pass a custom nonce to iOS's native `GIDSignIn`, but the SDK
+  embeds its own nonce in the ID token anyway — Supabase then rejects it
+  with "Passed nonce and nonce in id_token should either both exist or
+  not" unless this is on. Supabase's own field description calls out
+  exactly this iOS case.
 
 ### 4c. iOS project
 
@@ -245,8 +253,9 @@ and the RevenueCat keys (Phase 7). Apply the Phase B schema block in
 - [x] Email OTP sign-in + sync verified on one device (step 3) — sign in
       → pull history → solve → `POST /api/v1/results`
 - [x] Second-device pull verified (fresh install → sign in → history back)
-- [ ] Google: Cloud OAuth clients created, Supabase provider on, reversed
-      id in xcconfigs, `GOOGLE_SERVER_CLIENT_ID` dart-define, button works
+- [x] Google: Cloud OAuth clients created, Supabase provider on (skip
+      nonce checks on), reversed id in xcconfigs, `GOOGLE_SERVER_CLIENT_ID`
+      dart-define, button works — verified end to end
 - [ ] Apple: App ID capability on, Supabase provider on, Xcode capability
       added, button works
 - [x] Streak-decrease screen seen once (step 7)

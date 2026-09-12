@@ -143,10 +143,13 @@ class SupabaseAuthBackend implements AuthBackend {
 
   @override
   Future<void> signInWithGoogle() async {
-    // The client IDs come from --dart-define / GoogleService plists; a
-    // missing config surfaces as a PlatformException the sheet reports.
+    // serverClientId is the *web* OAuth client (--dart-define); the iOS
+    // client id is read from Info.plist's GIDClientID (set per flavor in
+    // the xcconfigs). A missing config surfaces as a PlatformException
+    // the sheet reports.
+    const serverClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
     final google = GoogleSignIn(
-      serverClientId: const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID'),
+      serverClientId: serverClientId.isEmpty ? null : serverClientId,
     );
     final account = await google.signIn();
     if (account == null) throw const AuthException('Google sign-in cancelled');

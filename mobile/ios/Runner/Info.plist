@@ -52,9 +52,12 @@
       <string>https</string>
       <string>mailto</string>
     </array>
-    <!-- Google Sign-In callback. Set GOOGLE_REVERSED_CLIENT_ID in the
-         flavor xcconfigs (from GoogleService-Info.plist / the OAuth iOS
-         client). Empty until then — the scheme is simply inert. -->
+    <!-- Google Sign-In. GOOGLE_IOS_CLIENT_ID / GOOGLE_REVERSED_CLIENT_ID
+         are set per flavor in ios/Flutter/{dev,prod}{Debug,Profile,Release}
+         .xcconfig (from the OAuth iOS client). Empty until then — the
+         scheme is inert and GIDClientID resolves to nothing. -->
+    <key>GIDClientID</key>
+    <string>$(GOOGLE_IOS_CLIENT_ID)</string>
     <key>CFBundleURLTypes</key>
     <array>
       <dict>

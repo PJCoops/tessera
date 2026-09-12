@@ -5,3 +5,7 @@ ASSET_PREFIX=prod
 BUNDLE_NAME=Tessera
 BUNDLE_DISPLAY_NAME=Tessera
 FLUTTER_TARGET=lib/main_prod.dart
+
+// Google Sign-In (iOS OAuth client for com.tesserapuzzle.app)
+GOOGLE_IOS_CLIENT_ID=201123798849-q15h2aoapqp58otutivk6s4hiutaon84.apps.googleusercontent.com
+GOOGLE_REVERSED_CLIENT_ID=com.googleusercontent.apps.201123798849-q15h2aoapqp58otutivk6s4hiutaon84
