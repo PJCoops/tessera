@@ -155,3 +155,21 @@ create table if not exists entitlement_events (
 );
 create index if not exists entitlement_events_user_idx on entitlement_events (user_id);
 alter table entitlement_events enable row level security;
+
+-- ── Phase 5: leaderboard score reports (mobile "report score", §12.3) ──
+-- A lightweight flag, not a moderation pipeline: a signed-in player can
+-- flag another player's verified result as implausible. The unique
+-- constraint makes repeat reports from the same reporter a no-op rather
+-- than inflating a count.
+create table if not exists score_reports (
+  id            uuid primary key default gen_random_uuid(),
+  reporter_id   uuid not null references auth.users(id) on delete cascade,
+  target_user_id uuid not null references auth.users(id) on delete cascade,
+  mode          text not null check (mode in ('classic','hard')),
+  puzzle_number int not null,
+  created_at    timestamptz not null default now(),
+  unique (reporter_id, target_user_id, mode, puzzle_number)
+);
+create index if not exists score_reports_target_idx
+  on score_reports (target_user_id, mode, puzzle_number);
+alter table score_reports enable row level security;

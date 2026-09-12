@@ -147,3 +147,38 @@ export async function getLeaderboard(
 
   return { global, country: countryBoard, me, hasHandle };
 }
+
+// Flags a board row as an implausible result (§12.3). The client never sees
+// user_id — only the public `handle` — so the target is resolved
+// server-side via profiles.display_name, which is unique
+// (profiles_display_name_lower in schema.sql). (mode, num, handle) is
+// therefore enough to identify exactly one puzzle_results row, no user_id
+// needed from the client.
+export async function reportScore(
+  sql: Sql,
+  reporterId: string,
+  mode: ModeId,
+  num: number,
+  rawHandle: string
+): Promise<{ ok: true } | { ok: false; reason: "not_found" | "self" }> {
+  const handle = rawHandle.trim();
+  if (handle.length === 0) return { ok: false, reason: "not_found" };
+
+  const rows = await sql<{ user_id: string }[]>`
+    select pr.user_id
+    from puzzle_results pr
+    join profiles p on p.id = pr.user_id
+    where lower(p.display_name) = lower(${handle})
+      and pr.mode = ${mode} and pr.puzzle_number = ${num}
+      and pr.verified and not pr.revealed`;
+  if (rows.length === 0) return { ok: false, reason: "not_found" };
+
+  const targetUserId = rows[0].user_id;
+  if (targetUserId === reporterId) return { ok: false, reason: "self" };
+
+  await sql`
+    insert into score_reports (reporter_id, target_user_id, mode, puzzle_number)
+    values (${reporterId}, ${targetUserId}, ${mode}, ${num})
+    on conflict (reporter_id, target_user_id, mode, puzzle_number) do nothing`;
+  return { ok: true };
+}
