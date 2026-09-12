@@ -1,10 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../config.dart';
 import '../mode.dart';
 import '../streak.dart';
-import 'auth_controller.dart';
+import 'api_client.dart';
 
 /// One result being pushed to the server (`POST /api/v1/results` or the
 /// `results` array of `/api/v1/results/import`). Mirrors `SubmitArgs` in
@@ -188,32 +187,8 @@ abstract interface class AccountApi {
 final accountClientProvider = Provider<AccountApi>((ref) => AccountClient(ref));
 
 class AccountClient implements AccountApi {
-  AccountClient(this._ref, {Dio? dio})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: AppConfig.current.apiBaseUrl,
-              connectTimeout: const Duration(seconds: 8),
-              receiveTimeout: const Duration(seconds: 8),
-              // Read every status so we can map `{ok:false}` bodies.
-              validateStatus: (_) => true,
-            ),
-          ) {
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          final token = _ref.read(authBackendProvider).accessToken;
-          if (token != null) {
-            options.headers['authorization'] = 'Bearer $token';
-          }
-          handler.next(options);
-        },
-      ),
-    );
-  }
+  AccountClient(Ref ref, {Dio? dio}) : _dio = buildAuthedDio(ref, dio: dio);
 
-  final Ref _ref;
   final Dio _dio;
 
   Map<String, dynamic> _ok(Response res) {
