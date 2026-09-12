@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../i18n.dart';
 import '../i18n/dict.dart';
 import '../mode.dart';
+import '../share_position.dart';
 import '../theme/tokens.dart';
 import 'leaderboard_client.dart';
 import 'leaderboard_providers.dart';
@@ -16,8 +17,10 @@ import 'leaderboard_providers.dart';
 /// alone still works for manual entry on mobile.
 String inviteLink(String code) => 'https://tesserapuzzle.com/?join=$code';
 
-Future<void> shareInvite(String name, String code) =>
-    Share.share('Join my Tessera league "$name": ${inviteLink(code)}');
+Future<void> shareInvite(BuildContext context, String name, String code) => Share.share(
+  'Join my Tessera league "$name": ${inviteLink(code)}',
+  sharePositionOrigin: sharePositionOrigin(context),
+);
 
 /// One league: today's board (members only) + the all-time "days won"
 /// tally. Each non-`isMe` board row gets a report action (§12.3) — a
@@ -54,7 +57,9 @@ class LeagueStandingsScreen extends ConsumerWidget {
           IconButton(
             tooltip: t(dict, 'leagues.shareInvite'),
             icon: const Icon(Icons.ios_share),
-            onPressed: inviteCode == null ? null : () => shareInvite(name, inviteCode),
+            onPressed: inviteCode == null
+                ? null
+                : () => shareInvite(context, name, inviteCode),
           ),
         ],
       ),

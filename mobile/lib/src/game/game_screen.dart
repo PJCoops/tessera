@@ -25,6 +25,7 @@ import '../mode.dart';
 import '../puzzle_number.dart';
 import '../settings/settings.dart';
 import '../share.dart';
+import '../share_position.dart';
 import '../streak.dart';
 import '../theme/tokens.dart';
 import '../tier.dart';
@@ -199,7 +200,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         mode: mode.id == ModeId.hard ? 'hard' : 'classic',
       ),
     );
-    await Share.share(payload.full);
+    await Share.share(payload.full, sharePositionOrigin: sharePositionOrigin(context));
   }
 
   @override
