@@ -438,8 +438,21 @@ class _LeaguesTab extends ConsumerWidget {
     if (name == null || name.isEmpty || !context.mounted) return;
 
     try {
-      await ref.read(leaderboardClientProvider).createLeague(name);
+      final league = await ref.read(leaderboardClientProvider).createLeague(name);
       ref.invalidate(myLeaguesProvider);
+      if (!context.mounted) return;
+      // Straight to standings — its share icon is how you invite people,
+      // and a brand-new league has nothing else to show yet.
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => LeagueStandingsScreen(
+            leagueId: league.id,
+            name: league.name,
+            mode: mode,
+            num: num,
+          ),
+        ),
+      );
     } on AccountApiException catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

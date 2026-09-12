@@ -68,6 +68,14 @@ void main() {
     expect(find.text('2'), findsWidgets);
   });
 
+  testWidgets('the invite share action is enabled once the invite code loads', (tester) async {
+    final api = _FakeApi();
+    await tester.pumpWidget(_harness(api));
+    await tester.pumpAndSettle();
+    final share = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.ios_share));
+    expect(share.onPressed, isNotNull);
+  });
+
   testWidgets("isMe rows have no report action, other rows do", (tester) async {
     final api = _FakeApi();
     await tester.pumpWidget(_harness(api));

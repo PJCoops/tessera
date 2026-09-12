@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../i18n.dart';
 import '../i18n/dict.dart';
@@ -7,6 +8,16 @@ import '../mode.dart';
 import '../theme/tokens.dart';
 import 'leaderboard_client.dart';
 import 'leaderboard_providers.dart';
+
+/// The web's shareable join link (app/components/LeaguesPanel.tsx uses the
+/// same `/?join=<code>` path). The app doesn't handle this link itself yet
+/// (deep-link wiring is deferred — see the Phase 5 plan), but it's a real,
+/// join-able link for whoever's on the web app already, and the code
+/// alone still works for manual entry on mobile.
+String inviteLink(String code) => 'https://tesserapuzzle.com/?join=$code';
+
+Future<void> shareInvite(String name, String code) =>
+    Share.share('Join my Tessera league "$name": ${inviteLink(code)}');
 
 /// One league: today's board (members only) + the all-time "days won"
 /// tally. Each non-`isMe` board row gets a report action (§12.3) — a
@@ -33,9 +44,20 @@ class LeagueStandingsScreen extends ConsumerWidget {
     final args = (leagueId: leagueId, mode: mode, num: num);
     final async = ref.watch(leagueStandingsProvider(args));
 
+    final inviteCode = async.valueOrNull?.league.inviteCode;
     return Scaffold(
       backgroundColor: c.paper,
-      appBar: AppBar(backgroundColor: c.paper, title: Text(name)),
+      appBar: AppBar(
+        backgroundColor: c.paper,
+        title: Text(name),
+        actions: [
+          IconButton(
+            tooltip: t(dict, 'leagues.shareInvite'),
+            icon: const Icon(Icons.ios_share),
+            onPressed: inviteCode == null ? null : () => shareInvite(name, inviteCode),
+          ),
+        ],
+      ),
       body: async.when(
         loading: () => Center(
           child: Text(t(dict, 'leaderboard.loading'), style: TextStyle(color: c.muted)),
