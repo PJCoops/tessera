@@ -295,7 +295,9 @@
     "joinConfirmTitle": "¿Unirte a {name}?",
     "joinConfirmBody": "Se te añadirá como miembro y aparecerás en su tabla.",
     "inviteFriends": "Invitar a amigos",
-    "inviteInstructions": "Comparte este código para que tus amigos se unan a {name}."
+    "inviteInstructions": "Comparte este código para que tus amigos se unan a {name}.",
+    "invite": "Invitar",
+    "tapToCopy": "Toca para copiar"
   },
   "whatsNew": {
     "label": "Nuevo",

@@ -295,7 +295,9 @@
     "joinConfirmTitle": "Join {name}?",
     "joinConfirmBody": "You'll be added as a member and appear on its board.",
     "inviteFriends": "Invite friends",
-    "inviteInstructions": "Share this code so friends can join {name}."
+    "inviteInstructions": "Share this code so friends can join {name}.",
+    "invite": "Invite",
+    "tapToCopy": "Tap to copy"
   },
   "whatsNew": {
     "label": "New",

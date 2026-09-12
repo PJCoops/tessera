@@ -68,9 +68,15 @@ void main() {
     expect(find.text('2'), findsWidgets);
   });
 
-  testWidgets('the invite card shows the code, instructions and a share button', (tester) async {
+  testWidgets('the bottom Invite button opens a sheet with the code, instructions and share', (
+    tester,
+  ) async {
     final api = _FakeApi();
     await tester.pumpWidget(_harness(api));
+    await tester.pumpAndSettle();
+
+    expect(find.text('X'), findsNothing); // not shown until the sheet opens
+    await tester.tap(find.widgetWithText(FilledButton, 'Invite'));
     await tester.pumpAndSettle();
 
     expect(find.text('X'), findsOneWidget); // the invite code itself
@@ -81,9 +87,11 @@ void main() {
     expect(share.onPressed, isNotNull);
   });
 
-  testWidgets('tapping the invite code does not throw', (tester) async {
+  testWidgets('tapping the invite code in the sheet does not throw', (tester) async {
     final api = _FakeApi();
     await tester.pumpWidget(_harness(api));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Invite'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('invite-code-tap')));
