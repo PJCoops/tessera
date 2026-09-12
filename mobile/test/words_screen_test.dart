@@ -77,6 +77,14 @@ void main() {
     SharedPreferences.setMockInitialValues({'tessera:locale': 'es'});
     await tester.pumpWidget(_harness(const []));
     await _ready(tester);
+    // Settings hydration is async, so the very first frame briefly
+    // defaults to 'en' before flipping to 'es' — long enough for
+    // _EnWordRow to mount and definitionProvider to fire a real (fake
+    // HttpClient, auto-400'd by the test binding) lookup that retries
+    // once. Drain that stray retry-delay timer before the test ends, or
+    // the framework's pending-timer check trips even though nothing in
+    // the final (es) UI ever used it.
+    await tester.pump(const Duration(milliseconds: 700));
 
     expect(find.text('TURF'), findsOneWidget);
     expect(find.text('STEW'), findsOneWidget);
