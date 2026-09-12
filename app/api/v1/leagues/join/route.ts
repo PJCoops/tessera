@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const sql = getDb();
   if (!sql) return NextResponse.json({ ok: false, reason: "not_configured" }, { status: 503 });
 
-  const userId = await getUserId();
+  const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
 
   const user = await rateLimit(req, "v1-leagues-join-user", 8, "1 m", userId);
