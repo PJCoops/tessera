@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "not_configured" }, { status: 503 });
   }
 
-  const userId = await getUserId();
+  const userId = await getUserId(req);
   if (!userId) {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
