@@ -8,9 +8,10 @@ how-to sheet, hints toggle + dashed hint, reveal, history/stats,
 today's words, settings, streak chip + countdown + legend, native share,
 classic/hard, past-puzzle replay), Phase 4 (accounts — email OTP + Apple +
 Google sign-in, cross-device sync, streak-decrease screen, in-app account
-deletion), localization (en/es) and daily local-notification reminders.
-Settings persist via `shared_preferences`; everything wires through
-Riverpod providers.
+deletion), Phase 5 (global/country leaderboard, leagues — join by manual
+code, standings + days-won tally, report-score), localization (en/es) and
+daily local-notification reminders. Settings persist via
+`shared_preferences`; everything wires through Riverpod providers.
 
 ## Toolchain
 
