@@ -152,16 +152,20 @@ class _EmailSignupState extends ConsumerState<EmailSignup> {
                 style: TextStyle(fontSize: 11, color: c.muted),
               ),
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => launchUrl(
                   Uri.parse(_privacyUrl),
                   mode: LaunchMode.externalApplication,
                 ),
-                child: Text(
-                  t(dict, 'email.privacyLink'),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: c.inkSoft,
-                    decoration: TextDecoration.underline,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    t(dict, 'email.privacyLink'),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: c.inkSoft,
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
                 ),
               ),

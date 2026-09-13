@@ -366,6 +366,7 @@ class _Segmented<T> extends StatelessWidget {
               child: GestureDetector(
                 onTap: () => onChanged(v),
                 child: Container(
+                  constraints: const BoxConstraints(minHeight: 44),
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(

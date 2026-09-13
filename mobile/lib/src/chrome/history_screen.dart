@@ -128,6 +128,8 @@ class _ModeToggle extends StatelessWidget {
       return GestureDetector(
         onTap: () => onChanged(id),
         child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: active ? c.paper : Colors.transparent,

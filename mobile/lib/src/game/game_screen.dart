@@ -375,8 +375,8 @@ class _StreakChip extends ConsumerWidget {
           );
       },
       child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           border: Border.all(color: c.rule),
