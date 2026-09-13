@@ -52,14 +52,14 @@ class FirstRunDemo extends ConsumerStatefulWidget {
 }
 
 class _FirstRunDemoState extends ConsumerState<FirstRunDemo> {
-  // A 2x2 board one swap from solved: "IT / ON". Start has the T and O
+  // A 2x2 board one swap from solved: "TO / IN". Start has the O and I
   // exchanged; swapping them back completes both rows.
-  static const _gold = ['it', 'on'];
+  static const _gold = ['to', 'in'];
   final _feedback = GameFeedback(muted: true);
 
   late BoardState _board = BoardState.start(
     goldRows: _gold,
-    startTiles: const [Tile(0, 'I'), Tile(2, 'O'), Tile(1, 'T'), Tile(3, 'N')],
+    startTiles: const [Tile(0, 'T'), Tile(2, 'I'), Tile(1, 'O'), Tile(3, 'N')],
     minSwaps: 1,
   );
   bool _dismissing = false;
@@ -98,8 +98,22 @@ class _FirstRunDemoState extends ConsumerState<FirstRunDemo> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // Names the brand and flags this as a practice round rather than
+          // the game itself — a bare 2x2 grid with no context otherwise
+          // reads as "this is the whole game" to a first-time player.
           Text(
-            done ? 'That’s the whole game.' : 'Tap two tiles to swap them',
+            'TESSERA · PRACTICE ROUND',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11,
+              letterSpacing: 2,
+              fontWeight: FontWeight.w600,
+              color: c.muted,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            done ? 'That’s the move.' : 'Tap two tiles to swap them',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Inter',

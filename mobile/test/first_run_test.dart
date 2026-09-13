@@ -27,6 +27,8 @@ void main() {
 
     expect(find.text('Tap two tiles to swap them'), findsOneWidget);
     expect(find.byType(BoardView), findsNothing);
+    // Labelled as a practice round, not the game itself.
+    expect(find.text('TESSERA · PRACTICE ROUND'), findsOneWidget);
   });
 
   testWidgets('completing the demo swap advances to the real board', (
@@ -35,12 +37,12 @@ void main() {
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
-    // Grid is I O / T N -> swap the O and T to make I T / O N.
+    // Grid is T I / O N -> swap the I and O to make T O / I N.
+    await tester.tap(find.text('I'));
+    await tester.pump();
     await tester.tap(find.text('O'));
     await tester.pump();
-    await tester.tap(find.text('T'));
-    await tester.pump();
-    expect(find.text('That’s the whole game.'), findsOneWidget);
+    expect(find.text('That’s the move.'), findsOneWidget);
 
     // Auto-dismiss, then the real board is shown and the flag persists.
     await tester.pumpAndSettle(const Duration(seconds: 2));
