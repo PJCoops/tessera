@@ -89,11 +89,17 @@ class GetResultsResponse {
     required this.results,
     required this.classicStreak,
     required this.hardStreak,
+    this.adsRemoved = false,
   });
 
   final List<ServerResult> results;
   final Streak classicStreak;
   final Streak hardStreak;
+
+  /// The account-level half of the ads-removed entitlement (§8.2) — the
+  /// RevenueCat webhook is the only writer server-side. A client ORs this
+  /// with its own store's cached entitlement.
+  final bool adsRemoved;
 
   Streak streakFor(ModeId m) => m == ModeId.hard ? hardStreak : classicStreak;
 
@@ -106,6 +112,7 @@ class GetResultsResponse {
       ],
       classicStreak: _streak(streaks['classic'] as Map<String, dynamic>?),
       hardStreak: _streak(streaks['hard'] as Map<String, dynamic>?),
+      adsRemoved: j['adsRemoved'] as bool? ?? false,
     );
   }
 }

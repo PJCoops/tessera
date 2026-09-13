@@ -9,7 +9,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { Locale } from "./i18n";
 import type { ModeId } from "./mode";
-import { getAccountState } from "./account-store";
+import { getAccountState, getAdsRemoved } from "./account-store";
 import { getDb } from "./db";
 import type { StoredPuzzle } from "./puzzle-store";
 import { parseIncomingResult, verifyIncoming } from "./results-ingest";
@@ -56,6 +56,7 @@ export async function handleResultsGet(
   try {
     const results = await listResults(sql, userId);
     const maxes = await importedMaxes(sql, userId);
+    const adsRemoved = await getAdsRemoved(sql, userId);
     const winsFor = (mode: "classic" | "hard") =>
       results.filter((r) => r.mode === mode && !r.revealed).map((r) => r.puzzleNumber);
     return NextResponse.json({
@@ -74,6 +75,7 @@ export async function handleResultsGet(
         classic: computeStreak(winsFor("classic"), maxes.classic),
         hard: computeStreak(winsFor("hard"), maxes.hard),
       },
+      adsRemoved,
     });
   } catch (e) {
     console.error("results get failed:", e);

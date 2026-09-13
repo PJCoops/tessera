@@ -56,10 +56,12 @@ GetResultsResponse _resp(
   List<ServerResult> rows, {
   Streak? classic,
   Streak? hard,
+  bool adsRemoved = false,
 }) => GetResultsResponse(
   results: rows,
   classicStreak: classic ?? const Streak(current: 0, max: 0, lastWon: 0),
   hardStreak: hard ?? const Streak(current: 0, max: 0, lastWon: 0),
+  adsRemoved: adsRemoved,
 );
 
 ServerResult _sr(
@@ -199,6 +201,40 @@ void main() {
     p = await SharedPreferences.getInstance();
     expect(p.getStringList('tessera:sync-queue'), isEmpty);
     expect(api.submitCalls, 2);
+  });
+
+  test('syncOnSignIn surfaces the account-level ads-removed entitlement',
+      () async {
+    final api = _FakeApi(() => _resp([], adsRemoved: true));
+    final c = _container(api, {});
+
+    final out = await c.read(syncEngineProvider).syncOnSignIn('u1');
+
+    expect(out.adsRemoved, isTrue);
+  });
+
+  test('adsRemovedProvider is set from the sync pull, then cleared on sign-out',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final api = _FakeApi(() => _resp([], adsRemoved: true));
+    final auth = _MutableAuth(const AuthUser(id: 'u1', email: 'a@b.com'));
+    final c = ProviderContainer(
+      overrides: [
+        accountClientProvider.overrideWithValue(api),
+        authBackendProvider.overrideWithValue(auth),
+      ],
+    );
+    addTearDown(c.dispose);
+
+    c.listen(accountSyncProvider, (_, _) {}, fireImmediately: true);
+    await _settle();
+
+    expect(c.read(adsRemovedProvider), isTrue);
+
+    auth.emit(null); // sign out
+    await _settle();
+
+    expect(c.read(adsRemovedProvider), isFalse);
   });
 
   test('signing out clears the per-user guard so the next sign-in re-syncs',

@@ -14,6 +14,12 @@ final streakDecreaseProvider = StateProvider<StreakDecrease?>((ref) => null);
 
 final syncStatusProvider = StateProvider<SyncStatus>((ref) => SyncStatus.idle);
 
+/// The account-level half of the ads-removed entitlement (§8.2), refreshed
+/// whenever [SyncEngine.syncOnSignIn] pulls results. Combine with the
+/// store's own cached entitlement (once RevenueCat is wired) via
+/// `storeEntitlement || adsRemovedProvider` — either side can grant it.
+final adsRemovedProvider = StateProvider<bool>((ref) => false);
+
 /// Remembers the last signed-in user so [accountSyncProvider] can clear
 /// that user's sync guard + queue when they sign out.
 final _lastSyncedUserProvider = StateProvider<String?>((ref) => null);
@@ -34,6 +40,7 @@ final accountSyncProvider = Provider<void>((ref) {
       if (last != null) {
         await engine.reset(last);
         ref.read(_lastSyncedUserProvider.notifier).state = null;
+        ref.read(adsRemovedProvider.notifier).state = false;
       }
       return;
     }
@@ -51,6 +58,7 @@ final accountSyncProvider = Provider<void>((ref) {
       if (out.streakDecrease != null) {
         ref.read(streakDecreaseProvider.notifier).state = out.streakDecrease;
       }
+      ref.read(adsRemovedProvider.notifier).state = out.adsRemoved;
       ref.read(syncStatusProvider.notifier).state = SyncStatus.done;
     } catch (_) {
       ref.read(syncStatusProvider.notifier).state = SyncStatus.failed;

@@ -36,10 +36,14 @@ class SyncOutcome {
   const SyncOutcome({
     required this.pushed,
     required this.pulled,
+    required this.adsRemoved,
     this.streakDecrease,
   });
   final int pushed;
   final int pulled;
+
+  /// The account-level ads-removed entitlement (§8.2), as of this pull.
+  final bool adsRemoved;
   final StreakDecrease? streakDecrease;
 }
 
@@ -195,6 +199,7 @@ class SyncEngine {
     return SyncOutcome(
       pushed: pushed,
       pulled: pulled,
+      adsRemoved: server.adsRemoved,
       streakDecrease: decrease,
     );
   }

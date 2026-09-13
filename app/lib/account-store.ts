@@ -23,6 +23,20 @@ export async function getAccountState(sql: Sql, userId: string): Promise<Account
 }
 
 /**
+ * The server-authoritative half of the ads-removed entitlement (§8.2): the
+ * RevenueCat webhook is the only writer of `profiles.ads_removed`, this is
+ * the only reader clients need. A client ORs this with its own store's
+ * cached entitlement so a purchase is honoured immediately on the
+ * purchasing device even before the webhook round-trip lands here.
+ */
+export async function getAdsRemoved(sql: Sql, userId: string): Promise<boolean> {
+  const rows = await sql<{ ads_removed: boolean }[]>`
+    select ads_removed from profiles where id = ${userId}
+  `;
+  return rows[0]?.ads_removed ?? false;
+}
+
+/**
  * Mark the account for deletion. Idempotent: a second call keeps the
  * original `deleted_at` (so the grace window can't be extended by
  * re-requesting). Returns whether a deletion was already pending and the
