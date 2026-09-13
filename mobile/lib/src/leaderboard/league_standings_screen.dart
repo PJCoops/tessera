@@ -23,10 +23,7 @@ Future<void> shareInvite(BuildContext context, String name, String code) => Shar
   sharePositionOrigin: sharePositionOrigin(context),
 );
 
-/// One league: today's board (members only) + the all-time "days won"
-/// tally. Each non-`isMe` board row gets a report action (§12.3) — a
-/// lightweight flag, not a moderation tool: it just posts to the server
-/// and acks, the row stays on the board.
+/// One league: today's board (members only) + the all-time "days won" tally.
 class LeagueStandingsScreen extends ConsumerWidget {
   const LeagueStandingsScreen({
     super.key,
@@ -96,14 +93,7 @@ class LeagueStandingsScreen extends ConsumerWidget {
                 style: TextStyle(fontSize: 13, color: c.muted),
               )
             else
-              for (final e in standings.board)
-                _StandingsRow(
-                  dict: dict,
-                  entry: e,
-                  onReport: e.isMe
-                      ? null
-                      : () => _confirmReport(context, ref, dict, e.handle),
-                ),
+              for (final e in standings.board) _StandingsRow(entry: e),
             const SizedBox(height: 24),
             Text(
               t(dict, 'leagues.daysWon').toUpperCase(),
@@ -132,45 +122,6 @@ class LeagueStandingsScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Future<void> _confirmReport(
-    BuildContext context,
-    WidgetRef ref,
-    Map<String, dynamic> dict,
-    String handle,
-  ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(t(dict, 'leaderboard.reportConfirmTitle')),
-        content: Text(t(dict, 'leaderboard.reportConfirmBody')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t(dict, 'leagues.back')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t(dict, 'leaderboard.reportScore')),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !context.mounted) return;
-
-    try {
-      await ref.read(leaderboardClientProvider).reportScore(mode, num, handle);
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t(dict, 'leaderboard.reportSent'))),
-      );
-    } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t(dict, 'leaderboard.reportError'))),
-      );
-    }
   }
 }
 
@@ -230,7 +181,7 @@ class _InviteSheetBodyState extends ConsumerState<_InviteSheetBody> {
             Text(
               t(dict, 'leagues.inviteFriends'),
               style: TextStyle(
-                fontFamily: 'Fraunces',
+                fontFamily: 'Inter',
                 fontSize: 22,
                 fontWeight: FontWeight.w300,
                 color: c.ink,
@@ -288,7 +239,7 @@ class _InviteSheetBodyState extends ConsumerState<_InviteSheetBody> {
               ),
               onPressed: () => shareInvite(context, widget.name, widget.code),
               icon: const Icon(Icons.ios_share, size: 16),
-              label: Text(t(dict, 'leagues.shareInvite')),
+              label: Text(t(dict, 'leagues.shareButton')),
             ),
           ],
         ),
@@ -298,11 +249,9 @@ class _InviteSheetBodyState extends ConsumerState<_InviteSheetBody> {
 }
 
 class _StandingsRow extends StatelessWidget {
-  const _StandingsRow({required this.dict, required this.entry, this.onReport});
+  const _StandingsRow({required this.entry});
 
-  final Map<String, dynamic> dict;
   final LeaderboardEntry entry;
-  final VoidCallback? onReport;
 
   @override
   Widget build(BuildContext context) {
@@ -313,38 +262,17 @@ class _StandingsRow extends StatelessWidget {
         children: [
           SizedBox(width: 24, child: Text('${entry.rank}', style: TextStyle(fontSize: 13, color: c.muted))),
           Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    entry.handle,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: c.ink,
-                      fontWeight: entry.isMe ? FontWeight.w700 : FontWeight.w400,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Tooltip(
-                  message: t(dict, 'leaderboard.verifiedTooltip'),
-                  child: Icon(Icons.verified, size: 13, color: c.muted),
-                ),
-              ],
+            child: Text(
+              entry.handle,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: c.ink,
+                fontWeight: entry.isMe ? FontWeight.w700 : FontWeight.w400,
+              ),
             ),
           ),
           Text('${entry.moves}', style: TextStyle(fontSize: 13, color: c.ink)),
-          if (onReport != null)
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              icon: Icon(Icons.flag_outlined, size: 16, color: c.muted),
-              tooltip: t(dict, 'leaderboard.reportScore'),
-              onPressed: onReport,
-            )
-          else
-            const SizedBox(width: 32),
         ],
       ),
     );

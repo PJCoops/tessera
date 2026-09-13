@@ -80,14 +80,13 @@ Widget _harness(_FakeApi api) => ProviderScope(
 );
 
 void main() {
-  testWidgets('global tab renders ranked rows with a verified mark', (tester) async {
+  testWidgets('global tab renders ranked rows', (tester) async {
     final api = _FakeApi();
     await tester.pumpWidget(_harness(api));
     await tester.pumpAndSettle();
 
     expect(find.text('Jem'), findsOneWidget);
     expect(find.text('Me'), findsOneWidget);
-    expect(find.byIcon(Icons.verified), findsWidgets);
   });
 
   testWidgets('leagues tab shows an empty state when the player has none', (tester) async {

@@ -101,28 +101,4 @@ void main() {
     // pin down in the test harness; verified manually in the running app).
     await tester.pump(const Duration(seconds: 3));
   });
-
-  testWidgets("isMe rows have no report action, other rows do", (tester) async {
-    final api = _FakeApi();
-    await tester.pumpWidget(_harness(api));
-    await tester.pumpAndSettle();
-
-    expect(find.byIcon(Icons.flag_outlined), findsOneWidget);
-  });
-
-  testWidgets('reporting a score confirms then posts and acks', (tester) async {
-    final api = _FakeApi();
-    await tester.pumpWidget(_harness(api));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byIcon(Icons.flag_outlined));
-    await tester.pumpAndSettle();
-    expect(find.text('Report this score?'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Report score'));
-    await tester.pumpAndSettle();
-
-    expect(api.calls, contains('reportScore:Alice'));
-    expect(find.textContaining('Reported'), findsOneWidget);
-  });
 }

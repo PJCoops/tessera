@@ -297,7 +297,8 @@
     "inviteFriends": "Invite friends",
     "inviteInstructions": "Share this code so friends can join {name}.",
     "invite": "Invite",
-    "tapToCopy": "Tap to copy"
+    "tapToCopy": "Tap to copy",
+    "shareButton": "Share invite"
   },
   "whatsNew": {
     "label": "New",

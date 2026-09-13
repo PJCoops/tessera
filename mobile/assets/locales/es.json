@@ -297,7 +297,8 @@
     "inviteFriends": "Invitar a amigos",
     "inviteInstructions": "Comparte este código para que tus amigos se unan a {name}.",
     "invite": "Invitar",
-    "tapToCopy": "Toca para copiar"
+    "tapToCopy": "Toca para copiar",
+    "shareButton": "Compartir invitación"
   },
   "whatsNew": {
     "label": "Nuevo",

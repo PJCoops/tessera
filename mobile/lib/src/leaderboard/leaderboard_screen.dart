@@ -18,9 +18,7 @@ import 'league_standings_screen.dart';
 
 /// Port of the web's LeaderboardModal + LeaguesPanel (app/components/).
 /// Global/Country boards for today's puzzle, plus a Leagues tab (list,
-/// join by code, create). Every row the server returns is already
-/// filtered to a verified, non-revealed replay, so "verified" is a static
-/// badge on each row rather than a per-row flag.
+/// join by code, create).
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
 
@@ -178,14 +176,14 @@ class _BoardTab extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           children: [
             _BoardHeader(dict: dict),
-            for (final e in entries) _BoardRow(dict: dict, entry: e),
+            for (final e in entries) _BoardRow(entry: e),
             if (me != null && !inList) ...[
               const SizedBox(height: 8),
               Text(
                 t(dict, 'leaderboard.yourRank').toUpperCase(),
                 style: TextStyle(fontSize: 10, letterSpacing: 1, color: c.muted),
               ),
-              _BoardRow(dict: dict, entry: me),
+              _BoardRow(entry: me),
             ],
           ],
         );
@@ -242,12 +240,10 @@ class _BoardHeader extends StatelessWidget {
   }
 }
 
-/// One board row: rank, handle (+ a static "verified" mark — every row the
-/// server returns is already a verified, non-revealed replay), moves, time.
+/// One board row: rank, handle, moves, time.
 class _BoardRow extends StatelessWidget {
-  const _BoardRow({required this.dict, required this.entry});
+  const _BoardRow({required this.entry});
 
-  final Map<String, dynamic> dict;
   final LeaderboardEntry entry;
 
   static String _fmtTime(int? ms) {
@@ -273,25 +269,14 @@ class _BoardRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    entry.handle,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: c.ink,
-                      fontWeight: entry.isMe ? FontWeight.w700 : FontWeight.w400,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Tooltip(
-                  message: t(dict, 'leaderboard.verifiedTooltip'),
-                  child: Icon(Icons.verified, size: 13, color: c.muted),
-                ),
-              ],
+            child: Text(
+              entry.handle,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: c.ink,
+                fontWeight: entry.isMe ? FontWeight.w700 : FontWeight.w400,
+              ),
             ),
           ),
           SizedBox(
@@ -368,25 +353,22 @@ class _LeaguesTab extends ConsumerWidget {
     Map<String, dynamic> dict,
   ) async {
     final controller = TextEditingController();
-    final code = await showDialog<String>(
+    final code = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(t(dict, 'leagues.join')),
-        content: TextField(
-          controller: controller,
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(hintText: t(dict, 'leagues.codePlaceholder')),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(t(dict, 'leagues.back')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(t(dict, 'leagues.joinButton')),
-          ),
-        ],
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: context.colors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _EntrySheetBody(
+        dict: dict,
+        title: t(dict, 'leagues.join'),
+        controller: controller,
+        hintText: t(dict, 'leagues.codePlaceholder'),
+        capitalizeCharacters: true,
+        submitLabel: t(dict, 'leagues.joinButton'),
+        onSubmit: () => Navigator.of(ctx).pop(controller.text.trim()),
       ),
     );
     if (code == null || code.isEmpty || !context.mounted) return;
@@ -417,24 +399,21 @@ class _LeaguesTab extends ConsumerWidget {
     Map<String, dynamic> dict,
   ) async {
     final controller = TextEditingController();
-    final name = await showDialog<String>(
+    final name = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(t(dict, 'leagues.create')),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(hintText: t(dict, 'leagues.namePlaceholder')),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(t(dict, 'leagues.back')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(t(dict, 'leagues.create')),
-          ),
-        ],
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: context.colors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _EntrySheetBody(
+        dict: dict,
+        title: t(dict, 'leagues.create'),
+        controller: controller,
+        hintText: t(dict, 'leagues.namePlaceholder'),
+        submitLabel: t(dict, 'leagues.create'),
+        onSubmit: () => Navigator.of(ctx).pop(controller.text.trim()),
       ),
     );
     if (name == null || name.isEmpty || !context.mounted) return;
@@ -501,6 +480,85 @@ class _LeagueRow extends StatelessWidget {
                 ),
                 Icon(Icons.chevron_right, size: 18, color: c.muted),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shared body for the "Join a league" / "Create a league" bottom sheets —
+/// same slide-up treatment as the invite sheet (league_standings_screen.dart)
+/// rather than a plain AlertDialog, so entering a code or a name feels like
+/// one consistent flow.
+class _EntrySheetBody extends StatelessWidget {
+  const _EntrySheetBody({
+    required this.dict,
+    required this.title,
+    required this.controller,
+    required this.hintText,
+    required this.submitLabel,
+    required this.onSubmit,
+    this.capitalizeCharacters = false,
+  });
+
+  final Map<String, dynamic> dict;
+  final String title;
+  final TextEditingController controller;
+  final String hintText;
+  final String submitLabel;
+  final VoidCallback onSubmit;
+  final bool capitalizeCharacters;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(24, 4, 24, 24 + MediaQuery.of(context).viewInsets.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 22,
+                fontWeight: FontWeight.w300,
+                color: c.ink,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              textCapitalization: capitalizeCharacters
+                  ? TextCapitalization.characters
+                  : TextCapitalization.none,
+              decoration: InputDecoration(
+                hintText: hintText,
+                filled: true,
+                fillColor: c.cream,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: c.rule),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+              ),
+              onSubmitted: (_) => onSubmit(),
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: c.ink,
+                foregroundColor: c.paper,
+                minimumSize: const Size.fromHeight(48),
+              ),
+              onPressed: onSubmit,
+              child: Text(submitLabel),
             ),
           ],
         ),
