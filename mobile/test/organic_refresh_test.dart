@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tessera/src/theme/theme.dart';
@@ -61,5 +62,62 @@ void main() {
     await tester.pump();
 
     await tester.pumpWidget(const SizedBox());
+  });
+
+  group('under iOS bouncing physics', () {
+    // Flutter's test binding defaults to TargetPlatform.android, where
+    // ClampingScrollPhysics reports a pull as OverscrollNotification. iOS
+    // (and macOS) get BouncingScrollPhysics instead, which never
+    // "overscrolls" — it just lets ScrollMetrics.pixels go negative via an
+    // ordinary ScrollUpdateNotification. The two other tests above passed
+    // even when this widget only listened for OverscrollNotification,
+    // which is exactly how this shipped structurally inert on a real
+    // iPhone: this platform override is what catches that class of bug.
+    //
+    // Reset inside a finally, synchronously before the test body returns —
+    // both package:test's tearDown and WidgetTester's addTearDown run
+    // after that point, too late to avoid tripping the framework's
+    // end-of-test "foundation debug var changed" invariant check.
+    testWidgets('a pull past the trigger threshold calls onRefresh', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        var calls = 0;
+        await tester.pumpWidget(_harness(onRefresh: () async => calls++));
+
+        await tester.fling(
+          find.byType(OrganicRefresh),
+          const Offset(0, 300),
+          800,
+        );
+        await tester.pumpAndSettle();
+
+        expect(calls, 1);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('a short pull under the trigger threshold does not refresh', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        var calls = 0;
+        await tester.pumpWidget(_harness(onRefresh: () async => calls++));
+
+        await tester.fling(
+          find.byType(OrganicRefresh),
+          const Offset(0, 40),
+          300,
+        );
+        await tester.pumpAndSettle();
+
+        expect(calls, 0);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
   });
 }

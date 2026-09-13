@@ -66,11 +66,27 @@ class _OrganicRefreshState extends State<OrganicRefresh>
   }
 
   bool _onNotification(ScrollNotification n) {
+    // Two different physics report a pull past the top differently:
+    // ClampingScrollPhysics (Android) refuses to move `pixels` past 0 and
+    // reports the leftover drag as OverscrollNotification; BouncingScrollPhysics
+    // (iOS's default — what actually matters here) never "overscrolls" at
+    // all, it just lets `pixels` go negative via an ordinary
+    // ScrollUpdateNotification. Listening for OverscrollNotification alone
+    // (this widget's first cut) is structurally inert on iOS.
     if (n is OverscrollNotification && n.dragDetails != null) {
       if (_phase == _Phase.idle || _phase == _Phase.dragging) {
         setState(() {
           _phase = _Phase.dragging;
           _pull = (_pull - n.overscroll).clamp(0.0, _maxPull);
+        });
+      }
+    } else if (n is ScrollUpdateNotification &&
+        n.dragDetails != null &&
+        n.metrics.pixels < 0) {
+      if (_phase == _Phase.idle || _phase == _Phase.dragging) {
+        setState(() {
+          _phase = _Phase.dragging;
+          _pull = (-n.metrics.pixels).clamp(0.0, _maxPull);
         });
       }
     } else if (n is ScrollEndNotification && _phase == _Phase.dragging) {
