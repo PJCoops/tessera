@@ -80,6 +80,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             bonus: board.isBonus,
             completedAt: completedAt,
             minSwaps: puzzle.minSwaps,
+            history: board.history,
           ),
         );
     _push(
@@ -90,6 +91,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         moves: board.moves,
         bonus: board.isBonus,
         completedAt: completedAt,
+        history: board.history,
       ),
     );
   }

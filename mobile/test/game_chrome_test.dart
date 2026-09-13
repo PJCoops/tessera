@@ -170,6 +170,12 @@ void main() {
     expect(api.submitCalls, 1);
     expect(api.submitted.single.number, _oneFromSolved().num);
     expect(api.submitted.single.revealed, isFalse);
+    // The swap-move chain must ride along so the server can replay-verify
+    // the solve (without it every mobile solve is silently unverified and
+    // never appears on any leaderboard).
+    expect(api.submitted.single.history, [
+      [0, 1],
+    ]);
 
     await tester.pumpWidget(const SizedBox());
   });
