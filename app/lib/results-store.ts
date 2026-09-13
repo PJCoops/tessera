@@ -16,8 +16,14 @@ export type ResultRow = {
   completedAtMs: number;
 };
 
-export async function ensureProfile(sql: Sql, userId: string): Promise<void> {
-  await sql`insert into profiles (id) values (${userId}) on conflict do nothing`;
+/** Returns whether this call actually created the profile row (vs. one
+ *  already existing) — the signal for the one-time `account_created`
+ *  analytics event (§11). */
+export async function ensureProfile(sql: Sql, userId: string): Promise<boolean> {
+  const rows = await sql`
+    insert into profiles (id) values (${userId}) on conflict do nothing returning id
+  `;
+  return rows.length > 0;
 }
 
 export async function bumpImportedMax(

@@ -37,6 +37,19 @@ export async function getAdsRemoved(sql: Sql, userId: string): Promise<boolean> 
 }
 
 /**
+ * The random per-user id used as the PostHog distinct_id for server-side
+ * events (§11) — never the raw Supabase auth id. Falls back to the
+ * userId itself only if the profile row somehow doesn't exist yet
+ * (shouldn't happen — callers run this after ensureProfile).
+ */
+export async function getAnalyticsId(sql: Sql, userId: string): Promise<string> {
+  const rows = await sql<{ analytics_id: string }[]>`
+    select analytics_id from profiles where id = ${userId}
+  `;
+  return rows[0]?.analytics_id ?? userId;
+}
+
+/**
  * Mark the account for deletion. Idempotent: a second call keeps the
  * original `deleted_at` (so the grace window can't be extended by
  * re-requesting). Returns whether a deletion was already pending and the

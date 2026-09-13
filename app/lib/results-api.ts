@@ -9,7 +9,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { Locale } from "./i18n";
 import type { ModeId } from "./mode";
-import { getAccountState, getAdsRemoved } from "./account-store";
+import { getAccountState, getAdsRemoved, getAnalyticsId } from "./account-store";
+import { captureServerEvent } from "./server-analytics";
 import { getDb } from "./db";
 import type { StoredPuzzle } from "./puzzle-store";
 import { parseIncomingResult, verifyIncoming } from "./results-ingest";
@@ -86,6 +87,12 @@ export async function handleResultsGet(
 export async function handleResultsSubmit(
   req: NextRequest,
   knownUserId?: string,
+  // Only the v1 (mobile) route passes this — see server-analytics.ts:
+  // these events exist specifically to cover mobile's pre-consent
+  // measurement gap, and web already tracks its own equivalent
+  // (`result_submitted`) client-side, so firing here for web would
+  // double-count.
+  platform?: "mobile",
 ): Promise<NextResponse> {
   const sql = getDb();
   if (!sql) return notConfigured();
@@ -108,7 +115,7 @@ export async function handleResultsSubmit(
   const country = req.headers.get("x-vercel-ip-country") ?? "ZZ";
 
   try {
-    await ensureProfile(sql, userId);
+    const created = await ensureProfile(sql, userId);
     const verdict = await verifyIncoming(sql, parsed, [parsed.locale], new Map());
     await upsertResults(sql, userId, [
       {
@@ -124,6 +131,19 @@ export async function handleResultsSubmit(
         completedAtMs: parsed.completedAtMs,
       },
     ]);
+    if (platform === "mobile") {
+      const analyticsId = await getAnalyticsId(sql, userId);
+      if (created) {
+        captureServerEvent(analyticsId, "account_created", { platform });
+      }
+      captureServerEvent(analyticsId, "result_recorded", {
+        num: parsed.num,
+        mode: parsed.mode,
+        moves: verdict.moves,
+        verified: verdict.verified,
+        platform,
+      });
+    }
     return NextResponse.json({ ok: true, verified: verdict.verified });
   } catch (e) {
     console.error("results submit failed:", e);
@@ -140,6 +160,8 @@ export async function handleResultsSubmit(
 export async function handleResultsImport(
   req: NextRequest,
   knownUserId?: string,
+  // See handleResultsSubmit — only the v1 (mobile) route passes this.
+  platform?: "mobile",
 ): Promise<NextResponse> {
   const sql = getDb();
   if (!sql) return notConfigured();
@@ -175,7 +197,7 @@ export async function handleResultsImport(
     .sort((a, b) => b.num - a.num);
 
   try {
-    await ensureProfile(sql, userId);
+    const created = await ensureProfile(sql, userId);
     await bumpImportedMax(sql, userId, "classic", parseStreakMax(body.streaks?.classic));
     await bumpImportedMax(sql, userId, "hard", parseStreakMax(body.streaks?.hard));
 
@@ -209,6 +231,17 @@ export async function handleResultsImport(
 
     for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
       await upsertResults(sql, userId, rows.slice(i, i + UPSERT_CHUNK));
+    }
+
+    if (platform === "mobile") {
+      const analyticsId = await getAnalyticsId(sql, userId);
+      if (created) {
+        captureServerEvent(analyticsId, "account_created", { platform });
+      }
+      captureServerEvent(analyticsId, "sync_completed", {
+        platform,
+        imported_count: rows.length,
+      });
     }
 
     return NextResponse.json({ ok: true, imported: rows.length, verified: verifiedCount });

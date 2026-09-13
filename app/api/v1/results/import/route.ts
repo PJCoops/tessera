@@ -27,5 +27,5 @@ export async function POST(req: NextRequest) {
   const user = await rateLimit(req, "v1-results-import-user", 5, "1 h", userId);
   if (!user.ok) return limited(user.retryAfter);
 
-  return handleResultsImport(req, userId);
+  return handleResultsImport(req, userId, "mobile");
 }

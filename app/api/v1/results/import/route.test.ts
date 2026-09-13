@@ -61,7 +61,7 @@ describe("POST /api/v1/results/import", () => {
     expect(getUserId).toHaveBeenCalledWith(expect.any(Request));
     const passedReq = getUserId.mock.calls[0][0] as Request;
     expect(passedReq.headers.get("authorization")).toBe("Bearer jwt-abc");
-    expect(handleResultsImport).toHaveBeenCalledWith(expect.any(Request), "u1");
+    expect(handleResultsImport).toHaveBeenCalledWith(expect.any(Request), "u1", "mobile");
     expect((await res.json())).toEqual({ ok: true, imported: 0, verified: 0 });
   });
 });
