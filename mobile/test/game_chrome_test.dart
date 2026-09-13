@@ -152,7 +152,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
 
-    expect(find.text('Challenge a friend →'), findsOneWidget);
+    expect(find.text('Share results →'), findsOneWidget);
     expect(find.text('Definitions'), findsOneWidget);
     expect(find.text('Solution'), findsNothing);
     expect(find.textContaining('Next puzzle in'), findsOneWidget);
