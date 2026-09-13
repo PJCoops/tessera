@@ -14,9 +14,9 @@ import '../settings/settings.dart';
 import '../theme/tokens.dart';
 import 'email_signup.dart';
 import 'how_to_sheet.dart';
+import 'legal_content.dart';
+import 'legal_sheet.dart';
 
-const _privacyUrl = 'https://tesserapuzzle.com/privacy';
-const _termsUrl = 'https://tesserapuzzle.com/terms';
 const _supportUrl = 'mailto:support@tesserapuzzle.com';
 
 final _packageInfoProvider = FutureProvider(
@@ -117,13 +117,21 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(height: 32),
           ListTile(
             title: Text(t(dict, 'settings.legal.privacy')),
-            trailing: Icon(Icons.open_in_new, size: 18, color: c.muted),
-            onTap: () => _launch(_privacyUrl),
+            trailing: Icon(Icons.chevron_right, color: c.muted),
+            onTap: () => showLegalSheet(
+              context,
+              title: t(dict, 'settings.legal.privacy'),
+              sections: privacySections(),
+            ),
           ),
           ListTile(
             title: Text(t(dict, 'settings.legal.terms')),
-            trailing: Icon(Icons.open_in_new, size: 18, color: c.muted),
-            onTap: () => _launch(_termsUrl),
+            trailing: Icon(Icons.chevron_right, color: c.muted),
+            onTap: () => showLegalSheet(
+              context,
+              title: t(dict, 'settings.legal.terms'),
+              sections: termsSections(),
+            ),
           ),
           ListTile(
             title: Text(t(dict, 'settings.legal.licenses')),

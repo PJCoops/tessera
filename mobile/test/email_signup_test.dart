@@ -93,4 +93,17 @@ void main() {
 
     expect(find.text('Reminders aren’t live yet. Come back soon.'), findsOneWidget);
   });
+
+  testWidgets('the privacy link opens a native sheet, not a browser link', (
+    tester,
+  ) async {
+    final repo = _FakeRepo(SubscribeStatus.ok);
+    await tester.pumpWidget(_harness(repo));
+    await _ready(tester);
+
+    await tester.tap(find.text('See our privacy policy.'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Who we are'), findsOneWidget);
+  });
 }

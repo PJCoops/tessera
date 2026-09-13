@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../email/subscribe_repository.dart';
 import '../i18n.dart';
 import '../i18n/dict.dart';
 import '../settings/settings.dart';
 import '../theme/tokens.dart';
-
-const _privacyUrl = 'https://tesserapuzzle.com/privacy';
+import 'legal_content.dart';
+import 'legal_sheet.dart';
 
 /// Light client-side check that mirrors `isPlausibleEmail` in
 /// `app/api/subscribe/route.ts` — an "@" with non-empty halves, a dot in
@@ -153,9 +152,10 @@ class _EmailSignupState extends ConsumerState<EmailSignup> {
               ),
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => launchUrl(
-                  Uri.parse(_privacyUrl),
-                  mode: LaunchMode.externalApplication,
+                onTap: () => showLegalSheet(
+                  context,
+                  title: t(dict, 'settings.legal.privacy'),
+                  sections: privacySections(),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),

@@ -180,4 +180,36 @@ void main() {
     );
     expect(tile.enabled, isFalse);
   });
+
+  testWidgets('privacy policy opens as a native sheet, not a browser link', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(_harness());
+    await _ready(tester);
+    await _scrollTo(tester, find.text('Privacy policy'));
+    await tester.ensureVisible(find.text('Privacy policy'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Privacy policy'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Who we are'), findsOneWidget);
+  });
+
+  testWidgets('terms opens as a native sheet, not a browser link', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(_harness());
+    await _ready(tester);
+    await _scrollTo(tester, find.text('Terms'));
+    await tester.ensureVisible(find.text('Terms'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Terms'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Who runs the game'), findsOneWidget);
+  });
 }
