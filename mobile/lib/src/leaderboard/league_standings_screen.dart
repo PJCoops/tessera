@@ -8,6 +8,7 @@ import '../i18n/dict.dart';
 import '../mode.dart';
 import '../share_position.dart';
 import '../theme/tokens.dart';
+import '../widgets/organic_refresh.dart';
 import 'leaderboard_client.dart';
 import 'leaderboard_providers.dart';
 
@@ -65,7 +66,7 @@ class LeagueStandingsScreen extends ConsumerWidget {
                 label: Text(t(dict, 'leagues.invite')),
               ),
             ),
-      body: RefreshIndicator(
+      body: OrganicRefresh(
         onRefresh: () => ref.refresh(leagueStandingsProvider(args).future),
         child: async.when(
           loading: () => _refreshableCentered(
@@ -154,7 +155,7 @@ class LeagueStandingsScreen extends ConsumerWidget {
 }
 
 /// Wraps a centered-message widget in a full-height scrollable —
-/// RefreshIndicator needs an overscroll-capable child to register the
+/// the pull-to-refresh wrapper needs an overscroll-capable child to register the
 /// pull gesture even when the content doesn't fill the screen.
 Widget _refreshableCentered(Widget child) => LayoutBuilder(
   builder: (context, constraints) => ListView(

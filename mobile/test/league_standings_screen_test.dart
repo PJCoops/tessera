@@ -5,6 +5,7 @@ import 'package:tessera/src/leaderboard/leaderboard_client.dart';
 import 'package:tessera/src/leaderboard/league_standings_screen.dart';
 import 'package:tessera/src/mode.dart';
 import 'package:tessera/src/theme/theme.dart';
+import 'package:tessera/src/widgets/organic_refresh.dart';
 
 import 'support/test_dict.dart';
 
@@ -75,7 +76,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.calls.where((c) => c == 'leagueStandings').length, 1);
 
-    await tester.fling(find.byType(RefreshIndicator), const Offset(0, 300), 1000);
+    await tester.fling(find.byType(OrganicRefresh), const Offset(0, 300), 1000);
     await tester.pumpAndSettle();
 
     expect(api.calls.where((c) => c == 'leagueStandings').length, 2);

@@ -12,6 +12,7 @@ import '../mode.dart';
 import '../puzzle_number.dart';
 import '../settings/settings.dart';
 import '../theme/tokens.dart';
+import '../widgets/organic_refresh.dart';
 import 'leaderboard_client.dart';
 import 'leaderboard_providers.dart';
 import 'league_standings_screen.dart';
@@ -155,7 +156,7 @@ class _BoardTab extends ConsumerWidget {
     final args = (mode: mode, num: num);
     final async = ref.watch(leaderboardProvider(args));
 
-    return RefreshIndicator(
+    return OrganicRefresh(
       onRefresh: () => ref.refresh(leaderboardProvider(args).future),
       child: async.when(
         loading: () => _refreshableCentered(
@@ -222,7 +223,7 @@ class _BoardTab extends ConsumerWidget {
 }
 
 /// Wraps a centered-message widget (which already centers/pads itself) in
-/// a full-height scrollable — RefreshIndicator needs an overscroll-capable
+/// a full-height scrollable — the pull-to-refresh wrapper needs an overscroll-capable
 /// child to register the pull gesture even when the content doesn't fill
 /// the screen.
 Widget _refreshableCentered(Widget child) => LayoutBuilder(
@@ -368,7 +369,7 @@ class _LeaguesTab extends ConsumerWidget {
     final dict = ref.watch(dictOrEmptyProvider);
     final async = ref.watch(myLeaguesProvider);
 
-    return RefreshIndicator(
+    return OrganicRefresh(
       onRefresh: () => ref.refresh(myLeaguesProvider.future),
       child: async.when(
         loading: () => _refreshableCentered(
