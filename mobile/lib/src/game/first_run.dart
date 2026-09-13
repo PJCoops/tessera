@@ -102,7 +102,7 @@ class _FirstRunDemoState extends ConsumerState<FirstRunDemo> {
             done ? 'That’s the whole game.' : 'Tap two tiles to swap them',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'Fraunces',
+              fontFamily: 'Inter',
               fontSize: 24,
               fontWeight: FontWeight.w300,
               color: c.ink,

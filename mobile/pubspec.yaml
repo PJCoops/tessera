@@ -80,12 +80,6 @@ flutter:
     - assets/shared/
 
   fonts:
-    - family: Fraunces
-      fonts:
-        - asset: assets/fonts/Fraunces-Light.ttf
-          weight: 300
-        - asset: assets/fonts/Fraunces-Bold.ttf
-          weight: 700
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter-Medium.ttf

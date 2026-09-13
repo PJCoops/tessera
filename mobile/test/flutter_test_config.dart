@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Runs once before the whole test suite. Loads the vendored fonts so
-/// golden images render real Fraunces/Inter glyphs instead of the test
-/// fallback boxes.
+/// golden images render real Inter glyphs instead of the test fallback
+/// boxes.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -18,11 +18,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     await loader.load();
   }
 
-  await load('Fraunces', [
-    'assets/fonts/Fraunces-Light.ttf',
-    'assets/fonts/Fraunces-Bold.ttf',
-  ]);
-  await load('Inter', ['assets/fonts/Inter-SemiBold.ttf']);
+  await load('Inter', ['assets/fonts/Inter-Medium.ttf', 'assets/fonts/Inter-SemiBold.ttf']);
 
   await testMain();
 }

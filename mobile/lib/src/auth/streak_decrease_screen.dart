@@ -35,7 +35,7 @@ class StreakDecreaseScreen extends ConsumerWidget {
               Text(
                 tr('streakSync.title'),
                 style: TextStyle(
-                  fontFamily: 'Fraunces',
+                  fontFamily: 'Inter',
                   fontSize: 26,
                   fontWeight: FontWeight.w300,
                   color: c.ink,

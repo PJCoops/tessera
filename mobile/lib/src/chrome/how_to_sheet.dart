@@ -46,7 +46,7 @@ class _HowToBody extends ConsumerWidget {
               Text(
                 tr('howto.title'),
                 style: TextStyle(
-                  fontFamily: 'Fraunces',
+                  fontFamily: 'Inter',
                   fontSize: 24,
                   fontWeight: FontWeight.w300,
                   color: c.ink,

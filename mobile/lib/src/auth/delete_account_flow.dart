@@ -134,7 +134,7 @@ class _State extends ConsumerState<_DeleteAccountScreen> {
       Text(
         _t('deleteAccount.confirmTitle'),
         style: TextStyle(
-          fontFamily: 'Fraunces',
+          fontFamily: 'Inter',
           fontSize: 22,
           fontWeight: FontWeight.w300,
           color: c.ink,
@@ -172,7 +172,7 @@ class _State extends ConsumerState<_DeleteAccountScreen> {
       Text(
         _t('deleteAccount.reauthTitle'),
         style: TextStyle(
-          fontFamily: 'Fraunces',
+          fontFamily: 'Inter',
           fontSize: 22,
           fontWeight: FontWeight.w300,
           color: c.ink,
@@ -225,7 +225,7 @@ class _State extends ConsumerState<_DeleteAccountScreen> {
         Text(
           _t('deleteAccount.pendingTitle'),
           style: TextStyle(
-            fontFamily: 'Fraunces',
+            fontFamily: 'Inter',
             fontSize: 22,
             fontWeight: FontWeight.w300,
             color: c.ink,

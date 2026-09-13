@@ -123,7 +123,7 @@ class _SignInBodyState extends ConsumerState<_SignInBody> {
             Text(
               _t('account.modalTitle'),
               style: TextStyle(
-                fontFamily: 'Fraunces',
+                fontFamily: 'Inter',
                 fontSize: 22,
                 fontWeight: FontWeight.w300,
                 color: c.ink,

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'tokens.dart';
 
 /// Builds the app ThemeData for a brightness + colour-blind combination.
-/// Fraunces is the display face, Inter the text face (spec §18); both are
-/// vendored from the web app.
+/// Inter is the app's only font (headings and body text alike), vendored
+/// from the web app.
 ThemeData buildTesseraTheme({
   required Brightness brightness,
   bool colourBlind = false,
