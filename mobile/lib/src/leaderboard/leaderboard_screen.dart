@@ -56,7 +56,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               _ModeToggle(
                 value: mode,
                 onChanged: (m) => setState(() => _mode = m),
-                labels: (t(dict, 'history.mode.classic'), t(dict, 'history.mode.hard')),
+                labels: (
+                  t(dict, 'history.mode.classic'),
+                  t(dict, 'history.mode.hard'),
+                ),
               ),
               const SizedBox(height: 8),
               TabBar(
@@ -128,17 +131,18 @@ class _ModeToggle extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          seg(ModeId.classic, labels.$1),
-          seg(ModeId.hard, labels.$2),
-        ],
+        children: [seg(ModeId.classic, labels.$1), seg(ModeId.hard, labels.$2)],
       ),
     );
   }
 }
 
 class _BoardTab extends ConsumerWidget {
-  const _BoardTab({required this.mode, required this.num, required this.country});
+  const _BoardTab({
+    required this.mode,
+    required this.num,
+    required this.country,
+  });
 
   final ModeId mode;
   final int num;
@@ -148,49 +152,90 @@ class _BoardTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
     final dict = ref.watch(dictOrEmptyProvider);
-    final async = ref.watch(leaderboardProvider((mode: mode, num: num)));
+    final args = (mode: mode, num: num);
+    final async = ref.watch(leaderboardProvider(args));
 
-    return async.when(
-      loading: () => Center(
-        child: Text(t(dict, 'leaderboard.loading'), style: TextStyle(color: c.muted)),
-      ),
-      error: (_, _) => Center(
-        child: Text(t(dict, 'game.loadError'), style: TextStyle(color: c.muted)),
-      ),
-      data: (res) {
-        final entries = country ? res.country.entries : res.global;
-        final me = country ? res.meCountry : res.meGlobal;
-        final inList = me != null && entries.any((e) => e.isMe);
+    return RefreshIndicator(
+      onRefresh: () => ref.refresh(leaderboardProvider(args).future),
+      child: async.when(
+        loading: () => _refreshableCentered(
+          Center(
+            child: Text(
+              t(dict, 'leaderboard.loading'),
+              style: TextStyle(color: c.muted),
+            ),
+          ),
+        ),
+        error: (_, _) => _refreshableCentered(
+          Center(
+            child: Text(
+              t(dict, 'game.loadError'),
+              style: TextStyle(color: c.muted),
+            ),
+          ),
+        ),
+        data: (res) {
+          final entries = country ? res.country.entries : res.global;
+          final me = country ? res.meCountry : res.meGlobal;
+          final inList = me != null && entries.any((e) => e.isMe);
 
-        if (!res.signedIn) {
-          return _CenteredMessage(text: t(dict, 'leaderboard.signInPrompt'));
-        }
-        if (!res.hasHandle) {
-          return _CenteredMessage(text: t(dict, 'leaderboard.optInPrompt'));
-        }
-        if (entries.isEmpty) {
-          return _CenteredMessage(text: t(dict, 'leaderboard.empty'));
-        }
+          if (!res.signedIn) {
+            return _refreshableCentered(
+              _CenteredMessage(text: t(dict, 'leaderboard.signInPrompt')),
+            );
+          }
+          if (!res.hasHandle) {
+            return _refreshableCentered(
+              _CenteredMessage(text: t(dict, 'leaderboard.optInPrompt')),
+            );
+          }
+          if (entries.isEmpty) {
+            return _refreshableCentered(
+              _CenteredMessage(text: t(dict, 'leaderboard.empty')),
+            );
+          }
 
-        return ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          children: [
-            _BoardHeader(dict: dict),
-            for (final e in entries) _BoardRow(entry: e),
-            if (me != null && !inList) ...[
-              const SizedBox(height: 8),
-              Text(
-                t(dict, 'leaderboard.yourRank').toUpperCase(),
-                style: TextStyle(fontSize: 10, letterSpacing: 1, color: c.muted),
-              ),
-              _BoardRow(entry: me),
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            children: [
+              _BoardHeader(dict: dict),
+              for (final e in entries) _BoardRow(entry: e),
+              if (me != null && !inList) ...[
+                const SizedBox(height: 8),
+                Text(
+                  t(dict, 'leaderboard.yourRank').toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 1,
+                    color: c.muted,
+                  ),
+                ),
+                _BoardRow(entry: me),
+              ],
             ],
-          ],
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
+
+/// Wraps a centered-message widget (which already centers/pads itself) in
+/// a full-height scrollable — RefreshIndicator needs an overscroll-capable
+/// child to register the pull gesture even when the content doesn't fill
+/// the screen.
+Widget _refreshableCentered(Widget child) => LayoutBuilder(
+  builder: (context, constraints) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    children: [
+      ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+        child: child,
+      ),
+    ],
+  ),
+);
 
 class _CenteredMessage extends StatelessWidget {
   const _CenteredMessage({required this.text});
@@ -224,15 +269,26 @@ class _BoardHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          SizedBox(width: 28, child: Text(t(dict, 'leaderboard.colRank'), style: style)),
+          SizedBox(
+            width: 28,
+            child: Text(t(dict, 'leaderboard.colRank'), style: style),
+          ),
           Expanded(child: Text(t(dict, 'leaderboard.colPlayer'), style: style)),
           SizedBox(
             width: 56,
-            child: Text(t(dict, 'leaderboard.colMoves'), textAlign: TextAlign.right, style: style),
+            child: Text(
+              t(dict, 'leaderboard.colMoves'),
+              textAlign: TextAlign.right,
+              style: style,
+            ),
           ),
           SizedBox(
             width: 56,
-            child: Text(t(dict, 'leaderboard.colTime'), textAlign: TextAlign.right, style: style),
+            child: Text(
+              t(dict, 'leaderboard.colTime'),
+              textAlign: TextAlign.right,
+              style: style,
+            ),
           ),
         ],
       ),
@@ -312,37 +368,52 @@ class _LeaguesTab extends ConsumerWidget {
     final dict = ref.watch(dictOrEmptyProvider);
     final async = ref.watch(myLeaguesProvider);
 
-    return async.when(
-      loading: () => Center(
-        child: Text(t(dict, 'leaderboard.loading'), style: TextStyle(color: c.muted)),
-      ),
-      error: (_, _) => Center(
-        child: Text(t(dict, 'game.loadError'), style: TextStyle(color: c.muted)),
-      ),
-      data: (leagues) => ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          if (leagues.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                t(dict, 'leagues.empty'),
-                style: TextStyle(fontSize: 14, color: c.muted),
-              ),
-            )
-          else
-            for (final l in leagues) _LeagueRow(dict: dict, league: l, mode: mode, num: num),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: () => _showJoinDialog(context, ref, dict),
-            child: Text(t(dict, 'leagues.joinButton')),
+    return RefreshIndicator(
+      onRefresh: () => ref.refresh(myLeaguesProvider.future),
+      child: async.when(
+        loading: () => _refreshableCentered(
+          Center(
+            child: Text(
+              t(dict, 'leaderboard.loading'),
+              style: TextStyle(color: c.muted),
+            ),
           ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: () => _showCreateDialog(context, ref, dict),
-            child: Text(t(dict, 'leagues.createButton')),
+        ),
+        error: (_, _) => _refreshableCentered(
+          Center(
+            child: Text(
+              t(dict, 'game.loadError'),
+              style: TextStyle(color: c.muted),
+            ),
           ),
-        ],
+        ),
+        data: (leagues) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            if (leagues.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  t(dict, 'leagues.empty'),
+                  style: TextStyle(fontSize: 14, color: c.muted),
+                ),
+              )
+            else
+              for (final l in leagues)
+                _LeagueRow(dict: dict, league: l, mode: mode, num: num),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => _showJoinDialog(context, ref, dict),
+              child: Text(t(dict, 'leagues.joinButton')),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => _showCreateDialog(context, ref, dict),
+              child: Text(t(dict, 'leagues.createButton')),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -383,13 +454,15 @@ class _LeaguesTab extends ConsumerWidget {
       ref.invalidate(myLeaguesProvider);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t(dict, 'leagues.joinedToast', {'name': league.name}))),
+        SnackBar(
+          content: Text(t(dict, 'leagues.joinedToast', {'name': league.name})),
+        ),
       );
     } catch (_) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t(dict, 'leagues.notFound'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t(dict, 'leagues.notFound'))));
     }
   }
 
@@ -419,7 +492,9 @@ class _LeaguesTab extends ConsumerWidget {
     if (name == null || name.isEmpty || !context.mounted) return;
 
     try {
-      final league = await ref.read(leaderboardClientProvider).createLeague(name);
+      final league = await ref
+          .read(leaderboardClientProvider)
+          .createLeague(name);
       ref.invalidate(myLeaguesProvider);
       if (!context.mounted) return;
       // Straight to standings — its share icon is how you invite people,
@@ -436,9 +511,9 @@ class _LeaguesTab extends ConsumerWidget {
       );
     } on AccountApiException catch (_) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t(dict, 'leagues.notFound'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t(dict, 'leagues.notFound'))));
     }
   }
 }
@@ -462,8 +537,12 @@ class _LeagueRow extends StatelessWidget {
     return InkWell(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) =>
-              LeagueStandingsScreen(leagueId: league.id, name: league.name, mode: mode, num: num),
+          builder: (_) => LeagueStandingsScreen(
+            leagueId: league.id,
+            name: league.name,
+            mode: mode,
+            num: num,
+          ),
         ),
       ),
       child: Padding(
@@ -517,7 +596,12 @@ class _EntrySheetBody extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(24, 4, 24, 24 + MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          4,
+          24,
+          24 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -546,7 +630,10 @@ class _EntrySheetBody extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(color: c.rule),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 18,
+                ),
               ),
               onSubmitted: (_) => onSubmit(),
             ),
@@ -574,7 +661,11 @@ class _EntrySheetBody extends StatelessWidget {
 /// unlike the web, which joins silently (§12.2 requires this on mobile).
 /// No preview endpoint exists to show the league's name up front, so the
 /// confirmation is code-only; the toast after joining shows the name.
-Future<void> handleJoinLinkCode(BuildContext context, WidgetRef ref, String code) async {
+Future<void> handleJoinLinkCode(
+  BuildContext context,
+  WidgetRef ref,
+  String code,
+) async {
   final dict = ref.read(dictOrEmptyProvider);
 
   if (ref.read(authUserProvider) == null) {
@@ -609,7 +700,9 @@ Future<void> handleJoinLinkCode(BuildContext context, WidgetRef ref, String code
     ref.invalidate(myLeaguesProvider);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(t(dict, 'leagues.joinedToast', {'name': league.name}))),
+      SnackBar(
+        content: Text(t(dict, 'leagues.joinedToast', {'name': league.name})),
+      ),
     );
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -623,8 +716,8 @@ Future<void> handleJoinLinkCode(BuildContext context, WidgetRef ref, String code
     );
   } catch (_) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(t(dict, 'leagues.notFound'))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(t(dict, 'leagues.notFound'))));
   }
 }

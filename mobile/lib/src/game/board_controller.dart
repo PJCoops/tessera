@@ -36,6 +36,23 @@ final boardProvider = NotifierProvider<BoardController, BoardState>(
 );
 
 class BoardController extends Notifier<BoardState> {
+  /// Set on the first [tap] of this controller's lifetime — the clock
+  /// starts on first interaction, not on puzzle load, so idle time before
+  /// the player actually begins doesn't count. Null for a puzzle reopened
+  /// already finished (build() short-circuits before any tap happens) or
+  /// one solved via reveal rather than play.
+  int? _startedAtMs;
+
+  /// Elapsed time since the first tap, for [game_screen.dart]'s solve
+  /// handler to stamp onto the result. Null if there was no first tap to
+  /// measure from (see [_startedAtMs]).
+  int? elapsedMs() {
+    final started = _startedAtMs;
+    return started == null
+        ? null
+        : DateTime.now().millisecondsSinceEpoch - started;
+  }
+
   @override
   BoardState build() {
     final puzzle = ref.watch(puzzleProvider).requireValue;
@@ -58,9 +75,15 @@ class BoardController extends Notifier<BoardState> {
     return puzzle.toBoardState();
   }
 
-  void tap(int index) => state = state.tap(index);
+  void tap(int index) {
+    _startedAtMs ??= DateTime.now().millisecondsSinceEpoch;
+    state = state.tap(index);
+  }
 
-  void reset() => state = ref.read(puzzleProvider).requireValue.toBoardState();
+  void reset() {
+    _startedAtMs = null;
+    state = ref.read(puzzleProvider).requireValue.toBoardState();
+  }
 
   /// Snap to the solved grid (the "Solution" button). No win transition.
   void reveal() => state = state.revealed();

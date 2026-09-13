@@ -89,6 +89,18 @@ void main() {
     expect(find.text('Me'), findsOneWidget);
   });
 
+  testWidgets('pulling to refresh re-fetches the global board', (tester) async {
+    final api = _FakeApi();
+    await tester.pumpWidget(_harness(api));
+    await tester.pumpAndSettle();
+    expect(api.calls.where((c) => c.startsWith('getLeaderboard')).length, 1);
+
+    await tester.fling(find.byType(RefreshIndicator), const Offset(0, 300), 1000);
+    await tester.pumpAndSettle();
+
+    expect(api.calls.where((c) => c.startsWith('getLeaderboard')).length, 2);
+  });
+
   testWidgets('leagues tab shows an empty state when the player has none', (tester) async {
     final api = _FakeApi();
     await tester.pumpWidget(_harness(api));

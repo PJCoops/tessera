@@ -22,6 +22,7 @@ class _FakeApi implements LeaderboardApi {
 
   @override
   Future<LeagueStandings> leagueStandings(String leagueId, ModeId mode, int num) async {
+    calls.add('leagueStandings');
     return const LeagueStandings(
       league: LeagueSummary(id: 'l1', name: 'Family', inviteCode: 'X', memberCount: 3),
       board: [
@@ -66,6 +67,18 @@ void main() {
     expect(find.text('5'), findsOneWidget); // Me's days-won tally
     // Alice's tally (2) also equals her board rank, so just check presence.
     expect(find.text('2'), findsWidgets);
+  });
+
+  testWidgets('pulling to refresh re-fetches standings', (tester) async {
+    final api = _FakeApi();
+    await tester.pumpWidget(_harness(api));
+    await tester.pumpAndSettle();
+    expect(api.calls.where((c) => c == 'leagueStandings').length, 1);
+
+    await tester.fling(find.byType(RefreshIndicator), const Offset(0, 300), 1000);
+    await tester.pumpAndSettle();
+
+    expect(api.calls.where((c) => c == 'leagueStandings').length, 2);
   });
 
   testWidgets('the bottom Invite button opens a sheet with the code, instructions and share', (

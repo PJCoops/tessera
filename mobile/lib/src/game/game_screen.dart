@@ -71,6 +71,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final mode = ref.read(activeModeProvider);
     if (ref.read(resultsProvider(mode.id)).containsKey(puzzle.num)) return;
     final completedAt = DateTime.now().millisecondsSinceEpoch;
+    final timeMs = ref.read(boardProvider.notifier).elapsedMs();
     ref
         .read(resultsProvider(mode.id).notifier)
         .record(
@@ -81,6 +82,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             completedAt: completedAt,
             minSwaps: puzzle.minSwaps,
             history: board.history,
+            timeMs: timeMs,
           ),
         );
     _push(
@@ -92,6 +94,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         bonus: board.isBonus,
         completedAt: completedAt,
         history: board.history,
+        timeMs: timeMs,
       ),
     );
   }
@@ -203,7 +206,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         mode: mode.id == ModeId.hard ? 'hard' : 'classic',
       ),
     );
-    await Share.share(payload.full, sharePositionOrigin: sharePositionOrigin(context));
+    await Share.share(
+      payload.full,
+      sharePositionOrigin: sharePositionOrigin(context),
+    );
   }
 
   @override
@@ -265,10 +271,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     error: (_, _) => _PuzzleError(
                       onRetry: () => ref.invalidate(puzzleProvider),
                     ),
-                    data: (_) => _Playing(
-                      onShare: _share,
-                      onReveal: _confirmReveal,
-                    ),
+                    data: (_) =>
+                        _Playing(onShare: _share, onReveal: _confirmReveal),
                   ),
                 ),
               ),
@@ -315,7 +319,9 @@ class _TopBar extends ConsumerWidget {
           IconButton(
             tooltip: t(dict, 'leaderboard.title'),
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const LeaderboardScreen()),
+              MaterialPageRoute<void>(
+                builder: (_) => const LeaderboardScreen(),
+              ),
             ),
             icon: Icon(Icons.emoji_events_outlined, color: c.muted),
           ),
@@ -404,7 +410,8 @@ class _Playing extends ConsumerWidget {
 
     final date = dateFromPuzzleNumber(puzzle.num, kEpoch);
     final finished = board.isSolved || stored != null;
-    final revealed = (stored?.revealed ?? false) ||
+    final revealed =
+        (stored?.revealed ?? false) ||
         (board.isSolved && board.solvedAtMove == -1);
 
     return Column(
@@ -445,10 +452,7 @@ class _Playing extends ConsumerWidget {
             spacing: 12,
             children: [
               _OutlineButton(
-                label: t(
-                  dict,
-                  revealed ? 'game.shareRevealed' : 'game.share',
-                ),
+                label: t(dict, revealed ? 'game.shareRevealed' : 'game.share'),
                 onPressed: onShare,
               ),
               _OutlineButton(
@@ -464,19 +468,13 @@ class _Playing extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _PillButton(
-                label: t(
-                  dict,
-                  hideHints ? 'game.showHints' : 'game.hideHints',
-                ),
+                label: t(dict, hideHints ? 'game.showHints' : 'game.hideHints'),
                 onPressed: () => ref
                     .read(settingsProvider.notifier)
                     .setHideHints(!hideHints),
               ),
               const SizedBox(width: 8),
-              _PillButton(
-                label: t(dict, 'game.reveal'),
-                onPressed: onReveal,
-              ),
+              _PillButton(label: t(dict, 'game.reveal'), onPressed: onReveal),
             ],
           ),
 
@@ -568,7 +566,11 @@ class _StatusLine extends StatelessWidget {
     } else if (board.moves == 0 && board.selectedIndex == null) {
       return Column(
         children: [
-          Text(t(dict, 'game.demoTipL1'), style: style, textAlign: TextAlign.center),
+          Text(
+            t(dict, 'game.demoTipL1'),
+            style: style,
+            textAlign: TextAlign.center,
+          ),
           Text(
             t(dict, 'game.demoTipL2', {'n': n}),
             style: style,

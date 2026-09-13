@@ -18,10 +18,11 @@ import 'leaderboard_providers.dart';
 /// alone still works for manual entry on mobile.
 String inviteLink(String code) => 'https://tesserapuzzle.com/?join=$code';
 
-Future<void> shareInvite(BuildContext context, String name, String code) => Share.share(
-  'Join my Tessera league "$name": ${inviteLink(code)}',
-  sharePositionOrigin: sharePositionOrigin(context),
-);
+Future<void> shareInvite(BuildContext context, String name, String code) =>
+    Share.share(
+      'Join my Tessera league "$name": ${inviteLink(code)}',
+      sharePositionOrigin: sharePositionOrigin(context),
+    );
 
 /// One league: today's board (members only) + the all-time "days won" tally.
 class LeagueStandingsScreen extends ConsumerWidget {
@@ -64,66 +65,108 @@ class LeagueStandingsScreen extends ConsumerWidget {
                 label: Text(t(dict, 'leagues.invite')),
               ),
             ),
-      body: async.when(
-        loading: () => Center(
-          child: Text(t(dict, 'leaderboard.loading'), style: TextStyle(color: c.muted)),
-        ),
-        error: (_, _) => Center(
-          child: Text(t(dict, 'game.loadError'), style: TextStyle(color: c.muted)),
-        ),
-        data: (standings) => ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            if (!standings.hasHandle)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  t(dict, 'leagues.noHandlePrompt'),
-                  style: TextStyle(fontSize: 13, color: c.muted),
-                ),
+      body: RefreshIndicator(
+        onRefresh: () => ref.refresh(leagueStandingsProvider(args).future),
+        child: async.when(
+          loading: () => _refreshableCentered(
+            Center(
+              child: Text(
+                t(dict, 'leaderboard.loading'),
+                style: TextStyle(color: c.muted),
               ),
-            Text(
-              t(dict, 'leagues.today').toUpperCase(),
-              style: TextStyle(fontSize: 10, letterSpacing: 1, color: c.muted),
             ),
-            const SizedBox(height: 8),
-            if (standings.board.isEmpty)
+          ),
+          error: (_, _) => _refreshableCentered(
+            Center(
+              child: Text(
+                t(dict, 'game.loadError'),
+                style: TextStyle(color: c.muted),
+              ),
+            ),
+          ),
+          data: (standings) => ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            children: [
+              if (!standings.hasHandle)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    t(dict, 'leagues.noHandlePrompt'),
+                    style: TextStyle(fontSize: 13, color: c.muted),
+                  ),
+                ),
               Text(
-                t(dict, 'leagues.noneToday'),
-                style: TextStyle(fontSize: 13, color: c.muted),
-              )
-            else
-              for (final e in standings.board) _StandingsRow(entry: e),
-            const SizedBox(height: 24),
-            Text(
-              t(dict, 'leagues.daysWon').toUpperCase(),
-              style: TextStyle(fontSize: 10, letterSpacing: 1, color: c.muted),
-            ),
-            const SizedBox(height: 8),
-            for (final tly in standings.tally)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      tly.handle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: c.ink,
-                        fontWeight: tly.isMe ? FontWeight.w700 : FontWeight.w400,
-                      ),
-                    ),
-                    Text('${tly.daysWon}', style: TextStyle(fontSize: 13, color: c.muted)),
-                  ],
+                t(dict, 'leagues.today').toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 1,
+                  color: c.muted,
                 ),
               ),
-          ],
+              const SizedBox(height: 8),
+              if (standings.board.isEmpty)
+                Text(
+                  t(dict, 'leagues.noneToday'),
+                  style: TextStyle(fontSize: 13, color: c.muted),
+                )
+              else
+                for (final e in standings.board) _StandingsRow(entry: e),
+              const SizedBox(height: 24),
+              Text(
+                t(dict, 'leagues.daysWon').toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 1,
+                  color: c.muted,
+                ),
+              ),
+              const SizedBox(height: 8),
+              for (final tly in standings.tally)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        tly.handle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: c.ink,
+                          fontWeight: tly.isMe
+                              ? FontWeight.w700
+                              : FontWeight.w400,
+                        ),
+                      ),
+                      Text(
+                        '${tly.daysWon}',
+                        style: TextStyle(fontSize: 13, color: c.muted),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+/// Wraps a centered-message widget in a full-height scrollable —
+/// RefreshIndicator needs an overscroll-capable child to register the
+/// pull gesture even when the content doesn't fill the screen.
+Widget _refreshableCentered(Widget child) => LayoutBuilder(
+  builder: (context, constraints) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    children: [
+      ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+        child: child,
+      ),
+    ],
+  ),
+);
 
 /// The invite bottom sheet: instructions, the code (tap to copy), and a
 /// share button. Replaces an earlier inline card and, before that, an
@@ -173,7 +216,12 @@ class _InviteSheetBodyState extends ConsumerState<_InviteSheetBody> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(24, 4, 24, 24 + MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          4,
+          24,
+          24 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -198,7 +246,10 @@ class _InviteSheetBodyState extends ConsumerState<_InviteSheetBody> {
               borderRadius: BorderRadius.circular(10),
               onTap: _copy,
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 18,
+                ),
                 decoration: BoxDecoration(
                   color: c.cream,
                   borderRadius: BorderRadius.circular(10),
@@ -227,8 +278,13 @@ class _InviteSheetBodyState extends ConsumerState<_InviteSheetBody> {
             ),
             const SizedBox(height: 6),
             Text(
-              _copied ? t(dict, 'leagues.copied') : t(dict, 'leagues.tapToCopy'),
-              style: TextStyle(fontSize: 11, color: _copied ? c.solved : c.muted),
+              _copied
+                  ? t(dict, 'leagues.copied')
+                  : t(dict, 'leagues.tapToCopy'),
+              style: TextStyle(
+                fontSize: 11,
+                color: _copied ? c.solved : c.muted,
+              ),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
@@ -260,7 +316,13 @@ class _StandingsRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          SizedBox(width: 24, child: Text('${entry.rank}', style: TextStyle(fontSize: 13, color: c.muted))),
+          SizedBox(
+            width: 24,
+            child: Text(
+              '${entry.rank}',
+              style: TextStyle(fontSize: 13, color: c.muted),
+            ),
+          ),
           Expanded(
             child: Text(
               entry.handle,

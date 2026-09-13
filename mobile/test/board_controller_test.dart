@@ -52,6 +52,44 @@ void main() {
     expect(identical(container.read(boardProvider), board), isTrue);
   });
 
+  test('elapsedMs is null until the first tap, then measures from it', () async {
+    SharedPreferences.setMockInitialValues({});
+    final container = ProviderContainer(
+      overrides: [puzzleProvider.overrideWith((ref) => _sample())],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(boardProvider.notifier);
+    expect(notifier.elapsedMs(), isNull, reason: 'no tap yet');
+
+    notifier.tap(0);
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    final elapsed = notifier.elapsedMs();
+    expect(elapsed, isNotNull);
+    expect(elapsed! >= 0, isTrue);
+
+    // A later tap doesn't reset the clock — it's the *first* tap only.
+    final startedAtFirst = elapsed;
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    notifier.tap(1);
+    expect(notifier.elapsedMs()! >= startedAtFirst, isTrue);
+  });
+
+  test('reset() clears elapsedMs so a fresh puzzle starts the clock over', () {
+    SharedPreferences.setMockInitialValues({});
+    final container = ProviderContainer(
+      overrides: [puzzleProvider.overrideWith((ref) => _sample())],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(boardProvider.notifier);
+    notifier.tap(0);
+    expect(notifier.elapsedMs(), isNotNull);
+
+    notifier.reset();
+    expect(notifier.elapsedMs(), isNull);
+  });
+
   test('reopening a revealed (not won) puzzle is reflected correctly', () async {
     SharedPreferences.setMockInitialValues({
       'tessera:result:${_sample().num}':

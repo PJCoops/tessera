@@ -192,6 +192,10 @@ void main() {
     expect(api.submitted.single.history, [
       [0, 1],
     ]);
+    // Clock starts on the first tap, not puzzle load — must be a small,
+    // non-null duration by the time the solve is recorded.
+    expect(api.submitted.single.timeMs, isNotNull);
+    expect(api.submitted.single.timeMs! >= 0, isTrue);
 
     await tester.pumpWidget(const SizedBox());
   });
