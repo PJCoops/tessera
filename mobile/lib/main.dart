@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +11,12 @@ import 'src/auth/supabase.dart';
 Future<void> run(Flavor flavor) async {
   F.appFlavor = flavor;
   WidgetsFlutterBinding.ensureInitialized();
+  // Portrait only (spec: iPhone-only v1) — the board layout isn't designed
+  // for landscape, so lock it here rather than fight a rotated frame.
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   await initSupabase(); // no-op without the SUPABASE_* dart-defines
   runApp(const ProviderScope(child: TesseraApp()));
 }
