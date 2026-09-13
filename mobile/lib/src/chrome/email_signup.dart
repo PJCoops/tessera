@@ -145,6 +145,7 @@ class _EmailSignupState extends ConsumerState<EmailSignup> {
           ],
           const SizedBox(height: 8),
           Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 '${t(dict, 'email.privacyLeader')} ',
