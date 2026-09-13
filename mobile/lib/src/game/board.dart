@@ -64,6 +64,32 @@ class BoardState {
     required int minSwaps,
   }) : this(positions: startTiles, goldRows: goldRows, minSwaps: minSwaps);
 
+  /// A puzzle already recorded as solved/revealed in an earlier session —
+  /// e.g. reopening today's puzzle after finishing it, or [BoardController]
+  /// rebuilding right after a genuine solve records its result. Shows the
+  /// solved grid straight away rather than the scrambled start (matching
+  /// the result screen's copy, and no scrambled-but-tappable board
+  /// underneath it). [moves] is the recorded count, not the swap count
+  /// taken to get there — no history to replay.
+  ///
+  /// [isSolved] is true but [justSolved] never fires (no cascade/jingle
+  /// replay): [revealed] picks the sentinel, -1 (matching [BoardState.
+  /// revealed]) or -2, so callers checking `solvedAtMove == -1` to detect
+  /// "this was a reveal, not a real solve" (game_screen.dart) still get
+  /// the right answer after this rebuild.
+  BoardState.finished({
+    required List<String> goldRows,
+    required int minSwaps,
+    required int moves,
+    required bool revealed,
+  }) : this(
+         positions: tilesFromRows(goldRows),
+         goldRows: goldRows,
+         minSwaps: minSwaps,
+         moves: moves,
+         solvedAtMove: revealed ? -1 : -2,
+       );
+
   late final List<bool> rowValid = List<bool>.generate(n, (r) {
     final gold = goldRows[r].toUpperCase();
     for (var col = 0; col < n; col++) {

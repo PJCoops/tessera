@@ -6,6 +6,7 @@ import '../settings/settings.dart';
 import 'board.dart';
 import 'puzzle.dart';
 import 'puzzle_repository.dart';
+import 'results.dart';
 
 final puzzleRepositoryProvider = Provider(
   (ref) => PuzzleRepository(devFallback: F.appFlavor == Flavor.dev),
@@ -36,7 +37,26 @@ final boardProvider = NotifierProvider<BoardController, BoardState>(
 
 class BoardController extends Notifier<BoardState> {
   @override
-  BoardState build() => ref.watch(puzzleProvider).requireValue.toBoardState();
+  BoardState build() {
+    final puzzle = ref.watch(puzzleProvider).requireValue;
+    final mode = ref.watch(activeModeProvider);
+    // Deliberately `read`, not `watch`: this only needs to catch a puzzle
+    // that was *already* finished before this controller was built (e.g.
+    // reopening today's puzzle after solving it earlier). Watching would
+    // also fire the instant `_recordSolve`/`_confirmReveal` write a live
+    // solve's own result — rebuilding mid-solve and wiping the transient
+    // `justSolved` state the win-cascade animation depends on.
+    final stored = ref.read(resultsProvider(mode.id))[puzzle.num];
+    if (stored != null) {
+      return BoardState.finished(
+        goldRows: puzzle.goldRows,
+        minSwaps: puzzle.minSwaps,
+        moves: stored.moves,
+        revealed: stored.revealed,
+      );
+    }
+    return puzzle.toBoardState();
+  }
 
   void tap(int index) => state = state.tap(index);
 

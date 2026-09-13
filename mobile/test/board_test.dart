@@ -86,4 +86,57 @@ void main() {
     expect(s.rowValid, [true, false, true, true]);
     expect(s.validRowCount, 3);
   });
+
+  group('BoardState.finished', () {
+    test('shows the solved grid, not scrambled, and is not tappable', () {
+      final s = BoardState.finished(
+        goldRows: _gold,
+        minSwaps: 1,
+        moves: 6,
+        revealed: false,
+      );
+      expect(s.isSolved, isTrue);
+      expect(s.moves, 6);
+      // A stray tap must be a no-op — this board is a static display, not
+      // interactive.
+      expect(identical(s.tap(0), s), isTrue);
+    });
+
+    test('never reports justSolved, for a real win or a reveal', () {
+      final won = BoardState.finished(
+        goldRows: _gold,
+        minSwaps: 1,
+        moves: 6,
+        revealed: false,
+      );
+      final gaveUp = BoardState.finished(
+        goldRows: _gold,
+        minSwaps: 1,
+        moves: 3,
+        revealed: true,
+      );
+      expect(won.justSolved, isFalse);
+      expect(gaveUp.justSolved, isFalse);
+    });
+
+    test('a genuine win keeps solvedAtMove distinct from the reveal sentinel', () {
+      // game_screen.dart tells "revealed" apart from "solved" partly by
+      // checking `solvedAtMove == -1` (the same sentinel BoardState.revealed
+      // uses) — a real win reopened later must not collide with that.
+      final won = BoardState.finished(
+        goldRows: _gold,
+        minSwaps: 1,
+        moves: 6,
+        revealed: false,
+      );
+      final revealed = BoardState.finished(
+        goldRows: _gold,
+        minSwaps: 1,
+        moves: 3,
+        revealed: true,
+      );
+      expect(won.solvedAtMove, isNot(-1));
+      expect(revealed.solvedAtMove, -1);
+    });
+  });
 }
