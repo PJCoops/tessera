@@ -21,7 +21,12 @@ Puzzle _oneFromSolved() {
   final t = home[0];
   home[0] = home[1];
   home[1] = t;
-  return Puzzle(num: p.num, goldRows: p.goldRows, minSwaps: 1, startTiles: home);
+  return Puzzle(
+    num: p.num,
+    goldRows: p.goldRows,
+    minSwaps: 1,
+    startTiles: home,
+  );
 }
 
 Widget _harness({List<Override> extra = const []}) => ProviderScope(
@@ -87,6 +92,15 @@ class _RecordingApi implements AccountApi {
   Future<bool> restoreAccount() => throw UnimplementedError();
   @override
   Future<AppConfigResponse> appConfig() => throw UnimplementedError();
+  @override
+  Future<void> registerDeviceToken({
+    required String platform,
+    required String token,
+    required int tzOffsetMinutes,
+  }) => throw UnimplementedError();
+  @override
+  Future<void> deregisterDeviceToken(String token) =>
+      throw UnimplementedError();
 }
 
 void main() {
@@ -96,7 +110,9 @@ void main() {
     }),
   );
 
-  testWidgets('top bar exposes how-to, history, leaderboard and settings', (tester) async {
+  testWidgets('top bar exposes how-to, history, leaderboard and settings', (
+    tester,
+  ) async {
     await tester.pumpWidget(_harness());
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.help_outline), findsOneWidget);

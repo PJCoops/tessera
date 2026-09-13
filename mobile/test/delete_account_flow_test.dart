@@ -65,6 +65,15 @@ class _Api implements AccountApi {
   }) => throw UnimplementedError();
   @override
   Future<AppConfigResponse> appConfig() => throw UnimplementedError();
+  @override
+  Future<void> registerDeviceToken({
+    required String platform,
+    required String token,
+    required int tzOffsetMinutes,
+  }) => throw UnimplementedError();
+  @override
+  Future<void> deregisterDeviceToken(String token) =>
+      throw UnimplementedError();
 }
 
 Widget _harness(_Backend b, _Api api) => ProviderScope(

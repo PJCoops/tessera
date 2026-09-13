@@ -154,7 +154,8 @@ class AppConfigResponse {
               body: wn['body'] as String? ?? '',
             ),
       flags: {
-        for (final e in (j['flags'] as Map<String, dynamic>? ?? const {}).entries)
+        for (final e
+            in (j['flags'] as Map<String, dynamic>? ?? const {}).entries)
           e.key: e.value == true,
       },
     );
@@ -189,6 +190,19 @@ abstract interface class AccountApi {
   Future<AccountDeleteResult> deleteAccount();
   Future<bool> restoreAccount();
   Future<AppConfigResponse> appConfig();
+
+  /// Register (or refresh) this device's FCM/APNs push token (§10). The
+  /// actual token comes from the `firebase_messaging` SDK once that's
+  /// wired — this is just the HTTP call.
+  Future<void> registerDeviceToken({
+    required String platform,
+    required String token,
+    required int tzOffsetMinutes,
+  });
+
+  /// Deregister one token — call on sign-out so a device no longer
+  /// attached to the account stops getting pushed to.
+  Future<void> deregisterDeviceToken(String token);
 }
 
 final accountClientProvider = Provider<AccountApi>((ref) => AccountClient(ref));
@@ -273,5 +287,27 @@ class AccountClient implements AccountApi {
       throw AccountApiException('bad_response', res.statusCode);
     }
     return AppConfigResponse.fromJson(body);
+  }
+
+  @override
+  Future<void> registerDeviceToken({
+    required String platform,
+    required String token,
+    required int tzOffsetMinutes,
+  }) async {
+    final res = await _dio.post<dynamic>(
+      '/api/v1/device-tokens',
+      data: {'platform': platform, 'token': token, 'tzOffset': tzOffsetMinutes},
+    );
+    _ok(res);
+  }
+
+  @override
+  Future<void> deregisterDeviceToken(String token) async {
+    final res = await _dio.delete<dynamic>(
+      '/api/v1/device-tokens',
+      data: {'token': token},
+    );
+    _ok(res);
   }
 }

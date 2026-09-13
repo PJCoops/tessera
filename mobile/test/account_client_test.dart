@@ -179,4 +179,22 @@ void main() {
       ),
     );
   });
+
+  test('registerDeviceToken posts the platform, token and tz offset', () async {
+    final adapter = _Adapter((o) => (status: 200, body: {'ok': true}));
+    await _client(adapter).registerDeviceToken(
+      platform: 'ios',
+      token: 'abc123',
+      tzOffsetMinutes: -60,
+    );
+    final body = adapter.last!.data as Map<String, dynamic>;
+    expect(body, {'platform': 'ios', 'token': 'abc123', 'tzOffset': -60});
+  });
+
+  test('deregisterDeviceToken posts the token', () async {
+    final adapter = _Adapter((o) => (status: 200, body: {'ok': true}));
+    await _client(adapter).deregisterDeviceToken('abc123');
+    final body = adapter.last!.data as Map<String, dynamic>;
+    expect(body, {'token': 'abc123'});
+  });
 }
