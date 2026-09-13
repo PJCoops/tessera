@@ -86,7 +86,9 @@ class LeagueStandingsScreen extends ConsumerWidget {
             ),
           ),
           data: (standings) => ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: ClampingScrollPhysics(),
+            ),
             padding: const EdgeInsets.all(20),
             children: [
               if (!standings.hasHandle)
@@ -159,7 +161,9 @@ class LeagueStandingsScreen extends ConsumerWidget {
 /// pull gesture even when the content doesn't fill the screen.
 Widget _refreshableCentered(Widget child) => LayoutBuilder(
   builder: (context, constraints) => ListView(
-    physics: const AlwaysScrollableScrollPhysics(),
+    physics: const AlwaysScrollableScrollPhysics(
+      parent: ClampingScrollPhysics(),
+    ),
     children: [
       ConstrainedBox(
         constraints: BoxConstraints(minHeight: constraints.maxHeight),

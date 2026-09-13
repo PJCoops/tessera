@@ -1,23 +1,30 @@
 // A catapult-style pull-to-refresh: pulling down sags the top edge into a
 // curved "pocket" (a c.cream membrane against c.paper, traced with a
 // c.rule hairline), with a blank ink tile riding at the bottom of the
-// sag. Release past the trigger and the curve snaps flat while the tile
-// flies up and settles into a docked, gently-bobbing position until the
-// refresh finishes; release short of it and the whole thing eases back
-// into the surface instead.
+// sag. The list content is pinned to sit exactly below the curve — it
+// never bounces on its own — so nothing overlaps or races the elastic.
+// Release past the trigger and the tile is flung straight up, past the
+// top edge, clipped away behind the app/tab bar rather than fading;
+// release short of it and everything eases back down to flat instead.
+// Either way the tile stays fully opaque throughout — no opacity trick.
 //
 // Built from scratch rather than Material's RefreshIndicator, which has
 // no shape/animation hook — only color and stroke width. Tracks the same
 // two notification shapes RefreshIndicator itself has to handle
-// internally: ClampingScrollPhysics (Android) reports a pull past the
-// top as OverscrollNotification, but BouncingScrollPhysics (iOS's
-// default, what this app actually runs under) never "overscrolls" at
-// all — it just lets ScrollMetrics.pixels go negative via an ordinary
-// ScrollUpdateNotification. Both are handled; see the iOS-physics test
-// group in organic_refresh_test.dart for why that distinction matters.
-
-import 'dart:math' as math;
-import 'dart:ui' show lerpDouble;
+// internally: ClampingScrollPhysics (what the wrapped list should use —
+// see the physics note below) reports a pull past the top as
+// OverscrollNotification; BouncingScrollPhysics (iOS's un-overridden
+// default) never "overscrolls" at all, it just lets ScrollMetrics.pixels
+// go negative via an ordinary ScrollUpdateNotification. Both are
+// handled, so this still degrades gracefully if some caller's list
+// doesn't force clamping physics — see the iOS-physics test group in
+// organic_refresh_test.dart for why that distinction matters.
+//
+// Callers should pass a child using
+// `AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics())`
+// (not bouncing) — otherwise the list's own native rubber-band, on its
+// own spring timing, fights this widget's, which is exactly the
+// "overlaps and snaps back too fast" bug this shape was built to fix.
 
 import 'package:flutter/material.dart';
 
@@ -37,14 +44,18 @@ class OrganicRefresh extends StatefulWidget {
   State<OrganicRefresh> createState() => _OrganicRefreshState();
 }
 
-enum _Phase { idle, dragging, launching, refreshing, snapping }
+enum _Phase { idle, dragging, retracting, waiting }
 
 class _OrganicRefreshState extends State<OrganicRefresh>
     with SingleTickerProviderStateMixin {
   static const _maxPull = 90.0;
   static const _triggerPull = 62.0;
-  static const _dockedY = 30.0;
   static const _tileSize = 22.0;
+  // How far above the top edge a launch flings the tile before holding —
+  // well past _tileSize so it's fully behind the clip, not peeking.
+  static const _overshoot = 56.0;
+  static const _launchDuration = Duration(milliseconds: 380);
+  static const _cancelDuration = Duration(milliseconds: 420);
 
   // Eagerly built in initState, not a lazy `late final` field initializer:
   // an idle build never touches _controller at all, so a lazy initializer
@@ -56,7 +67,9 @@ class _OrganicRefreshState extends State<OrganicRefresh>
   _Phase _phase = _Phase.idle;
   double _pull = 0; // 0.._maxPull, follows the finger 1:1 while dragging
   double _snapFrom = 0;
-  bool _refreshResolvedEarly = false;
+  double _retractTarget = 0; // 0 (cancel) or -_overshoot (launch)
+  bool _isLaunch = false;
+  bool _refreshDone = false;
 
   @override
   void initState() {
@@ -89,163 +102,105 @@ class _OrganicRefreshState extends State<OrganicRefresh>
         });
       }
     } else if (n is ScrollEndNotification && _phase == _Phase.dragging) {
-      if (_pull >= _triggerPull) {
-        _launch();
-      } else {
-        _cancel();
-      }
+      _retract(launch: _pull >= _triggerPull);
     }
     return false;
   }
 
-  void _launch() {
+  void _retract({required bool launch}) {
+    final from = _pull;
     setState(() {
-      _snapFrom = _pull;
+      _snapFrom = from;
       _pull = 0;
-      _refreshResolvedEarly = false;
-      _phase = _Phase.launching;
+      _isLaunch = launch;
+      _refreshDone = false;
+      _retractTarget = launch ? -_overshoot : 0;
+      _phase = _Phase.retracting;
     });
     _controller
-      ..duration = const Duration(milliseconds: 520)
+      ..duration = launch ? _launchDuration : _cancelDuration
       ..reset();
-    _controller.forward().whenComplete(_settleAfterLaunch);
-    widget.onRefresh().whenComplete(() {
-      if (!mounted) return;
-      if (_phase == _Phase.launching) {
-        // Let the launch animation finish landing before reacting —
-        // stopping it mid-flight would jump the tile awkwardly.
-        _refreshResolvedEarly = true;
-        return;
-      }
-      _controller.stop();
-      _cancel();
-    });
+    _controller.forward().whenComplete(_afterRetract);
+    if (launch) {
+      widget.onRefresh().whenComplete(() {
+        if (!mounted) return;
+        _refreshDone = true;
+        if (_phase == _Phase.waiting) _finish();
+      });
+    }
   }
 
-  void _settleAfterLaunch() {
+  void _afterRetract() {
     if (!mounted) return;
-    if (_refreshResolvedEarly) {
-      _cancel();
+    if (!_isLaunch) {
+      _finish();
       return;
     }
-    setState(() => _phase = _Phase.refreshing);
-    _controller
-      ..duration = const Duration(milliseconds: 1400)
-      ..repeat();
+    if (_refreshDone) {
+      _finish();
+    } else {
+      setState(() => _phase = _Phase.waiting);
+    }
   }
 
-  void _cancel() {
-    final current = _curveDepth; // capture before mutating _phase
+  void _finish() {
+    if (!mounted) return;
     setState(() {
-      _snapFrom = current;
-      _pull = 0;
-      _phase = _Phase.snapping;
-    });
-    _controller
-      ..duration = const Duration(milliseconds: 500)
-      ..reset();
-    _controller.forward().whenComplete(() {
-      if (!mounted) return;
-      setState(() {
-        _phase = _Phase.idle;
-        _snapFrom = 0;
-      });
+      _phase = _Phase.idle;
+      _snapFrom = 0;
+      _retractTarget = 0;
     });
   }
 
-  double get _curveDepth {
+  /// Unclamped — negative once a launch has flung the tile past the top
+  /// edge, which is exactly what lets it clip away behind the app/tab
+  /// bar instead of needing an opacity fade.
+  double get _depth {
     switch (_phase) {
       case _Phase.idle:
         return 0;
       case _Phase.dragging:
         return _pull;
-      case _Phase.launching:
-        final t = Curves.easeOutExpo.transform(_controller.value);
-        return _snapFrom * (1 - t);
-      case _Phase.refreshing:
-        return 0;
-      case _Phase.snapping:
-        final t = Curves.easeOut.transform(_controller.value);
-        return _snapFrom * (1 - t);
-    }
-  }
-
-  double get _tileY {
-    switch (_phase) {
-      case _Phase.idle:
-        return 0;
-      case _Phase.dragging:
-      case _Phase.snapping:
-        return _curveDepth;
-      case _Phase.launching:
-        final t = Curves.easeOutBack.transform(_controller.value);
-        return lerpDouble(_snapFrom, _dockedY, t)!;
-      case _Phase.refreshing:
-        return _dockedY + math.sin(_controller.value * 2 * math.pi) * 3;
-    }
-  }
-
-  double get _tileOpacity {
-    switch (_phase) {
-      case _Phase.idle:
-        return 0;
-      case _Phase.dragging:
-      case _Phase.snapping:
-        return (_curveDepth / 18).clamp(0.0, 1.0);
-      case _Phase.launching:
-      case _Phase.refreshing:
-        return 1;
-    }
-  }
-
-  double get _tileScale {
-    switch (_phase) {
-      case _Phase.idle:
-        return 0.7;
-      case _Phase.dragging:
-      case _Phase.snapping:
-        final progress = (_curveDepth / _triggerPull).clamp(0.0, 1.0);
-        return 0.7 + progress * 0.3;
-      case _Phase.launching:
-      case _Phase.refreshing:
-        return 1;
-    }
-  }
-
-  double get _tileRotation {
-    switch (_phase) {
-      case _Phase.idle:
-        return 0;
-      case _Phase.dragging:
-      case _Phase.snapping:
-        final progress = (_curveDepth / _triggerPull).clamp(0.0, 1.0);
-        return progress * 0.12;
-      case _Phase.launching:
-        final t = Curves.easeOutBack.transform(_controller.value);
-        return (1 - t).clamp(0.0, 1.0) * -0.35;
-      case _Phase.refreshing:
-        return 0;
+      case _Phase.retracting:
+        final curve = _isLaunch ? Curves.easeInExpo : Curves.easeOut;
+        final t = curve.transform(_controller.value);
+        return _snapFrom + (_retractTarget - _snapFrom) * t;
+      case _Phase.waiting:
+        return _retractTarget;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final curveDepth = _curveDepth;
+    final depth = _depth;
+    // The curve panel and the list beneath it never go negative — only
+    // the tile is allowed past the top edge, to clip away there.
+    final curveHeight = depth < 0 ? 0.0 : depth;
     final tileVisible = _phase != _Phase.idle;
+    final rotation = (depth / _maxPull).clamp(-1.2, 1.2) * 0.14;
+    final scale = depth >= 0
+        ? 0.7 + (depth / _triggerPull).clamp(0.0, 1.0) * 0.3
+        : 1.0;
 
     return NotificationListener<ScrollNotification>(
       onNotification: _onNotification,
       child: Stack(
-        clipBehavior: Clip.none,
+        clipBehavior: Clip.hardEdge,
         children: [
-          widget.child,
-          if (curveDepth > 0.5)
+          // Pinned exactly below the curve, in lockstep with it — this
+          // (not the list's own scroll physics) is what stops the list
+          // from overlapping or out-racing the elastic on release.
+          Transform.translate(
+            offset: Offset(0, curveHeight),
+            child: widget.child,
+          ),
+          if (curveHeight > 0.5)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              height: curveDepth,
+              height: curveHeight,
               child: CustomPaint(
                 size: Size.infinite,
                 painter: _CurvePainter(fill: c.cream, stroke: c.rule),
@@ -253,24 +208,21 @@ class _OrganicRefreshState extends State<OrganicRefresh>
             ),
           if (tileVisible)
             Positioned(
-              top: _tileY - _tileSize / 2,
+              top: depth - _tileSize / 2,
               left: 0,
               right: 0,
               child: IgnorePointer(
                 child: Center(
-                  child: Opacity(
-                    opacity: _tileOpacity,
-                    child: Transform.rotate(
-                      angle: _tileRotation,
-                      child: Transform.scale(
-                        scale: _tileScale,
-                        child: Container(
-                          width: _tileSize,
-                          height: _tileSize,
-                          decoration: BoxDecoration(
-                            color: c.ink,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
+                  child: Transform.rotate(
+                    angle: rotation,
+                    child: Transform.scale(
+                      scale: scale,
+                      child: Container(
+                        width: _tileSize,
+                        height: _tileSize,
+                        decoration: BoxDecoration(
+                          color: c.ink,
+                          borderRadius: BorderRadius.circular(6),
                         ),
                       ),
                     ),

@@ -197,7 +197,9 @@ class _BoardTab extends ConsumerWidget {
           }
 
           return ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: ClampingScrollPhysics(),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             children: [
               _BoardHeader(dict: dict),
@@ -228,7 +230,9 @@ class _BoardTab extends ConsumerWidget {
 /// the screen.
 Widget _refreshableCentered(Widget child) => LayoutBuilder(
   builder: (context, constraints) => ListView(
-    physics: const AlwaysScrollableScrollPhysics(),
+    physics: const AlwaysScrollableScrollPhysics(
+      parent: ClampingScrollPhysics(),
+    ),
     children: [
       ConstrainedBox(
         constraints: BoxConstraints(minHeight: constraints.maxHeight),
@@ -389,7 +393,9 @@ class _LeaguesTab extends ConsumerWidget {
           ),
         ),
         data: (leagues) => ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: ClampingScrollPhysics(),
+          ),
           padding: const EdgeInsets.all(20),
           children: [
             if (leagues.isEmpty)
