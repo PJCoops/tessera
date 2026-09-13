@@ -106,20 +106,30 @@ class _ModeToggle extends StatelessWidget {
     final c = context.colors;
     Widget seg(ModeId id, String label) {
       final active = id == value;
-      return GestureDetector(
-        onTap: () => onChanged(id),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: active ? c.paper : Colors.transparent,
+      return Semantics(
+        button: true,
+        selected: active,
+        label: label,
+        excludeSemantics: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: () => onChanged(id),
             borderRadius: BorderRadius.circular(6),
-            border: active ? Border.all(color: c.rule) : null,
-          ),
-          child: Text(
-            label,
-            style: TextStyle(fontSize: 12, color: active ? c.ink : c.muted),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 44),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: active ? c.paper : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                border: active ? Border.all(color: c.rule) : null,
+              ),
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 12, color: active ? c.ink : c.muted),
+              ),
+            ),
           ),
         ),
       );

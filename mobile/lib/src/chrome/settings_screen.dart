@@ -363,22 +363,32 @@ class _Segmented<T> extends StatelessWidget {
         children: [
           for (final (v, label) in options)
             Expanded(
-              child: GestureDetector(
-                onTap: () => onChanged(v),
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 44),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: v == value ? c.paper : Colors.transparent,
+              child: Semantics(
+                button: true,
+                selected: v == value,
+                label: label,
+                excludeSemantics: true,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    onTap: () => onChanged(v),
                     borderRadius: BorderRadius.circular(6),
-                    border: v == value ? Border.all(color: c.rule) : null,
-                  ),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: v == value ? c.ink : c.muted,
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: v == value ? c.paper : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: v == value ? Border.all(color: c.rule) : null,
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: v == value ? c.ink : c.muted,
+                        ),
+                      ),
                     ),
                   ),
                 ),
