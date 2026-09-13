@@ -37,6 +37,21 @@ export async function getAdsRemoved(sql: Sql, userId: string): Promise<boolean> 
 }
 
 /**
+ * The colour-blind palette preference (spec §17.2) — persisted so it
+ * follows the account across devices/platforms, not just this one.
+ */
+export async function getColourBlind(sql: Sql, userId: string): Promise<boolean> {
+  const rows = await sql<{ colour_blind: boolean }[]>`
+    select colour_blind from profiles where id = ${userId}
+  `;
+  return rows[0]?.colour_blind ?? false;
+}
+
+export async function setColourBlind(sql: Sql, userId: string, value: boolean): Promise<void> {
+  await sql`update profiles set colour_blind = ${value}, updated_at = now() where id = ${userId}`;
+}
+
+/**
  * The random per-user id used as the PostHog distinct_id for server-side
  * events (§11) — never the raw Supabase auth id. Falls back to the
  * userId itself only if the profile row somehow doesn't exist yet

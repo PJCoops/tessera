@@ -74,6 +74,8 @@ class _Api implements AccountApi {
   @override
   Future<void> deregisterDeviceToken(String token) =>
       throw UnimplementedError();
+  @override
+  Future<void> setColourBlindRemote(bool value) => throw UnimplementedError();
 }
 
 Widget _harness(_Backend b, _Api api) => ProviderScope(

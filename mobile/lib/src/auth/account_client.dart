@@ -90,6 +90,7 @@ class GetResultsResponse {
     required this.classicStreak,
     required this.hardStreak,
     this.adsRemoved = false,
+    this.colourBlind = false,
   });
 
   final List<ServerResult> results;
@@ -100,6 +101,10 @@ class GetResultsResponse {
   /// RevenueCat webhook is the only writer server-side. A client ORs this
   /// with its own store's cached entitlement.
   final bool adsRemoved;
+
+  /// The colour-blind palette preference (§17.2), so it follows the
+  /// account across devices rather than staying per-install.
+  final bool colourBlind;
 
   Streak streakFor(ModeId m) => m == ModeId.hard ? hardStreak : classicStreak;
 
@@ -113,6 +118,7 @@ class GetResultsResponse {
       classicStreak: _streak(streaks['classic'] as Map<String, dynamic>?),
       hardStreak: _streak(streaks['hard'] as Map<String, dynamic>?),
       adsRemoved: j['adsRemoved'] as bool? ?? false,
+      colourBlind: j['colourBlind'] as bool? ?? false,
     );
   }
 }
@@ -203,6 +209,10 @@ abstract interface class AccountApi {
   /// Deregister one token — call on sign-out so a device no longer
   /// attached to the account stops getting pushed to.
   Future<void> deregisterDeviceToken(String token);
+
+  /// Persist the colour-blind palette preference to the account (§17.2)
+  /// so it follows the player across devices.
+  Future<void> setColourBlindRemote(bool value);
 }
 
 final accountClientProvider = Provider<AccountApi>((ref) => AccountClient(ref));
@@ -307,6 +317,15 @@ class AccountClient implements AccountApi {
     final res = await _dio.delete<dynamic>(
       '/api/v1/device-tokens',
       data: {'token': token},
+    );
+    _ok(res);
+  }
+
+  @override
+  Future<void> setColourBlindRemote(bool value) async {
+    final res = await _dio.post<dynamic>(
+      '/api/v1/settings',
+      data: {'colourBlind': value},
     );
     _ok(res);
   }

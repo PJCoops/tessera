@@ -9,6 +9,7 @@ import 'package:tessera/src/epoch.dart';
 import 'package:tessera/src/game/results.dart';
 import 'package:tessera/src/mode.dart';
 import 'package:tessera/src/puzzle_number.dart';
+import 'package:tessera/src/settings/settings.dart';
 import 'package:tessera/src/streak.dart';
 import 'package:tessera/src/sync/sync_providers.dart';
 
@@ -19,6 +20,7 @@ class _FakeApi implements AccountApi {
   final GetResultsResponse Function() _get;
 
   final List<SubmitArgs> imported = [];
+  final List<bool> colourBlindPushes = [];
   int? importClassicMax;
   int submitCalls = 0;
   bool submitFails = false;
@@ -59,6 +61,10 @@ class _FakeApi implements AccountApi {
   @override
   Future<void> deregisterDeviceToken(String token) =>
       throw UnimplementedError();
+  @override
+  Future<void> setColourBlindRemote(bool value) async {
+    colourBlindPushes.add(value);
+  }
 }
 
 GetResultsResponse _resp(
@@ -66,11 +72,13 @@ GetResultsResponse _resp(
   Streak? classic,
   Streak? hard,
   bool adsRemoved = false,
+  bool colourBlind = false,
 }) => GetResultsResponse(
   results: rows,
   classicStreak: classic ?? const Streak(current: 0, max: 0, lastWon: 0),
   hardStreak: hard ?? const Streak(current: 0, max: 0, lastWon: 0),
   adsRemoved: adsRemoved,
+  colourBlind: colourBlind,
 );
 
 ServerResult _sr(
@@ -253,6 +261,41 @@ void main() {
   );
 
   test(
+    'syncOnSignIn surfaces the account colour-blind preference',
+    () async {
+      final api = _FakeApi(() => _resp([], colourBlind: true));
+      final c = _container(api, {});
+
+      final out = await c.read(syncEngineProvider).syncOnSignIn('u1');
+
+      expect(out.colourBlind, isTrue);
+    },
+  );
+
+  test(
+    "the account's colour-blind preference is applied to local settings on first sign-in",
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final api = _FakeApi(() => _resp([], colourBlind: true));
+      final auth = _MutableAuth(const AuthUser(id: 'u1', email: 'a@b.com'));
+      final c = ProviderContainer(
+        overrides: [
+          accountClientProvider.overrideWithValue(api),
+          authBackendProvider.overrideWithValue(auth),
+        ],
+      );
+      addTearDown(c.dispose);
+
+      expect(c.read(settingsProvider).colourBlind, isFalse);
+
+      c.listen(accountSyncProvider, (_, _) {}, fireImmediately: true);
+      await _settle();
+
+      expect(c.read(settingsProvider).colourBlind, isTrue);
+    },
+  );
+
+  test(
     'signing out clears the per-user guard so the next sign-in re-syncs',
     () async {
       final api = _FakeApi(() => _resp([]));
@@ -279,6 +322,43 @@ void main() {
         reason: 'reset() must clear the guard on sign-out',
       );
       expect(await c.read(syncEngineProvider).alreadySynced('u1'), isFalse);
+    },
+  );
+
+  test(
+    'colourBlindSyncProvider pushes the local toggle while signed in, not signed out',
+    () async {
+      SharedPreferences.setMockInitialValues({'tessera:synced:u1': true});
+      final api = _FakeApi(() => _resp([]));
+      final auth = _MutableAuth(const AuthUser(id: 'u1', email: 'a@b.com'));
+      final c = ProviderContainer(
+        overrides: [
+          accountClientProvider.overrideWithValue(api),
+          authBackendProvider.overrideWithValue(auth),
+        ],
+      );
+      addTearDown(c.dispose);
+
+      // Not watched yet -> no push.
+      c.read(settingsProvider.notifier).setColourBlind(true);
+      expect(api.colourBlindPushes, isEmpty);
+
+      c.listen(colourBlindSyncProvider, (_, _) {}, fireImmediately: true);
+      await _settle();
+      expect(api.colourBlindPushes, [true]);
+
+      c.read(settingsProvider.notifier).setColourBlind(false);
+      await _settle();
+      expect(api.colourBlindPushes, [true, false]);
+
+      auth.emit(null); // sign out
+      c.read(settingsProvider.notifier).setColourBlind(true);
+      await _settle();
+      expect(
+        api.colourBlindPushes,
+        [true, false],
+        reason: 'no push while signed out',
+      );
     },
   );
 }

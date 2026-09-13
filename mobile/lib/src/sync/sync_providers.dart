@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth/account_client.dart';
 import '../auth/auth_controller.dart';
+import '../settings/settings.dart';
 import 'sync_engine.dart';
 
 enum SyncStatus { idle, syncing, done, failed }
@@ -59,9 +63,33 @@ final accountSyncProvider = Provider<void>((ref) {
         ref.read(streakDecreaseProvider.notifier).state = out.streakDecrease;
       }
       ref.read(adsRemovedProvider.notifier).state = out.adsRemoved;
+      // First sign-in only (this whole block is guarded by alreadySynced
+      // above): the account's colour-blind preference wins over whatever
+      // this fresh install/device happened to default to.
+      if (out.colourBlind != ref.read(settingsProvider).colourBlind) {
+        ref.read(settingsProvider.notifier).setColourBlind(out.colourBlind);
+      }
       ref.read(syncStatusProvider.notifier).state = SyncStatus.done;
     } catch (_) {
       ref.read(syncStatusProvider.notifier).state = SyncStatus.failed;
     }
   });
+});
+
+/// Keeps the account's colour-blind preference (§17.2) in step with the
+/// local settings toggle whenever signed in — mirrors [reminderSyncProvider]'s
+/// shape (watched high in the tree, side effect on change). Fires once
+/// per rebuild of either dependency, including the sign-in pull above
+/// re-applying the same value back to the server; that round-trip is a
+/// harmless no-op, not worth guarding against.
+final colourBlindSyncProvider = Provider<void>((ref) {
+  final user = ref.watch(authUserProvider);
+  final colourBlind = ref.watch(settingsProvider.select((s) => s.colourBlind));
+  if (user == null) return;
+  unawaited(
+    ref
+        .read(accountClientProvider)
+        .setColourBlindRemote(colourBlind)
+        .catchError((_) {}),
+  );
 });

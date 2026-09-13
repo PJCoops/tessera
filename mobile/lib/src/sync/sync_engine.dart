@@ -37,6 +37,7 @@ class SyncOutcome {
     required this.pushed,
     required this.pulled,
     required this.adsRemoved,
+    required this.colourBlind,
     this.streakDecrease,
   });
   final int pushed;
@@ -44,6 +45,10 @@ class SyncOutcome {
 
   /// The account-level ads-removed entitlement (§8.2), as of this pull.
   final bool adsRemoved;
+
+  /// The account's colour-blind palette preference (§17.2), as of this
+  /// pull — applied to local settings once, on first sign-in.
+  final bool colourBlind;
   final StreakDecrease? streakDecrease;
 }
 
@@ -107,8 +112,7 @@ class SyncEngine {
       for (final m in ModeId.values) m: _ref.read(streakProvider(m)),
     };
     final visibleBefore = <ModeId, int>{
-      for (final m in ModeId.values)
-        m: visibleCurrent(localStreak[m]!, today),
+      for (final m in ModeId.values) m: visibleCurrent(localStreak[m]!, today),
     };
 
     final server = await _api.getResults();
@@ -122,7 +126,8 @@ class SyncEngine {
     for (final m in ModeId.values) {
       localResults[m]!.forEach((n, r) {
         final sv = serverByKey['${m.name}:$n'];
-        final couldUpgrade = sv != null &&
+        final couldUpgrade =
+            sv != null &&
             !sv.verified &&
             !r.revealed &&
             (r.history?.isNotEmpty ?? false);
@@ -171,8 +176,9 @@ class SyncEngine {
       }
       _ref.read(resultsProvider(m).notifier).mergeServerRows(rows);
       // The server's streak.max already folds imported_max_streak_*.
-      _ref.read(importedMaxProvider(m).notifier).state =
-          server.streakFor(m).max;
+      _ref.read(importedMaxProvider(m).notifier).state = server
+          .streakFor(m)
+          .max;
     }
 
     // ── Streak-decrease detection (recomputed, not merged). ──
@@ -200,6 +206,7 @@ class SyncEngine {
       pushed: pushed,
       pulled: pulled,
       adsRemoved: server.adsRemoved,
+      colourBlind: server.colourBlind,
       streakDecrease: decrease,
     );
   }

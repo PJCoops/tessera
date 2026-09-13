@@ -101,6 +101,8 @@ class _RecordingApi implements AccountApi {
   @override
   Future<void> deregisterDeviceToken(String token) =>
       throw UnimplementedError();
+  @override
+  Future<void> setColourBlindRemote(bool value) => throw UnimplementedError();
 }
 
 void main() {
