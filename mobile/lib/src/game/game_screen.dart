@@ -549,13 +549,19 @@ class _StatusLine extends StatelessWidget {
     final c = context.colors;
     final style = TextStyle(fontSize: 15, color: c.inkSoft);
 
-    String text;
+    // Always two lines, even when only one carries text — this status line
+    // sits inside a vertically-centered Column, so a state with real text on
+    // both lines (the demo tip) versus one line (everything else) would
+    // otherwise change height and shift the whole board up/down the moment
+    // a tile is selected and the demo tip disappears.
+    String line1;
+    String line2 = '';
     if (revealed) {
-      text = t(dict, 'game.revealedStatus');
+      line1 = t(dict, 'game.revealedStatus');
     } else if (board.isSolved || stored != null) {
       final moves = board.isSolved ? board.moves : stored!.moves;
       final tier = getTier(moves, minSwaps);
-      text = t(dict, 'game.solvedIn', {
+      line1 = t(dict, 'game.solvedIn', {
         'moves': moves,
         'moveWord': t(
           dict,
@@ -564,28 +570,21 @@ class _StatusLine extends StatelessWidget {
         'tier': t(dict, 'tiers.${tier.key.name}'),
       });
     } else if (board.moves == 0 && board.selectedIndex == null) {
-      return Column(
-        children: [
-          Text(
-            t(dict, 'game.demoTipL1'),
-            style: style,
-            textAlign: TextAlign.center,
-          ),
-          Text(
-            t(dict, 'game.demoTipL2', {'n': n}),
-            style: style,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      );
+      line1 = t(dict, 'game.demoTipL1');
+      line2 = t(dict, 'game.demoTipL2', {'n': n});
     } else {
-      text = t(dict, 'game.movesStatus', {
+      line1 = t(dict, 'game.movesStatus', {
         'moves': board.moves,
         'valid': board.validRowCount,
         'total': n,
       });
     }
-    return Text(text, style: style, textAlign: TextAlign.center);
+    return Column(
+      children: [
+        Text(line1, style: style, textAlign: TextAlign.center),
+        Text(line2, style: style, textAlign: TextAlign.center),
+      ],
+    );
   }
 }
 
