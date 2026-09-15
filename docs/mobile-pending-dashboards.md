@@ -18,19 +18,26 @@ other, work through in any order.
   `<TeamID>.com.tesserapuzzle.app`. Needed for both Sign in with Apple and
   for `/.well-known/apple-app-site-association` to serve the real value
   instead of the `TEAMID.com.tesserapuzzle.app` placeholder.
-- [ ] **Android signing SHA** — `cd mobile/android && ./gradlew
-  signingReport`, copy the debug + release SHA-1 (Google Sign-In Android
-  OAuth client) and SHA-256 (`ANDROID_CERT_SHA256` env var on the backend,
-  comma-separated, colon-hex — needed for both Google Sign-In and for
-  `/.well-known/assetlinks.json` App Links verification).
-- [ ] **Google Android OAuth client** — Google Cloud Console → Credentials
-  → new Android client using the package + SHA-1 above.
-- [ ] **AdMob + RevenueCat accounts** — needed to actually build Phase 7
-  (monetization) beyond the account-free plumbing already done (entitlement
-  read + interstitial gating logic). Create an AdMob app + ad unit ids
-  (interstitial + banner), a RevenueCat project with a `remove_ads`
-  non-consumable product, and the matching App Store Connect / Play Console
-  IAP products.
+- [x] **Android signing SHA** — done 2026-09-15. Debug SHA-1
+  `5F:B0:F2:52:A0:BC:77:1C:77:75:2E:9A:B5:E1:A3:69:05:B9:AB:FD`, release SHA-1
+  `0A:D1:41:1E:CF:D1:CC:77:40:63:07:AD:B0:20:90:8D:DF:09:94:79` (a real
+  release upload keystore was generated and wired into
+  `android/app/build.gradle.kts` — see `android/key.properties`, gitignored,
+  backed up to Bitwarden). `ANDROID_CERT_SHA256` set on the Vercel backend
+  (production/preview/development) with both SHA-256 fingerprints,
+  comma-separated.
+- [x] **Google Android OAuth client** — done 2026-09-15. Two clients: one for
+  `com.tesserapuzzle.app.dev` (debug SHA-1), one for `com.tesserapuzzle.app`
+  (release SHA-1).
+- [x] **AdMob account + real ad integration** — done 2026-09-15. AdMob app
+  "Tessera Puzzle" created (iOS + Android), interstitial + banner ad units
+  for both platforms, and the full client build (`google_mobile_ads`,
+  `app_tracking_transparency`, the UMP/ATT consent flow, both placements) —
+  see `docs/flutter-app-spec.md` Phase 7. Not blocked on anything further.
+- [ ] **RevenueCat account** — still needed for the remove-ads IAP half of
+  Phase 7. Create a RevenueCat project with a `remove_ads` non-consumable
+  product and the matching App Store Connect / Play Console IAP products,
+  then `purchases_flutter` + the paywall UI can be built.
 - [ ] **Firebase project + `flutterfire configure`** — needed for Phase 8
   remote push (FCM/APNs via `firebase_messaging`). The token-registration
   endpoint (`POST`/`DELETE /api/v1/device-tokens`) and mobile client calls
@@ -39,9 +46,11 @@ other, work through in any order.
   generated against a live project, which can't be faked or skipped.
 - [ ] **Sentry project + DSN** — needed for Phase 9 crash reporting on
   mobile (`sentry_flutter`). Server-side PostHog activation events and the
-  entitlement/ad-gating plumbing are done without needing any new account;
-  this and the client `posthog_flutter` SDK (blocked on the Phase 7 consent
-  flow, not an account) are what's left of Phase 9.
+  entitlement/ad-gating plumbing are done without needing any new account.
+  The client `posthog_flutter` SDK was previously blocked on the Phase 7
+  consent flow not existing — that flow is now built (`mobile/lib/src/ads/
+  consent_flow.dart`), so PostHog on mobile just needs its own build pass,
+  not an account; Sentry is the only account-blocked item left of Phase 9.
 - [ ] **Verify the country leaderboard from a real deploy** — country comes
   from the `x-vercel-ip-country` header, which only Vercel's edge injects
   based on the requester's real IP; it's always absent against a local dev
