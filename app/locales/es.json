@@ -367,5 +367,18 @@
     "restored": "Cuenta restaurada.",
     "done": "Hecho",
     "failed": "No funcionó. Inténtalo de nuevo."
+  },
+  "ads": {
+    "label": "ANUNCIO",
+    "consentPrimer": {
+      "title": "Antes de continuar",
+      "body": "Usamos análisis anónimos y anuncios para que Tessera sea gratis. En la siguiente pantalla puedes elegir qué permitir.",
+      "continue": "Continuar"
+    },
+    "attPrimer": {
+      "title": "Una cosa más",
+      "body": "Permitir el seguimiento hace que los anuncios sean más relevantes para ti. Si lo rechazas, seguirás viendo anuncios, solo que menos personalizados.",
+      "continue": "Continuar"
+    }
   }
 }

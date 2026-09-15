@@ -12,6 +12,17 @@ import 'board_controller.dart';
 const _gap = 8.0;
 const _radius = 10.0;
 const _cascadeStagger = Duration(milliseconds: 70);
+const _cascadeTilePop = Duration(milliseconds: 180);
+
+/// Time until every tile of an [n]x[n] board has finished its solved-
+/// cascade animation (or, under reduce-motion, the moment it's safe to
+/// treat the board as visually settled — the cascade is skipped entirely
+/// then, spec §17.3). Used to time anything that must never overlap the
+/// cascade, e.g. the post-result interstitial (spec §8.1).
+Duration cascadeSettleDuration(int n, {required bool reduceMotion}) =>
+    reduceMotion
+        ? const Duration(milliseconds: 90)
+        : _cascadeStagger * (n * n - 1) + _cascadeTilePop;
 
 /// The tile grid. Tiles are positioned absolutely and animate to their
 /// slot on a swap (transform only — spec §13.2). Every tile carries a

@@ -52,6 +52,8 @@ dependencies:
   google_sign_in: ^6.2.2
   crypto: ^3.0.6
   app_links: ^6.3.2
+  google_mobile_ads: ^6.0.0
+  app_tracking_transparency: ^2.0.6+1
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../ads/banner_ad_widget.dart';
 import '../epoch.dart';
 import '../i18n.dart';
 import '../i18n/dict.dart';
@@ -105,6 +106,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
           _ReplayTab(dict: dict, mode: mode, results: results),
         ],
       ),
+      bottomNavigationBar: const HistoryBannerAd(),
     );
   }
 }

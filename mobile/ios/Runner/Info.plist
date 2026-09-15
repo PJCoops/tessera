@@ -76,6 +76,16 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <!-- AdMob (spec §8.1). ADMOB_APP_ID is set per flavor in
+         ios/Flutter/{dev,prod}{Debug,Profile,Release}.xcconfig — dev
+         always uses Google's public test app id, never real inventory. -->
+    <key>GADApplicationIdentifier</key>
+    <string>$(ADMOB_APP_ID)</string>
+    <!-- App Tracking Transparency (spec §8.3): shown once, after a custom
+         one-line primer, right after the first puzzle is solved — see
+         lib/src/ads/consent_flow.dart. -->
+    <key>NSUserTrackingUsageDescription</key>
+    <string>Tessera uses this to show ads that are more relevant to you. Declining still shows ads, just less targeted ones.</string>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     <key>UILaunchStoryboardName</key>

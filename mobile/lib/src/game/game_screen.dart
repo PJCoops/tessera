@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../ads/consent_flow.dart';
+import '../ads/interstitial_ad_controller.dart';
+import '../ads/interstitial_gate.dart';
 import '../auth/account_client.dart';
 import '../auth/auth_controller.dart';
 import '../auth/second_method_prompt.dart';
@@ -58,6 +61,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (next.justSolved) {
       _feedback.solved();
       _recordSolve(next);
+      _runPostSolveAds(next);
     } else if (next.moves > prev.moves) {
       _feedback.swap();
     } else if (next.selectedIndex != null && prev.selectedIndex == null) {
@@ -105,6 +109,34 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void _push(SubmitArgs a) {
     if (ref.read(authUserProvider) == null) return;
     unawaited(ref.read(syncEngineProvider).submitOne(a));
+  }
+
+  /// Consent (spec §8.3, first solve is the earliest it's allowed to run)
+  /// and the interstitial (spec §8.1, must never overlap the solved
+  /// cascade). Preload starts immediately so there's no spinner once the
+  /// cascade settles; consent and the actual show both run after, gated
+  /// on the cascade-settle delay so nothing here can visually collide
+  /// with it.
+  void _runPostSolveAds(BoardState board) {
+    unawaited(ref.read(interstitialAdControllerProvider).preload());
+
+    final mode = ref.read(activeModeProvider);
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    final settle = cascadeSettleDuration(mode.n, reduceMotion: reduceMotion);
+    Future.delayed(settle, () async {
+      if (!mounted) return;
+      await ensureConsentFlow(context, ref);
+      if (!mounted) return;
+      final todayNum = puzzleNumber(todayUtcDate(), kEpoch);
+      final streak = visibleCurrent(
+        ref.read(streakProvider(mode.id)),
+        todayNum,
+      );
+      final lifetimePlays = ref.read(lifetimePlaysProvider);
+      await ref
+          .read(interstitialAdControllerProvider)
+          .maybeShow(streak: streak, lifetimePlays: lifetimePlays);
+    });
   }
 
   Future<void> _confirmReveal() async {

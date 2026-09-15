@@ -367,5 +367,18 @@
     "restored": "Account restored.",
     "done": "Done",
     "failed": "That didn’t work. Try again."
+  },
+  "ads": {
+    "label": "AD",
+    "consentPrimer": {
+      "title": "Before you continue",
+      "body": "We use anonymous analytics and ads to keep Tessera free. On the next screen you can choose what to allow.",
+      "continue": "Continue"
+    },
+    "attPrimer": {
+      "title": "One more thing",
+      "body": "Allowing tracking lets ads be more relevant to you. If you decline, you'll still see ads — just less targeted ones.",
+      "continue": "Continue"
+    }
   }
 }
