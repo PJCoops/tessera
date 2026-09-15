@@ -10,6 +10,8 @@
 // allowed at all; this controller additionally requires consent to have
 // resolved ([canRequestAds]) and `!adsRemoved` before ever calling the SDK.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -31,30 +33,50 @@ class InterstitialAdController {
 
   final Ref _ref;
   InterstitialAd? _loaded;
-  bool _loading = false;
+  Completer<void>? _loadCompleter;
 
-  Future<void> preload() async {
-    if (_loaded != null || _loading) return;
-    if (_ref.read(adsRemovedProvider)) return;
-    if (!await canRequestAds()) return;
-    _loading = true;
-    try {
-      await InterstitialAd.load(
-        adUnitId: AdUnits.interstitial,
-        request: await buildAdRequest(),
-        adLoadCallback: InterstitialAdLoadCallback(
-          onAdLoaded: (ad) {
-            _loading = false;
-            _loaded = ad;
-          },
-          onAdFailedToLoad: (_) {
-            _loading = false;
-          },
-        ),
-      );
-    } catch (_) {
-      _loading = false;
-    }
+  /// Completes only once the load actually resolves (fill or failure),
+  /// not just once the load request round-trips — `InterstitialAd.load`'s
+  /// own future resolves on the latter, well before `onAdLoaded`/
+  /// `onAdFailedToLoad` fire, which would otherwise race callers that
+  /// need to know whether an ad is actually ready right after preloading
+  /// (see game_screen.dart's post-consent preload retry).
+  Future<void> preload() {
+    if (_loaded != null) return Future.value();
+    final inFlight = _loadCompleter;
+    if (inFlight != null) return inFlight.future;
+    if (_ref.read(adsRemovedProvider)) return Future.value();
+
+    final completer = Completer<void>();
+    _loadCompleter = completer;
+    () async {
+      try {
+        if (!await canRequestAds()) {
+          _loadCompleter = null;
+          completer.complete();
+          return;
+        }
+        await InterstitialAd.load(
+          adUnitId: AdUnits.interstitial,
+          request: await buildAdRequest(),
+          adLoadCallback: InterstitialAdLoadCallback(
+            onAdLoaded: (ad) {
+              _loadCompleter = null;
+              _loaded = ad;
+              if (!completer.isCompleted) completer.complete();
+            },
+            onAdFailedToLoad: (_) {
+              _loadCompleter = null;
+              if (!completer.isCompleted) completer.complete();
+            },
+          ),
+        );
+      } catch (_) {
+        _loadCompleter = null;
+        if (!completer.isCompleted) completer.complete();
+      }
+    }();
+    return completer.future;
   }
 
   /// Shows the preloaded ad if [InterstitialGate] allows it this time,

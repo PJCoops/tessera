@@ -114,9 +114,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   /// Consent (spec §8.3, first solve is the earliest it's allowed to run)
   /// and the interstitial (spec §8.1, must never overlap the solved
   /// cascade). Preload starts immediately so there's no spinner once the
-  /// cascade settles; consent and the actual show both run after, gated
-  /// on the cascade-settle delay so nothing here can visually collide
-  /// with it.
+  /// cascade settles on the common case (consent already resolved from an
+  /// earlier solve) — but on the very first solve ever, consent hasn't
+  /// resolved yet at this exact instant, so that first preload attempt
+  /// reliably bails out (`canRequestAds()` is still false) and is never
+  /// retried on its own. Preload is called again after consent finishes,
+  /// right before maybeShow, to cover exactly that case.
   void _runPostSolveAds(BoardState board) {
     unawaited(ref.read(interstitialAdControllerProvider).preload());
 
@@ -127,6 +130,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       if (!mounted) return;
       await ensureConsentFlow(context, ref);
       if (!mounted) return;
+      await ref.read(interstitialAdControllerProvider).preload();
       final todayNum = puzzleNumber(todayUtcDate(), kEpoch);
       final streak = visibleCurrent(
         ref.read(streakProvider(mode.id)),

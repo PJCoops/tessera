@@ -12,12 +12,15 @@
 //      the same way the package's own docs recommend).
 //
 // Ads are then only ever requested once `ConsentInformation.canRequestAds()`
-// is true (see [canRequestAds] below) — until granted, AdMob is configured
-// to request non-personalized ads only via [MobileAds.instance.initialize],
-// which is exactly what iOS ATT-denied requires (spec: "until granted,
-// request non-personalized ads only"). Runs fully best-effort: any SDK
-// failure here must never block gameplay ("the app boots and plays fully
-// with everything denied").
+// is true (see [canRequestAds] below) — until iOS ATT is granted, ad
+// requests are non-personalized only (spec: "until granted, request
+// non-personalized ads only" — see ad_request.dart). SDK initialization
+// itself (`MobileAds.instance.initialize()`) is NOT gated on consent — it
+// isn't a request or a display, and it must run every process launch, not
+// just once ever, so it lives in main.dart alongside the app's other
+// startup init rather than here. Runs fully best-effort: any SDK failure
+// here must never block gameplay ("the app boots and plays fully with
+// everything denied").
 
 import 'dart:async';
 import 'dart:io' show Platform;
@@ -40,33 +43,36 @@ const _doneKey = 'tessera:ads:consent-flow-done';
 Future<bool> canRequestAds() =>
     ConsentInformation.instance.canRequestAds().catchError((_) => false);
 
-/// Runs the one-time consent sequence if it hasn't already run. Safe to
-/// call repeatedly — every call after the first is a no-op. Never throws:
-/// any SDK failure just leaves ads unrequestable, which the rest of the
-/// ads code already treats as "don't show anything."
+/// Runs the one-time consent dialog sequence if it hasn't already run, and
+/// (every call, not just the first) re-syncs UMP's in-memory consent state
+/// from its persisted decision — `requestConsentInfoUpdate` must run every
+/// process launch for `canRequestAds()`/`getConsentStatus()` to reflect
+/// reality; only the *dialogs* are one-time-ever, not the state sync. Skew
+/// here was a real bug: on a returning launch the dialog sequence (and
+/// therefore `requestConsentInfoUpdate`) was skipped entirely, so
+/// `canRequestAds()` stayed false all process long even though the player
+/// had already granted consent in an earlier session. Never throws: any
+/// SDK failure just leaves ads unrequestable, which the rest of the ads
+/// code already treats as "don't show anything."
 Future<void> ensureConsentFlow(BuildContext context, WidgetRef ref) async {
+  await _syncConsentInfo();
+
   final prefs = await SharedPreferences.getInstance();
   if (prefs.getBool(_doneKey) ?? false) return;
 
   try {
-    if (context.mounted) await _runUmpStep(context, ref);
+    if (context.mounted) await _maybeShowUmpForm(context, ref);
     if (Platform.isIOS && context.mounted) {
       await _runAttStep(context, ref);
     }
   } catch (_) {
-    // Fall through — still mark done and still initialize the SDK below,
-    // so a transient SDK error doesn't re-prompt the player every launch.
+    // Fall through — still mark done, so a transient SDK error doesn't
+    // re-prompt the player every launch.
   }
-
   await prefs.setBool(_doneKey, true);
-  try {
-    await MobileAds.instance.initialize();
-  } catch (_) {
-    // Never block gameplay on an SDK init failure.
-  }
 }
 
-Future<void> _runUmpStep(BuildContext context, WidgetRef ref) async {
+Future<void> _syncConsentInfo() async {
   final completer = Completer<void>();
   ConsentInformation.instance.requestConsentInfoUpdate(
     ConsentRequestParameters(),
@@ -74,7 +80,9 @@ Future<void> _runUmpStep(BuildContext context, WidgetRef ref) async {
     (_) => completer.complete(),
   );
   await completer.future;
+}
 
+Future<void> _maybeShowUmpForm(BuildContext context, WidgetRef ref) async {
   final status = await ConsentInformation.instance.getConsentStatus();
   if (status != ConsentStatus.required) return;
   if (!context.mounted) return;
